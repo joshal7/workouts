@@ -15,7 +15,7 @@ A standalone, offline-ready iPhone Progressive Web App (PWA) port of your Google
 ## Running Locally
 
 ```bash
-cd /Users/joshal/workspace/WorkoutApp
+cd /Users/joshal/workspace/workouts
 python3 -m http.server 8080
 ```
 Then open:
@@ -33,11 +33,23 @@ node tests/audit-diagrams-to-descriptions.mjs
 
 ---
 
-## Deploying Free to GitHub Pages (`workout.joshal.com`)
+## Deploying to GitHub Pages (`workouts.joshal.com`)
 
-1. Push this directory to a GitHub repository (e.g., `joshal/workout`).
-2. In GitHub **Settings → Pages**, set Source to **Deploy from a branch (`main` / root)**.
-3. *(Optional Custom Subdomain)*: In your DNS provider for `joshal.com`, add a `CNAME` record:
-   * **Host / Name**: `workout`
-   * **Target / Value**: `<your-github-username>.github.io`
-4. On your iPhone in Safari, open the site and tap **Share → Add to Home Screen** for a full-screen native app experience.
+1. Push this directory to your GitHub repository `joshal7/workouts`:
+   ```bash
+   git add CNAME README.md
+   git commit -m "Configure custom domain workouts.joshal.com"
+   git push origin main
+   ```
+2. In your DNS provider where you manage `joshal.com` (Cloudflare, Namecheap, Google/Squarespace, etc.), add a DNS record:
+   * **Type**: `CNAME`
+   * **Name / Host**: `workouts`
+   * **Target / Value**: `joshal7.github.io`
+   * *(If using Cloudflare, set Proxy to "DNS only" initially so GitHub can verify and issue the Let's Encrypt SSL certificate).*
+3. In GitHub: Go to [joshal7/workouts → Settings → Pages](https://github.com/joshal7/workouts/settings/pages):
+   * **Source**: `Deploy from a branch`
+   * **Branch**: `main` / `/(root)`
+   * **Custom domain**: `workouts.joshal.com` (picked up automatically from the `CNAME` file)
+   * Check **Enforce HTTPS** (once DNS finishes propagating, usually 1-5 minutes).
+4. On your iPhone in Safari, open `https://workouts.joshal.com` and tap **Share → Add to Home Screen** for a full-screen native app experience.
+
