@@ -323,6 +323,7 @@ export function generateWorkout(sheetData, inputs = {}, rng = Math.random) {
         slotIndex: exIdx,
         options: slotOptions,
         selectedOptionIndex: 0,
+        optionChosen: false,
         completed: false,
         completedSets:
           checkMode.mode === 'exercise-sets'
@@ -433,6 +434,7 @@ export function swapExerciseInSlot(workoutState, roundIndex, slotIndex, newExerc
   const targetOptIdx = optionIndex !== null ? optionIndex : (slot.selectedOptionIndex || 0);
   slot.options[targetOptIdx] = newExercise;
   slot.selectedOptionIndex = targetOptIdx;
+  slot.optionChosen = true;
   slot.manuallyModified = isManual;
 
   nextState.exercisesText = formatExercisesText(nextState);

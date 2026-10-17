@@ -465,8 +465,8 @@ test('HTML/CSS/JS UI audit: Light motif, hyperlinked workout type, and removed S
   assert.ok(!html.includes('copySummaryBtn') && !appJs.includes('copySummaryBtn'));
   assert.ok(!html.includes('ACTIVE WORKOUT'));
 
-  // Light motif (#8) and unbolded inline muscle/equipment text (#4)
-  assert.ok(css.includes('--bg-primary: #f8fafc') && css.includes('--bg-card: #ffffff'));
+  // Light blue motif and unbolded inline muscle/equipment text (#4)
+  assert.ok(css.includes('--bg-primary: #f0f6fc') && css.includes('--bg-card: #ffffff'));
   assert.ok(css.includes('.exercise-inline-meta') && css.includes('font-weight: 400'));
 });
 

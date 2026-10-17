@@ -24,10 +24,6 @@ let currentAnalysis = null;
 
 // DOM Elements
 const els = {
-  profileBtn: document.getElementById('profileBtn'),
-  activeProfileAvatar: document.getElementById('activeProfileAvatar'),
-  activeProfileName: document.getElementById('activeProfileName'),
-  activeProfileOptionBadge: document.getElementById('activeProfileOptionBadge'),
   settingsBtn: document.getElementById('settingsBtn'),
   excludedCountBadge: document.getElementById('excludedCountBadge'),
 
@@ -77,11 +73,6 @@ function populateWorkoutTypeSelect() {
 function syncUIFromActiveProfile() {
   const profile = dataService.getActiveProfile();
 
-  // Top nav profile badge
-  els.activeProfileAvatar.textContent = (profile.name || 'U')[0].toUpperCase();
-  els.activeProfileName.textContent = profile.name;
-  els.activeProfileOptionBadge.textContent = `${profile.optionsPerSlot || 1}x`;
-
   const excludedCount = (profile.excludedExerciseIds || []).length;
   if (excludedCount > 0) {
     els.excludedCountBadge.textContent = `${excludedCount} Excluded`;
@@ -118,6 +109,8 @@ function rehydrateActiveWorkout(workoutState) {
     if (typeof r.completed !== 'boolean') r.completed = false;
     r.slots.forEach(s => {
       s.options = s.options.map(o => exMap.get(o.id) || o);
+      s.optionChosen = !!s.optionChosen;
+      s.selectedOptionIndex = s.selectedOptionIndex || 0;
       if (checkMode.mode === 'exercise-sets') {
         if (!Array.isArray(s.completedSets) || s.completedSets.length !== checkMode.count) {
           s.completedSets = Array.from({ length: checkMode.count }, () => !!s.completed);
@@ -237,9 +230,9 @@ function renderActiveWorkout() {
         if (equipLabel) inlineMetaParts.push(equipLabel);
         const inlineMeta = inlineMetaParts.join(' · ');
 
-        // Multi-option tabs if slot has 2 or 3 options
+        // Multi-option tabs if slot has 2 or 3 options and user hasn't chosen one yet
         let multiTabsHtml = '';
-        if (slot.options.length > 1) {
+        if (slot.options.length > 1 && !slot.optionChosen) {
           multiTabsHtml = `
             <div class="multi-option-tabs" role="tablist" aria-label="Exercise slot options">
               ${slot.options
@@ -467,6 +460,35 @@ function openSwapModal(roundIndex, slotIndex) {
   document.getElementById('swapModalTitle').textContent =
     currentEx ? currentEx.name : 'Swap Exercise';
 
+  const slotOptionsContainer = document.getElementById('swapSlotOptionsContainer');
+  if (slot && slot.options && slot.options.length > 1) {
+    slotOptionsContainer.hidden = false;
+    slotOptionsContainer.innerHTML = `
+      <div class="swap-slot-options-header">
+        <span class="swap-slot-options-title">Slot Alternatives (${slot.options.length})</span>
+        <button type="button" class="text-link-btn" id="restoreSlotPillsBtn">Show on Card</button>
+      </div>
+      <div class="swap-slot-options-pills">
+        ${slot.options
+          .map(
+            (optEx, idx) => `
+          <button
+            type="button"
+            class="swap-slot-pill ${idx === (slot.selectedOptionIndex || 0) ? 'active' : ''}"
+            data-action="pick-original-option"
+            data-option-index="${idx}"
+          >
+            ${idx + 1}. ${optEx.name}
+          </button>`
+          )
+          .join('')}
+      </div>
+    `;
+  } else if (slotOptionsContainer) {
+    slotOptionsContainer.hidden = true;
+    slotOptionsContainer.innerHTML = '';
+  }
+
   document.getElementById('swapSearchInput').value = '';
   document.getElementById('swapFilterMatchingBtn').classList.add('active');
   document.getElementById('swapFilterAllBtn').classList.remove('active');
@@ -586,27 +608,11 @@ function openSettingsModal() {
 function renderSettingsModalContent() {
   const profile = dataService.getActiveProfile();
 
-  const profilesContainer = document.getElementById('profileListContainer');
-  profilesContainer.innerHTML = dataService.profiles
-    .map(
-      p => `
-      <button
-        type="button"
-        class="profile-chip ${p.id === profile.id ? 'active' : ''}"
-        data-action="switch-profile"
-        data-profile-id="${p.id}"
-      >
-        ${p.name} (${p.optionsPerSlot || 1}x)
-      </button>`
-    )
-    .join('');
-
   document.querySelectorAll('[data-options-count]').forEach(btn => {
     const count = Number(btn.getAttribute('data-options-count'));
     btn.classList.toggle('active', count === (profile.optionsPerSlot || 1));
   });
 
-  document.getElementById('exclusionUserNameLabel').textContent = profile.name;
   renderExclusionChecklist();
 }
 
@@ -662,7 +668,6 @@ function bindEvents() {
     if (wk) openWorkoutTypeModal(wk.id);
   });
 
-  els.profileBtn.addEventListener('click', openSettingsModal);
   els.settingsBtn.addEventListener('click', openSettingsModal);
 
   els.modalBackdrop.addEventListener('click', closeAllModals);
@@ -737,6 +742,7 @@ function bindEvents() {
         }
         slot.completedSets[setIndex] = !slot.completedSets[setIndex];
         slot.completed = slot.completedSets.every(Boolean);
+        slot.optionChosen = true;
         dataService.saveProfilesToStorage();
         renderActiveWorkout();
       }
@@ -752,9 +758,14 @@ function bindEvents() {
       const slot = wkState.rounds[roundIndex]?.slots[slotIndex];
       if (slot) {
         slot.selectedOptionIndex = optionIndex;
+        slot.optionChosen = true;
         slot.manuallyModified = true;
         dataService.saveProfilesToStorage();
         renderActiveWorkout();
+        const chosenEx = getActiveSlotExercise(slot);
+        if (chosenEx) {
+          showToast(`Selected: ${chosenEx.name}`);
+        }
       }
     } else if (action === 'open-exercise-modal') {
       const exId = btn.getAttribute('data-exercise-id');
@@ -806,33 +817,47 @@ function bindEvents() {
     }
   });
 
+  // Swap Modal original slot options selection & restore
+  const slotOptionsBox = document.getElementById('swapSlotOptionsContainer');
+  if (slotOptionsBox) {
+    slotOptionsBox.addEventListener('click', e => {
+      const optBtn = e.target.closest('[data-action="pick-original-option"]');
+      if (optBtn && currentSwapContext) {
+        const optIdx = Number(optBtn.getAttribute('data-option-index'));
+        const profile = dataService.getActiveProfile();
+        const slot = profile.activeWorkout?.rounds?.[currentSwapContext.roundIndex]?.slots?.[currentSwapContext.slotIndex];
+        if (slot && slot.options[optIdx]) {
+          slot.selectedOptionIndex = optIdx;
+          slot.optionChosen = true;
+          slot.manuallyModified = true;
+          dataService.saveProfilesToStorage();
+          closeAllModals();
+          renderActiveWorkout();
+          showToast(`Selected: ${slot.options[optIdx].name}`);
+        }
+        return;
+      }
+
+      const restoreBtn = e.target.closest('#restoreSlotPillsBtn');
+      if (restoreBtn && currentSwapContext) {
+        const profile = dataService.getActiveProfile();
+        const slot = profile.activeWorkout?.rounds?.[currentSwapContext.roundIndex]?.slots?.[currentSwapContext.slotIndex];
+        if (slot) {
+          slot.optionChosen = false;
+          dataService.saveProfilesToStorage();
+          closeAllModals();
+          renderActiveWorkout();
+          showToast('Options restored to card');
+        }
+      }
+    });
+  }
+
   // Settings Modal interactions
-  document.getElementById('profileListContainer').addEventListener('click', e => {
-    const btn = e.target.closest('[data-action="switch-profile"]');
-    if (!btn) return;
-    const profileId = btn.getAttribute('data-profile-id');
-    dataService.setActiveProfile(profileId);
-    syncUIFromActiveProfile();
-    renderSettingsModalContent();
-    showToast(`Profile: ${dataService.getActiveProfile().name}`);
-  });
-
-  document.getElementById('addProfileBtn').addEventListener('click', () => {
-    const input = document.getElementById('newProfileNameInput');
-    const created = dataService.addProfile(input.value);
-    if (created) {
-      input.value = '';
-      syncUIFromActiveProfile();
-      renderSettingsModalContent();
-      showToast(`Created profile "${created.name}"`);
-    }
-  });
-
   document.querySelectorAll('[data-options-count]').forEach(btn => {
     btn.addEventListener('click', () => {
       const count = Number(btn.getAttribute('data-options-count'));
       dataService.setOptionsPerSlot(count);
-      els.activeProfileOptionBadge.textContent = `${count}x`;
       renderSettingsModalContent();
       handleGenerateWorkout(false);
       showToast(`${count} option${count > 1 ? 's' : ''} per slot`);

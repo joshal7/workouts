@@ -16,18 +16,13 @@ export const DEFAULT_INPUTS = {
 };
 
 export function createDefaultProfiles() {
+  const uniqueId = typeof crypto !== 'undefined' && crypto.randomUUID
+    ? `user-${crypto.randomUUID().slice(0, 8)}`
+    : `user-${Math.random().toString(36).slice(2, 9)}`;
   return [
     {
-      id: 'user-josh',
-      name: 'Josh',
-      excludedExerciseIds: [],
-      optionsPerSlot: 1,
-      inputs: { ...DEFAULT_INPUTS },
-      activeWorkout: null
-    },
-    {
-      id: 'user-guest',
-      name: 'Guest',
+      id: uniqueId,
+      name: 'User',
       excludedExerciseIds: [],
       optionsPerSlot: 1,
       inputs: { ...DEFAULT_INPUTS },
@@ -41,7 +36,7 @@ export class DataService {
     this.sheetData = null;
     this.enrichments = null;
     this.profiles = createDefaultProfiles();
-    this.activeProfileId = 'user-josh';
+    this.activeProfileId = this.profiles[0].id;
   }
 
   /**

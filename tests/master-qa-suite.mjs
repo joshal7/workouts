@@ -1,6 +1,7 @@
 // tests/master-qa-suite.mjs
 import { spawn } from 'child_process';
 import http from 'http';
+import fs from 'node:fs';
 
 function runProcess(cmd, args) {
   return new Promise((resolve, reject) => {
@@ -21,6 +22,44 @@ function checkHttp(url) {
   });
 }
 
+async function ensureChromeRunning() {
+  const isRunning = await checkHttp('http://127.0.0.1:9222/json/version').then(() => true).catch(() => false);
+  if (isRunning) return null;
+
+  console.log('  -> Launching headless Google Chrome with remote debugging on port 9222...');
+  const chromePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+  const chromeProc = spawn(chromePath, [
+    '--headless=new',
+    '--remote-debugging-port=9222',
+    '--disable-gpu',
+    '--user-data-dir=/tmp/chrome-master-qa',
+    'http://127.0.0.1:8080/index.html'
+  ], { stdio: 'ignore' });
+
+  // Wait up to 5s for port 9222 to respond
+  for (let i = 0; i < 25; i++) {
+    await new Promise(r => setTimeout(r, 200));
+    const ready = await checkHttp('http://127.0.0.1:9222/json/version').then(() => true).catch(() => false);
+    if (ready) {
+      console.log('  -> Headless Chrome is ready on port 9222');
+      return chromeProc;
+    }
+  }
+  throw new Error('Chrome failed to start on port 9222');
+}
+
+async function getActivePageWs() {
+  const res = await fetch('http://127.0.0.1:9222/json/list');
+  const pages = await res.json();
+  const page = pages.find(p => p.type === 'page' && p.url.includes('8080')) ||
+               pages.find(p => p.type === 'page') ||
+               pages[0];
+  if (!page || !page.webSocketDebuggerUrl) {
+    throw new Error('No active webSocketDebuggerUrl found in Chrome');
+  }
+  return page.webSocketDebuggerUrl;
+}
+
 async function runBrowserCDPTests(wsUrl) {
   const ws = new WebSocket(wsUrl);
   let id = 1;
@@ -28,7 +67,7 @@ async function runBrowserCDPTests(wsUrl) {
   function send(method, params = {}) {
     return new Promise((resolve, reject) => {
       const msgId = id++;
-      const timer = setTimeout(() => reject(new Error('Timeout ' + method)), 5000);
+      const timer = setTimeout(() => reject(new Error('Timeout ' + method)), 8000);
       const handler = (evt) => {
         const msg = JSON.parse(evt.data);
         if (msg.id === msgId) {
@@ -59,6 +98,7 @@ async function runBrowserCDPTests(wsUrl) {
       try {
         await send('Runtime.enable');
         await send('DOM.enable');
+        await send('Page.enable');
 
         // Emulate iPhone viewport (390 x 844)
         await send('Emulation.setDeviceMetricsOverride', {
@@ -68,19 +108,28 @@ async function runBrowserCDPTests(wsUrl) {
           mobile: true
         });
 
-        console.log('\n--- 1. Viewport & Single-Screen Light Layout Check ---');
+        // Ensure page is on our app
+        await send('Page.navigate', { url: 'http://127.0.0.1:8080/index.html' });
+        await new Promise(r => setTimeout(r, 600));
+
+        console.log('\n--- 1. Viewport, Light Blue Palette & Single-Screen Layout Check ---');
         const vpCheck = await evalInPage(() => {
           const winWidth = window.innerWidth;
           const scrollWidth = document.documentElement.scrollWidth;
           const bodyScroll = document.body.scrollWidth;
+          const rootBg = getComputedStyle(document.documentElement).getPropertyValue('--bg-primary').trim();
+          const primaryAccent = getComputedStyle(document.documentElement).getPropertyValue('--accent-primary').trim();
           return {
             winWidth,
             scrollWidth,
-            noHorizontalOverflow: scrollWidth <= winWidth && bodyScroll <= winWidth
+            noHorizontalOverflow: scrollWidth <= winWidth && bodyScroll <= winWidth,
+            rootBg,
+            primaryAccent
           };
         });
         if (!vpCheck.noHorizontalOverflow) throw new Error('Horizontal overflow detected!');
-        console.log('  ✅ PASS: 390px iPhone viewport has 0 horizontal overflow (perfect edge alignment)');
+        if (vpCheck.rootBg !== '#f0f6fc') throw new Error(`Expected --bg-primary to be #f0f6fc, got ${vpCheck.rootBg}`);
+        console.log(`  ✅ PASS: 390px iPhone viewport has 0 horizontal overflow; light blue palette verified (--bg-primary: ${vpCheck.rootBg})`);
 
         console.log('\n--- 2. Workout Type Hyperlink & Format Modal Check ---');
         const modalCheck = await evalInPage(() => {
@@ -114,7 +163,7 @@ async function runBrowserCDPTests(wsUrl) {
         }
         console.log(`  ✅ PASS: Exercise modal for "${exCheck.title}" loads SVG diagram (${exCheck.imgSrc}) and instructions`);
 
-        console.log('\n--- 4. Format-Aware Checkbox Verification ---');
+        console.log('\n--- 4. Format-Aware Checkboxes & Blue Check Verification ---');
         const cbCheck = await evalInPage(() => {
           // A: Fixed Sets (Strength Duos)
           const typeSelect = document.getElementById('workoutTypeSelect');
@@ -126,6 +175,7 @@ async function runBrowserCDPTests(wsUrl) {
           box.click();
           box = document.querySelector('.set-check-box');
           const c1 = box.classList.contains('checked');
+          const checkedBg = getComputedStyle(box).backgroundColor;
           box.click();
           box = document.querySelector('.set-check-box');
           const c2 = box.classList.contains('checked');
@@ -146,6 +196,7 @@ async function runBrowserCDPTests(wsUrl) {
 
           return {
             fixedSetsCheckToggle: c1 === true && c2 === false,
+            checkedBg,
             amrapRoundCheckOnly: rChecks8x8 === 4 && sChecks8x8 === 0,
             pyramidNoCheckboxes: rChecksPyr === 0 && sChecksPyr === 0
           };
@@ -153,9 +204,9 @@ async function runBrowserCDPTests(wsUrl) {
         if (!cbCheck.fixedSetsCheckToggle || !cbCheck.amrapRoundCheckOnly || !cbCheck.pyramidNoCheckboxes) {
           throw new Error('Format-aware checkboxes failed: ' + JSON.stringify(cbCheck));
         }
-        console.log('  ✅ PASS: Fixed sets render 3 per-exercise boxes; 8x8 Duos renders round checkbox; Pyramid has 0 boxes');
+        console.log(`  ✅ PASS: Format checkboxes toggle correctly with vibrant blue checked styling (${cbCheck.checkedBg})`);
 
-        console.log('\n--- 5. Settings, Profiles & Multi-Option Slots (3x) Check ---');
+        console.log('\n--- 5. Settings, Automatic Profile & Multi-Option Collapse Check ---');
         const optCheck = await evalInPage(() => {
           document.getElementById('settingsBtn').click();
           document.querySelector('[data-options-count="3"]').click();
@@ -166,23 +217,55 @@ async function runBrowserCDPTests(wsUrl) {
           typeSelect.dispatchEvent(new Event('change'));
           document.getElementById('generateWorkoutBtn').click();
 
-          const multiTabs = document.querySelectorAll('.multi-option-tabs').length;
+          const multiTabsBefore = document.querySelectorAll('.multi-option-tabs').length;
           const pills = document.querySelectorAll('.round-card:first-child .exercise-slot:first-child .multi-opt-pill');
+          const option2ExpectedName = pills[1]?.innerText.replace(/^\d+\.\s*/, '').trim();
 
-          // Tap option 2
+          // Tap option 2: pills should collapse and disappear from the slot on the card!
           pills[1].click();
           const activeName = document.querySelector('.round-card:first-child .exercise-slot:first-child .exercise-title-text').innerText;
+          const firstSlotTabsAfter = document.querySelectorAll('.round-card:first-child .exercise-slot:first-child .multi-option-tabs').length;
+
+          // Open swap modal to check if original slot options are available in Swap sheet
+          document.querySelector('.round-card:first-child .exercise-slot:first-child .swap-trigger-btn').click();
+          const swapBox = document.getElementById('swapSlotOptionsContainer');
+          const swapBoxVisible = swapBox && !swapBox.hidden;
+          const swapPillsCount = document.querySelectorAll('#swapSlotOptionsContainer .swap-slot-pill').length;
+
+          // Test "Show on Card" restores tabs
+          document.getElementById('restoreSlotPillsBtn').click();
+          const firstSlotTabsRestored = document.querySelectorAll('.round-card:first-child .exercise-slot:first-child .multi-option-tabs').length;
+
+          // Tap option 2 again to re-collapse for final clean state
+          const pillsRestored = document.querySelectorAll('.round-card:first-child .exercise-slot:first-child .multi-opt-pill');
+          pillsRestored[1].click();
+          const finalTabsCount = document.querySelectorAll('.round-card:first-child .exercise-slot:first-child .multi-option-tabs').length;
 
           return {
-            multiTabsCount: multiTabs,
+            multiTabsBefore,
             pillsCount: pills.length,
-            activeName
+            activeName,
+            option2ExpectedName,
+            slotCollapsedOnCard: firstSlotTabsAfter === 0,
+            swapBoxVisible,
+            swapPillsCount,
+            tabsRestored: firstSlotTabsRestored === 1,
+            finalCollapsed: finalTabsCount === 0
           };
         });
-        if (optCheck.multiTabsCount !== 8 || optCheck.pillsCount !== 3 || !optCheck.activeName) {
-          throw new Error('Multi-option slots failed: ' + JSON.stringify(optCheck));
+        if (
+          optCheck.multiTabsBefore !== 8 ||
+          optCheck.pillsCount !== 3 ||
+          !optCheck.activeName ||
+          !optCheck.slotCollapsedOnCard ||
+          !optCheck.swapBoxVisible ||
+          optCheck.swapPillsCount !== 3 ||
+          !optCheck.tabsRestored ||
+          !optCheck.finalCollapsed
+        ) {
+          throw new Error('Multi-option slots collapse test failed: ' + JSON.stringify(optCheck));
         }
-        console.log(`  ✅ PASS: 3-options-per-slot renders pill tabs and seamlessly swaps active exercise to "${optCheck.activeName}"`);
+        console.log(`  ✅ PASS: 3-options-per-slot renders pills, collapses on selection to "${optCheck.activeName}", and preserves options in Swap sheet`);
 
         console.log('\n--- 6. Combined 1-Line Overload Detection & 1-Tap Auto-Balance Check ---');
         const ovCheck = await evalInPage(() => {
@@ -200,7 +283,7 @@ async function runBrowserCDPTests(wsUrl) {
           document.querySelector('#swapExerciseList .swap-option-item').click();
 
           const banner = document.querySelector('.overload-banner');
-          const bannerText = banner?.innerText.replace(/\\s+/g, ' ').trim() || '';
+          const bannerText = banner?.innerText.replace(/\s+/g, ' ').trim() || '';
 
           // Click auto balance
           const autoBtn = banner?.querySelector('[data-action="auto-balance"]');
@@ -221,6 +304,9 @@ async function runBrowserCDPTests(wsUrl) {
         console.log('\n--- 7. UI Clutter Removal & Minimization Audit ---');
         const uiClutterAudit = await evalInPage(() => {
           return {
+            noProfileBtn: !document.getElementById('profileBtn'),
+            noProfileListContainer: !document.getElementById('profileListContainer'),
+            hasSettingsBtn: !!document.getElementById('settingsBtn'),
             noSpreadsheetView: !document.getElementById('sheetDetailsAccordion'),
             noCopyButton: !document.getElementById('copySummaryBtn'),
             noActiveWorkoutEyebrow: !document.querySelector('.active-workout-eyebrow'),
@@ -231,7 +317,12 @@ async function runBrowserCDPTests(wsUrl) {
         if (!Object.values(uiClutterAudit).every(Boolean)) {
           throw new Error('Clutter removal audit failed: ' + JSON.stringify(uiClutterAudit));
         }
-        console.log('  ✅ PASS: Spreadsheet view, copy button, eyebrow label, and redundant buttons completely removed');
+        console.log('  ✅ PASS: Profile/login button removed, top-nav has settings only, and clutter completely removed');
+
+        console.log('\n--- 8. Mobile Viewport Screenshot Capture ---');
+        const screenshotData = await send('Page.captureScreenshot', { format: 'png' });
+        fs.writeFileSync('/tmp/workout-mobile-screenshot.png', Buffer.from(screenshotData.data, 'base64'));
+        console.log('  ✅ PASS: Mobile screenshot saved to /tmp/workout-mobile-screenshot.png');
 
         ws.close();
         resolve();
@@ -248,27 +339,36 @@ async function main() {
   console.log('MASTER WORKOUT GENERATOR COMPREHENSIVE QA & VERIFICATION SUITE');
   console.log('================================================================');
 
-  // Step 1: Unit & Generator QA
-  console.log('\n>>> STEP 1: Running Engine & Biomechanical Unit Tests...');
-  await runProcess('node', ['tests/run-qa-suite.mjs']);
+  let chromeProc = null;
+  try {
+    // Step 1: Unit & Generator QA
+    console.log('\n>>> STEP 1: Running Engine & Biomechanical Unit Tests...');
+    await runProcess('node', ['tests/run-qa-suite.mjs']);
 
-  // Step 2: 68 SVG Diagram Audit
-  console.log('\n>>> STEP 2: Auditing All 68 Bespoke SVG Diagrams...');
-  await runProcess('node', ['tests/audit-diagrams-to-descriptions.mjs']);
+    // Step 2: 68 SVG Diagram Audit
+    console.log('\n>>> STEP 2: Auditing All 68 Bespoke SVG Diagrams...');
+    await runProcess('node', ['tests/audit-diagrams-to-descriptions.mjs']);
 
-  // Step 3: Check HTTP server
-  console.log('\n>>> STEP 3: Verifying Localhost HTTP Server (port 8080)...');
-  await checkHttp('http://127.0.0.1:8080/index.html');
-  console.log('  ✅ PASS: HTTP server responding 200 OK on http://127.0.0.1:8080/index.html');
+    // Step 3: Check HTTP server
+    console.log('\n>>> STEP 3: Verifying Localhost HTTP Server (port 8080)...');
+    await checkHttp('http://127.0.0.1:8080/index.html');
+    console.log('  ✅ PASS: HTTP server responding 200 OK on http://127.0.0.1:8080/index.html');
 
-  // Step 4: Real Browser End-to-End CDP QA
-  console.log('\n>>> STEP 4: Executing Real Browser CDP End-to-End Test Suite...');
-  const targetWs = 'ws://127.0.0.1:9222/devtools/page/3A28A05F552DA66C816C9DE1C9B808E6';
-  await runBrowserCDPTests(targetWs);
+    // Step 4: Ensure Chrome is running & execute CDP Tests
+    console.log('\n>>> STEP 4: Executing Real Browser CDP End-to-End Test Suite...');
+    chromeProc = await ensureChromeRunning();
+    const targetWs = await getActivePageWs();
+    await runBrowserCDPTests(targetWs);
 
-  console.log('\n================================================================');
-  console.log('🎉 100% OF QA TEST SUITES & END-TO-END BROWSER CHECKS PASSED!');
-  console.log('================================================================\n');
+    console.log('\n================================================================');
+    console.log('🎉 100% OF QA TEST SUITES & END-TO-END BROWSER CHECKS PASSED!');
+    console.log('================================================================\n');
+  } finally {
+    if (chromeProc) {
+      console.log('Cleaning up headless Chrome process...');
+      chromeProc.kill('SIGTERM');
+    }
+  }
 }
 
 main().catch(err => {

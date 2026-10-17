@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Workouts" />
-  <meta name="theme-color" content="#f8fafc" />
+  <meta name="theme-color" content="#f0f6fc" />
 
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/svg+xml" href="./diagrams/app-icon.svg" />
@@ -27,11 +27,6 @@
       </div>
 
       <div class="nav-actions">
-        <button id="profileBtn" class="pill-btn profile-btn" type="button" aria-label="Switch user profile or settings">
-          <span class="profile-avatar" id="activeProfileAvatar">J</span>
-          <span id="activeProfileName">Josh</span>
-          <span class="OptionBadge" id="activeProfileOptionBadge">1x</span>
-        </button>
         <button id="settingsBtn" class="icon-btn" type="button" aria-label="User Settings">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="4" y1="21" x2="4" y2="14"></line>
@@ -205,6 +200,7 @@
       </div>
       <div class="sheet-content">
         <div class="swap-controls">
+          <div id="swapSlotOptionsContainer" class="swap-slot-options-box" hidden></div>
           <button id="randomSwapBtn" class="random-swap-btn" type="button">
             Pick Random Valid Replacement
           </button>
@@ -250,16 +246,6 @@
       </div>
       <div class="sheet-content">
         <div class="settings-block">
-          <h3>Profile</h3>
-          <p class="settings-help">Each profile saves its own excluded exercises, options per slot, and active workout.</p>
-          <div id="profileListContainer" class="profile-chips-row"></div>
-          <div class="new-profile-row">
-            <input id="newProfileNameInput" type="text" placeholder="New profile name..." class="search-input" />
-            <button id="addProfileBtn" class="secondary-pill-btn" type="button">Add</button>
-          </div>
-        </div>
-
-        <div class="settings-block">
           <h3>Options per Exercise Slot</h3>
           <p class="settings-help">Provide 1 single exercise or 2–3 balanced options per slot.</p>
           <div class="segmented-control options-per-slot-control">
@@ -274,7 +260,7 @@
             <h3>Exercise Exclusion List</h3>
             <button id="clearExclusionsBtn" class="text-link-btn" type="button">Include All</button>
           </div>
-          <p class="settings-help">Uncheck exercises to exclude them for <strong id="exclusionUserNameLabel">Josh</strong>.</p>
+          <p class="settings-help">Uncheck exercises to exclude them from your workouts.</p>
           <input id="exclusionSearchInput" type="search" placeholder="Filter exercises..." class="search-input" />
           <div id="exclusionChecklist" class="exclusion-checklist"></div>
         </div>
