@@ -140,9 +140,11 @@ test('All 68 SVG diagrams exist, contain valid SVG, highlight Pri/Sec muscles, a
     assert.ok(fs.existsSync(svgPath), `Missing SVG diagram file: ${svgPath}`);
 
     const svgContent = fs.readFileSync(svgPath, 'utf8');
+    const escapedName = ex.name.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    const escapedBadge = enrich.badge.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
     assert.ok(svgContent.startsWith('<svg') && svgContent.endsWith('</svg>'), `Invalid SVG wrapper for ${ex.id}`);
-    assert.ok(svgContent.includes(ex.name), `SVG aria-label should reference ${ex.name}`);
-    assert.ok(svgContent.includes(enrich.badge.replace(/&/g, '&amp;')) || svgContent.includes(enrich.badge), `SVG missing badge for ${ex.id}`);
+    assert.ok(svgContent.includes(escapedName), `SVG aria-label should reference ${escapedName}`);
+    assert.ok(svgContent.includes(escapedBadge), `SVG missing XML-escaped badge for ${ex.id}`);
     assert.ok(svgContent.includes(`Equip: ${ex.equipment}`), `SVG missing equipment label for ${ex.id}`);
 
     const priMuscles = SPECIFIC_MUSCLES.filter(m => ex.muscles[m] === 'Pri');
@@ -468,6 +470,12 @@ test('HTML/CSS/JS UI audit: Light motif, hyperlinked workout type, and removed S
   // Light blue motif and unbolded inline muscle/equipment text (#4)
   assert.ok(css.includes('--bg-primary: #f0f6fc') && css.includes('--bg-card: #ffffff'));
   assert.ok(css.includes('.exercise-inline-meta') && css.includes('font-weight: 400'));
+
+  // Removed Audit Update box from app and gallery
+  const galleryHtml = fs.readFileSync(path.join(rootDir, 'qa-gallery.html'), 'utf8');
+  assert.ok(!html.includes('exerciseModalAuditBox') && !html.includes('audit-note-box'), 'Audit box must be removed from index.html');
+  assert.ok(!galleryHtml.includes('audit-note-box') && !galleryHtml.includes('Audit Update:'), 'Audit box must be removed from qa-gallery.html');
+  assert.ok(!appJs.includes('exerciseModalAuditBox'), 'Audit box logic must be removed from src/app.js');
 });
 
 console.log(`\n🎉 ALL ${passed} QA TEST SUITES PASSED SUCCESSFULLY!`);

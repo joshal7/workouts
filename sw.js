@@ -1,4 +1,4 @@
-const CACHE_NAME = 'joshal-workout-pwa-v4';
+const CACHE_NAME = 'joshal-workout-pwa-v5';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -42,6 +42,9 @@ self.addEventListener('fetch', event => {
         }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(async () => {
+        const cached = await caches.match(event.request);
+        return cached || Response.error();
+      })
   );
 });

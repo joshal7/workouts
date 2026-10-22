@@ -2,6 +2,37 @@
 import { spawn } from 'child_process';
 import http from 'http';
 import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const rootDir = path.resolve(__dirname, '..');
+
+function startLocalStaticServer(port = 8080) {
+  const mime = {
+    '.html': 'text/html',
+    '.js': 'application/javascript',
+    '.css': 'text/css',
+    '.json': 'application/json',
+    '.svg': 'image/svg+xml'
+  };
+  return new Promise((resolve, reject) => {
+    const server = http.createServer((req, res) => {
+      const urlPath = (req.url || '/').split('?')[0];
+      const rel = urlPath === '/' ? 'index.html' : urlPath.replace(/^\/+/, '');
+      const fullPath = path.join(rootDir, rel);
+      if (!fs.existsSync(fullPath) || fs.statSync(fullPath).isDirectory()) {
+        res.writeHead(404);
+        res.end('Not found');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': mime[path.extname(fullPath)] || 'text/plain' });
+      res.end(fs.readFileSync(fullPath));
+    });
+    server.on('error', reject);
+    server.listen(port, '127.0.0.1', () => resolve(server));
+  });
+}
 
 function runProcess(cmd, args) {
   return new Promise((resolve, reject) => {
@@ -324,6 +355,37 @@ async function runBrowserCDPTests(wsUrl) {
         fs.writeFileSync('/tmp/workout-mobile-screenshot.png', Buffer.from(screenshotData.data, 'base64'));
         console.log('  ✅ PASS: Mobile screenshot saved to /tmp/workout-mobile-screenshot.png');
 
+        console.log('\n--- 9. QA Gallery All 68 Diagrams Render & No Audit Box Check ---');
+        await send('Emulation.setDeviceMetricsOverride', {
+          width: 1280,
+          height: 900,
+          deviceScaleFactor: 2,
+          mobile: false
+        });
+        await send('Page.navigate', { url: 'http://127.0.0.1:8080/qa-gallery.html' });
+        await new Promise(r => setTimeout(r, 1200));
+
+        const galleryCheck = await evalInPage(() => {
+          const cards = Array.from(document.querySelectorAll('article.qa-card'));
+          const broken = cards
+            .map(c => {
+              const img = c.querySelector('img');
+              return {
+                id: c.dataset.exerciseId,
+                complete: img?.complete || false,
+                w: img?.naturalWidth || 0,
+                h: img?.naturalHeight || 0
+              };
+            })
+            .filter(x => !x.complete || x.w !== 680 || x.h !== 248);
+          const auditBoxes = document.querySelectorAll('.audit-note-box').length;
+          return { totalCards: cards.length, brokenCount: broken.length, broken, auditBoxes };
+        });
+        if (galleryCheck.totalCards !== 68 || galleryCheck.brokenCount > 0 || galleryCheck.auditBoxes > 0) {
+          throw new Error('QA Gallery check failed: ' + JSON.stringify(galleryCheck));
+        }
+        console.log('  ✅ PASS: All 68/68 exercise SVG diagrams rendered cleanly (680x248) with 0 broken images and 0 audit update boxes');
+
         ws.close();
         resolve();
       } catch (err) {
@@ -340,6 +402,7 @@ async function main() {
   console.log('================================================================');
 
   let chromeProc = null;
+  let localServer = null;
   try {
     // Step 1: Unit & Generator QA
     console.log('\n>>> STEP 1: Running Engine & Biomechanical Unit Tests...');
@@ -349,8 +412,12 @@ async function main() {
     console.log('\n>>> STEP 2: Auditing All 68 Bespoke SVG Diagrams...');
     await runProcess('node', ['tests/audit-diagrams-to-descriptions.mjs']);
 
-    // Step 3: Check HTTP server
+    // Step 3: Check or Start HTTP server
     console.log('\n>>> STEP 3: Verifying Localhost HTTP Server (port 8080)...');
+    const serverAlreadyRunning = await checkHttp('http://127.0.0.1:8080/index.html').then(() => true).catch(() => false);
+    if (!serverAlreadyRunning) {
+      localServer = await startLocalStaticServer(8080);
+    }
     await checkHttp('http://127.0.0.1:8080/index.html');
     console.log('  ✅ PASS: HTTP server responding 200 OK on http://127.0.0.1:8080/index.html');
 
@@ -367,6 +434,9 @@ async function main() {
     if (chromeProc) {
       console.log('Cleaning up headless Chrome process...');
       chromeProc.kill('SIGTERM');
+    }
+    if (localServer) {
+      localServer.close();
     }
   }
 }

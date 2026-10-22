@@ -70,7 +70,6 @@
     <div class="qa-filter-bar">
       <input id="qaSearch" type="search" placeholder="Search exercise, muscle, equipment, or pose..." class="search-input" style="max-width:340px;" />
       <button class="secondary-pill-btn" data-filter="all" type="button">All (68)</button>
-      <button class="secondary-pill-btn" data-filter="audited" type="button">🔬 Muscle Audit Updated</button>
       <button class="secondary-pill-btn" data-filter="Upper Body" type="button">Upper Body</button>
       <button class="secondary-pill-btn" data-filter="Core" type="button">Core</button>
       <button class="secondary-pill-btn" data-filter="Legs" type="button">Legs</button>
@@ -93,7 +92,6 @@
     function render() {
       const q = (searchInput.value || '').trim().toLowerCase();
       const list = ds.sheetData.exercises.filter(ex => {
-        if (activeFilter === 'audited' && !ex.auditUpdated) return false;
         if (['Upper Body', 'Core', 'Legs'].includes(activeFilter) && ex.bodyCategories[activeFilter] !== 'Pri') {
           return false;
         }
@@ -118,7 +116,7 @@
               <span class="mini-tag">${ex.equipment}</span>
             </div>
             <div class="diagram-container">
-              <img src="./${enrich.diagram}" alt="${ex.name} diagram" class="exercise-diagram-img" loading="lazy" />
+              <img src="./${enrich.diagram}" alt="${ex.name} diagram" width="680" height="248" class="exercise-diagram-img" />
             </div>
             <div class="badge-row">
               ${pri.map(m => `<span class="mini-tag pri-muscle">Pri: ${m}</span>`).join('')}
@@ -131,7 +129,6 @@
             <div class="form-tip-box" style="font-size:12px;">
               <strong>💡 Form Cue:</strong> ${enrich.formTip}
             </div>
-            ${ex.auditUpdated ? `<div class="audit-note-box" style="font-size:11.5px;"><strong>🔬 Audit Update:</strong> ${ex.auditNote}</div>` : ''}
           </article>
         `;
       }).join('');

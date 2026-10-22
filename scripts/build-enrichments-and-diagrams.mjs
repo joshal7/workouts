@@ -160,7 +160,7 @@ const exerciseSpecs = {
     frames: [
       { label: '1. Stop 1 (Half Down)', phase: 'plank-mid', note: 'Hold 1s' },
       { label: '2. Stop 2 (1" Hover)', phase: 'plank-low', note: 'Hold 1s' },
-      { label: '3. Stop 3 & Lockout', phase: 'plank-high', arrow: 'up', note: 'Hold 1s → Top' }
+      { label: '3. Stop 3 & Lockout', phase: 'plank-mid', arrow: 'up', note: 'Hold 1s → Top' }
     ]
   },
   'pushups-with-shoulder-tap': {
@@ -192,7 +192,7 @@ const exerciseSpecs = {
     badge: 'WIDE ARC FLY',
     frames: [
       { label: '1. Wide Pectoral Stretch', phase: 'bench-fly-open' },
-      { label: '2. Arc Squeeze Together', phase: 'bench-press-top', arrow: 'arc-in' }
+      { label: '2. Arc Squeeze Together', phase: 'bench-fly-closed', arrow: 'arc-in' }
     ]
   },
   'chest-press-6-6-6': {
@@ -207,7 +207,7 @@ const exerciseSpecs = {
     equip: 'dumbbells-press',
     badge: '6 BOTH · 6R · 6L',
     frames: [
-      { label: '1. 6x Both Arms', phase: 'bench-press-both', note: 'Reps 1–6' },
+      { label: '1. 6x Both Arms', phase: 'bench-press-both', arrow: 'skull-up', note: 'Reps 1–6' },
       { label: '2. 6x Right (Hold Left)', phase: 'bench-press-1arm-r', note: 'Reps 7–12' },
       { label: '3. 6x Left (Hold Right)', phase: 'bench-press-1arm-l', note: 'Reps 13–18' }
     ]
@@ -306,7 +306,7 @@ const exerciseSpecs = {
     badge: 'TRX EXTENSION',
     frames: [
       { label: '1. Forehead to Hands (Bent)', phase: 'trx-tricep-bent' },
-      { label: '2. Full Elbow Extension', phase: 'trx-tricep-ext', arrow: 'trx-push' }
+      { label: '2. Full Elbow Extension', phase: 'trx-tricep-ext', arrow: 'trx-tricep-ext' }
     ]
   },
   'chair-dips': {
@@ -484,8 +484,8 @@ const exerciseSpecs = {
     equip: 'pullup-bar',
     badge: 'UNDERHAND GRIP',
     frames: [
-      { label: '1. Supinated Hang', phase: 'pullup-bottom' },
-      { label: '2. Chin Over Bar Squeeze', phase: 'pullup-top', arrow: 'up' }
+      { label: '1. Supinated Hang', phase: 'chinup-bottom' },
+      { label: '2. Chin Over Bar Squeeze', phase: 'chinup-top', arrow: 'up' }
     ]
   },
   'face-pulls': {
@@ -580,8 +580,8 @@ const exerciseSpecs = {
     equip: 'trx-feet',
     badge: 'CRUNCH / PIKE',
     frames: [
-      { label: '1. Suspended Plank', phase: 'roller-plank' },
-      { label: '2. Knee-Tuck Crunch (or Pike)', phase: 'roller-tuck', arrow: 'tuck-in' }
+      { label: '1. Suspended TRX Plank', phase: 'trx-crunch-plank' },
+      { label: '2. Knee-Tuck Crunch (or Pike)', phase: 'trx-crunch-tuck', arrow: 'tuck-in' }
     ]
   },
   'crunch-pike-on-roller': {
@@ -920,8 +920,8 @@ const exerciseSpecs = {
     equip: 'band-ankles',
     badge: 'FWD / BACK WALK',
     frames: [
-      { label: '1. Low Quarter-Squat Stance', phase: 'band-walk-narrow' },
-      { label: '2. Diagonal Monster Step', phase: 'band-walk-wide', arrow: 'fwd-back' }
+      { label: '1. Low Quarter-Squat Stance', phase: 'monster-walk-1' },
+      { label: '2. Forward / Backward Stride', phase: 'monster-walk-2', arrow: 'fwd-back' }
     ]
   },
   'band-leg-kick-backs-and-diagonals': {
@@ -952,8 +952,8 @@ const exerciseSpecs = {
     equip: 'bodyweight',
     badge: 'SOLES TOGETHER PUMP',
     frames: [
-      { label: '1. Soles Together (Knees Wide)', phase: 'bridge-low' },
-      { label: '2. High Frog Hip Bridge', phase: 'bridge-butterfly', arrow: 'up' }
+      { label: '1. Soles Together (Knees Wide)', phase: 'frog-pump-low' },
+      { label: '2. High Frog Hip Bridge', phase: 'frog-pump-high', arrow: 'up' }
     ]
   },
   'squats': {
@@ -1196,7 +1196,7 @@ const exerciseSpecs = {
     frames: [
       { label: '1. Drop to Plank / Push-up', phase: 'plank-low' },
       { label: '2. Snap Feet In Flat', phase: 'squat-low' },
-      { label: '3. Explosive Vertical Jump', phase: 'squat-air', arrow: 'up' }
+      { label: '3. Explosive Vertical Jump', phase: 'burpee-jump', arrow: 'up' }
     ]
   },
   'single-leg-deadlift': {
@@ -1449,9 +1449,26 @@ function getPhasePose(phase) {
       hip: [126, 128],
       knee: [156, 122],
       ankle: [166, 165],
-      elbow: [74, 146],
-      wrist: [68, 116],
-      dumbbell: [68, 112]
+      elbow: [58, 144],
+      wrist: [42, 118],
+      elbow2: [88, 144],
+      wrist2: [104, 118],
+      dumbbell: [40, 114],
+      dumbbell2: [106, 114]
+    },
+    'bench-fly-closed': {
+      bench: [38, 138, 110],
+      head: [48, 124, -90],
+      shoulder: [72, 126],
+      hip: [126, 128],
+      knee: [156, 122],
+      ankle: [166, 165],
+      elbow: [64, 96],
+      wrist: [68, 68],
+      elbow2: [82, 96],
+      wrist2: [78, 68],
+      dumbbell: [66, 64],
+      dumbbell2: [80, 64]
     },
     'bench-press-top': {
       bench: [38, 138, 110],
@@ -1471,9 +1488,12 @@ function getPhasePose(phase) {
       hip: [126, 128],
       knee: [156, 122],
       ankle: [166, 165],
-      elbow: [72, 136],
-      wrist: [72, 102],
-      dumbbell: [72, 96]
+      elbow: [66, 136],
+      wrist: [66, 102],
+      elbow2: [80, 136],
+      wrist2: [80, 102],
+      dumbbell: [66, 96],
+      dumbbell2: [80, 96]
     },
     'bench-press-1arm-r': {
       bench: [38, 138, 110],
@@ -1572,7 +1592,9 @@ function getPhasePose(phase) {
       knee: [144, 142],
       ankle: [156, 165],
       elbow: [86, 52],
-      wrist: [68, 36]
+      wrist: [68, 36],
+      elbow2: [96, 48],
+      wrist2: [82, 30]
     },
     'trx-pull-t': {
       trxAnchor: [28, 22],
@@ -1581,8 +1603,10 @@ function getPhasePose(phase) {
       hip: [128, 118],
       knee: [144, 142],
       ankle: [156, 165],
-      elbow: [108, 76],
-      wrist: [76, 72]
+      elbow: [90, 74],
+      wrist: [70, 72],
+      elbow2: [126, 78],
+      wrist2: [146, 76]
     },
     'trx-chop-finish': {
       trxAnchor: [28, 22],
@@ -1660,9 +1684,12 @@ function getPhasePose(phase) {
       hip: [105, 112],
       knee: [105, 138],
       ankle: [105, 165],
-      elbow: [122, 86],
-      wrist: [124, 64],
-      dumbbell: [124, 62]
+      elbow: [92, 86],
+      wrist: [94, 64],
+      elbow2: [118, 86],
+      wrist2: [116, 64],
+      dumbbell: [92, 62],
+      dumbbell2: [118, 62]
     },
     'press-start': {
       head: [105, 48, 0],
@@ -1722,9 +1749,12 @@ function getPhasePose(phase) {
       hip: [100, 112],
       knee: [100, 138],
       ankle: [100, 165],
-      elbow: [126, 68],
-      wrist: [154, 66],
-      dumbbell: [158, 66]
+      elbow: [126, 66],
+      wrist: [154, 64],
+      elbow2: [122, 74],
+      wrist2: [148, 72],
+      dumbbell: [158, 64],
+      dumbbell2: [152, 74]
     },
     'cheer-v': {
       head: [105, 48, 0],
@@ -1796,10 +1826,10 @@ function getPhasePose(phase) {
       hip: [105, 124],
       knee: [105, 148],
       ankle: [105, 166],
-      elbow: [84, 54],
-      wrist: [80, 28],
-      elbow2: [126, 54],
-      wrist2: [130, 28]
+      elbow: [82, 54],
+      wrist: [76, 28],
+      elbow2: [128, 54],
+      wrist2: [134, 28]
     },
     'pullup-top': {
       pullupBar: true,
@@ -1808,10 +1838,34 @@ function getPhasePose(phase) {
       hip: [105, 94],
       knee: [105, 124],
       ankle: [112, 144],
-      elbow: [78, 56],
-      wrist: [80, 28],
-      elbow2: [132, 56],
-      wrist2: [130, 28]
+      elbow: [76, 56],
+      wrist: [76, 28],
+      elbow2: [134, 56],
+      wrist2: [134, 28]
+    },
+    'chinup-bottom': {
+      pullupBar: true,
+      head: [105, 64, 0],
+      shoulder: [105, 82],
+      hip: [105, 124],
+      knee: [105, 148],
+      ankle: [105, 166],
+      elbow: [92, 54],
+      wrist: [92, 28],
+      elbow2: [118, 54],
+      wrist2: [118, 28]
+    },
+    'chinup-top': {
+      pullupBar: true,
+      head: [105, 28, 0],
+      shoulder: [105, 48],
+      hip: [105, 94],
+      knee: [105, 124],
+      ankle: [112, 144],
+      elbow: [88, 58],
+      wrist: [92, 28],
+      elbow2: [122, 58],
+      wrist2: [118, 28]
     },
     'facepull-start': {
       bandAnchor: [24, 58],
@@ -1872,6 +1926,28 @@ function getPhasePose(phase) {
       elbow: [168, 140],
       wrist: [188, 158],
       roller: [188, 160]
+    },
+    'trx-crunch-plank': {
+      trxAnchor: [38, 22],
+      trxTarget: 'ankle',
+      head: [162, 92, -15],
+      shoulder: [146, 102],
+      hip: [96, 118],
+      knee: [64, 134],
+      ankle: [38, 148],
+      elbow: [148, 134],
+      wrist: [150, 165]
+    },
+    'trx-crunch-tuck': {
+      trxAnchor: [38, 22],
+      trxTarget: 'ankle',
+      head: [162, 92, -15],
+      shoulder: [146, 102],
+      hip: [102, 112],
+      knee: [122, 138],
+      ankle: [86, 148],
+      elbow: [148, 134],
+      wrist: [150, 165]
     },
     'roller-plank': {
       head: [162, 92, -15],
@@ -2200,6 +2276,52 @@ function getPhasePose(phase) {
       wrist: [114, 94],
       bandAnkles: true
     },
+    'monster-walk-1': {
+      head: [118, 54, -8],
+      shoulder: [114, 74],
+      hip: [96, 116],
+      knee: [118, 138],
+      ankle: [116, 165],
+      knee2: [92, 140],
+      ankle2: [84, 165],
+      elbow: [118, 96],
+      wrist: [134, 90],
+      bandAnkles: true
+    },
+    'monster-walk-2': {
+      head: [124, 56, -8],
+      shoulder: [120, 76],
+      hip: [102, 118],
+      knee: [134, 138],
+      ankle: [138, 165],
+      knee2: [86, 142],
+      ankle2: [72, 165],
+      elbow: [124, 98],
+      wrist: [140, 92],
+      bandAnkles: true
+    },
+    'frog-pump-low': {
+      head: [42, 152, -90],
+      shoulder: [62, 156],
+      hip: [108, 156],
+      knee: [136, 118],
+      ankle: [156, 165],
+      knee2: [148, 136],
+      ankle2: [156, 165],
+      elbow: [84, 160],
+      wrist: [106, 162]
+    },
+    'frog-pump-high': {
+      head: [42, 152, -90],
+      shoulder: [62, 156],
+      hip: [108, 126],
+      knee: [138, 104],
+      ankle: [156, 165],
+      knee2: [150, 124],
+      ankle2: [156, 165],
+      elbow: [84, 160],
+      wrist: [106, 162]
+    },
     'kickback-stand': {
       head: [116, 48, 0],
       shoulder: [114, 68],
@@ -2257,6 +2379,17 @@ function getPhasePose(phase) {
       ankle: [102, 144],
       elbow: [96, 72],
       wrist: [86, 92]
+    },
+    'burpee-jump': {
+      head: [105, 34, 0],
+      shoulder: [105, 52],
+      hip: [105, 94],
+      knee: [105, 120],
+      ankle: [105, 144],
+      elbow: [94, 30],
+      wrist: [90, 14],
+      elbow2: [116, 30],
+      wrist2: [120, 14]
     },
     'sumo-top': {
       head: [105, 48, 0],
@@ -2477,6 +2610,15 @@ function getPhasePose(phase) {
   return P[phase] || P['squat-top'];
 }
 
+function escapeXml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 function renderMotionArrow(arrowType) {
   if (!arrowType) return '';
   const c = '#34d399';
@@ -2486,7 +2628,8 @@ function renderMotionArrow(arrowType) {
     case 'down':
       return `<path d="M 184 64 L 184 142" stroke="${c}" stroke-width="2.5" stroke-linecap="round" marker-end="url(#arrow)" />`;
     case 'arc-in':
-      return `<path d="M 118 106 Q 108 68 82 64" stroke="${c}" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />`;
+      return `<path d="M 40 98 Q 48 68 62 64" stroke="${c}" stroke-width="2.2" fill="none" marker-end="url(#arrow)" />
+              <path d="M 106 98 Q 98 68 84 64" stroke="${c}" stroke-width="2.2" fill="none" marker-end="url(#arrow)" />`;
     case 'curl':
       return `<path d="M 142 122 Q 158 92 138 66" stroke="${c}" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />`;
     case 'skull-up':
@@ -2500,6 +2643,8 @@ function renderMotionArrow(arrowType) {
       return `<path d="M 88 144 Q 148 136 166 78" stroke="${c}" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />`;
     case 'trx-push':
       return `<path d="M 164 126 L 188 104" stroke="${c}" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />`;
+    case 'trx-tricep-ext':
+      return `<path d="M 152 46 L 182 54" stroke="${c}" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />`;
     case 'trx-pull':
       return `<path d="M 62 96 L 88 64" stroke="${c}" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />`;
     case 'row-up':
@@ -2534,9 +2679,9 @@ function renderSingleFramePanel(frame, ex, panelX, panelWidth) {
   g += `<rect width="${panelWidth}" height="186" rx="12" fill="#0d1322" stroke="#1e293b" stroke-width="1.2" />`;
 
   // Step Title Pill inside top of frame
-  g += `<text x="12" y="21" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="700">${frame.label}</text>`;
+  g += `<text x="12" y="21" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="700">${escapeXml(frame.label)}</text>`;
   if (frame.note) {
-    g += `<text x="${panelWidth - 12}" y="21" text-anchor="end" fill="#38bdf8" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" font-weight="700">${frame.note}</text>`;
+    g += `<text x="${panelWidth - 12}" y="21" text-anchor="end" fill="#38bdf8" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" font-weight="700">${escapeXml(frame.note)}</text>`;
   }
 
   // Floor line
@@ -2562,7 +2707,7 @@ function renderSingleFramePanel(frame, ex, panelX, panelWidth) {
   }
   if (p.trxAnchor) {
     const [ax, ay] = p.trxAnchor;
-    const target = p.trxAnchor[0] > 100 ? p.ankle : p.wrist;
+    const target = p.trxTarget === 'ankle' || p.trxAnchor[0] > 100 ? p.ankle : p.wrist;
     g += `<circle cx="${ax}" cy="${ay}" r="4.5" fill="#facc15" />
           <line x1="${ax}" y1="${ay}" x2="${target[0]}" y2="${target[1]}" stroke="#facc15" stroke-width="2.2" stroke-dasharray="5 2" />`;
   }
@@ -2680,11 +2825,11 @@ function buildExerciseSVG(ex, spec) {
   const secMuscles = Object.entries(ex.muscles).filter(([, v]) => v === 'Sec').map(([k]) => k);
 
   const footerPills = [
-    ...priMuscles.map(m => `<tspan fill="#f97316" font-weight="700">● ${m} (PRI)</tspan>`),
-    ...secMuscles.map(m => `<tspan fill="#38bdf8" font-weight="600">  ○ ${m} (SEC)</tspan>`)
+    ...priMuscles.map(m => `<tspan fill="#f97316" font-weight="700">● ${escapeXml(m)} (PRI)</tspan>`),
+    ...secMuscles.map(m => `<tspan fill="#38bdf8" font-weight="600">  ○ ${escapeXml(m)} (SEC)</tspan>`)
   ].join('  ');
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" width="100%" height="100%" role="img" aria-label="${ex.name} multi-step exercise diagram">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" width="${totalW}" height="${totalH}" role="img" aria-label="${escapeXml(ex.name)} multi-step exercise diagram">
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
       <path d="M 0 1 L 10 5 L 0 9 z" fill="#34d399" />
@@ -2697,12 +2842,12 @@ function buildExerciseSVG(ex, spec) {
   <!-- Multi-Frame Motion Sequence Panels -->
   ${panelsSvg}
 
-  <!-- Minimalist Footer Bar: Target Muscles & Equipment -->
+  <!-- Minimalist Footer Bar: Target Muscles and Equipment -->
   <text x="16" y="220" fill="#cbd5e1" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11">
     ${footerPills}
   </text>
   <text x="${totalW - 16}" y="220" text-anchor="end" fill="#64748b" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10.5" font-weight="600">
-    ${spec.badge} · Equip: ${ex.equipment} · Cat: ${ex.workoutCategory}
+    ${escapeXml(spec.badge)} · Equip: ${escapeXml(ex.equipment)} · Cat: ${escapeXml(ex.workoutCategory)}
   </text>
 </svg>`;
 }

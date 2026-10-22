@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,6 +21,17 @@ for (const ex of sheetData.exercises) {
   const svgPath = path.join(rootDir, enrich.diagram);
   const svg = fs.readFileSync(svgPath, 'utf8');
 
+  // 0. Strict XML parsing validation via xmllint + intrinsic dimensions check
+  execFileSync('xmllint', ['--noout', svgPath]);
+  assert.ok(
+    !svg.replace(/<!--[\s\S]*?-->/g, '').match(/&(?!amp;|lt;|gt;|quot;|apos;|#\d+;|#x[0-9a-fA-F]+;)/),
+    `Diagram for "${ex.name}" contains unescaped XML ampersand`
+  );
+  assert.ok(
+    svg.includes('width="680" height="248"'),
+    `Diagram for "${ex.name}" must specify intrinsic width="680" height="248"`
+  );
+
   // 1. Verify multi-frame motion sequence (2 or 3 frames per exercise)
   assert.ok(
     svg.includes('>1. ') && svg.includes('>2. '),
@@ -40,8 +52,8 @@ for (const ex of sheetData.exercises) {
       `TRX exercise "${ex.name}" must use a TRX suspension pose, got ${enrich.pose}`
     );
     assert.ok(
-      svg.includes('stroke="#facc15"'),
-      `TRX diagram for "${ex.name}" must draw suspension strap lines`
+      svg.includes('stroke-dasharray="5 2"'),
+      `TRX diagram for "${ex.name}" must draw dashed suspension strap lines from anchor`
     );
   }
 

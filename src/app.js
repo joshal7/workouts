@@ -404,14 +404,6 @@ function openExerciseModal(exerciseId, roundIndex = null, slotIndex = null) {
 
   document.getElementById('exerciseModalTip').textContent = enrich.formTip || '';
 
-  const auditBox = document.getElementById('exerciseModalAuditBox');
-  if (ex.auditUpdated && ex.auditNote) {
-    document.getElementById('exerciseModalAuditNote').textContent = ex.auditNote;
-    auditBox.hidden = false;
-  } else {
-    auditBox.hidden = true;
-  }
-
   document.getElementById('exerciseModalFooterActions').hidden = !currentSwapContext;
   openModal(els.exerciseModal);
 }
