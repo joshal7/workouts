@@ -28,6 +28,7 @@ import {
   CUSTOM_TIMER_PRESETS,
   isTimedHiitWorkout,
   formatTimerClock,
+  getTimerBottomLabel,
   getDefaultExerciseTimerConfig,
   buildStockTimerSequence,
   buildCustomPresetTimerSequence,
@@ -852,6 +853,8 @@ test('Timed Duos (40/20) round timer starts with 10s yellow countdown followed b
   assert.equal(seq[0].type, 'countdown');
   assert.equal(seq[0].duration, 10);
   assert.equal(seq[0].color, 'yellow');
+  assert.equal(seq[0].exerciseName, 'Count Down');
+  assert.equal(getTimerBottomLabel(seq[0]), 'Count Down');
   assert.equal(formatTimerClock(seq[0].duration), '00:10');
 
   const exA = getActiveSlotExercise(wk.rounds[0].slots[0]).name;
@@ -867,10 +870,13 @@ test('Timed Duos (40/20) round timer starts with 10s yellow countdown followed b
     assert.equal(workStep.duration, 40);
     assert.equal(workStep.color, 'green');
     assert.equal(workStep.exerciseName, expectedExName);
+    assert.equal(getTimerBottomLabel(workStep), expectedExName);
 
     assert.equal(restStep.type, 'rest');
     assert.equal(restStep.duration, 20);
     assert.equal(restStep.color, 'blue');
+    assert.equal(restStep.exerciseName, 'Rest');
+    assert.equal(getTimerBottomLabel(restStep), 'Rest');
   }
 });
 

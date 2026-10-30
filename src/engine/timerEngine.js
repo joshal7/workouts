@@ -160,6 +160,23 @@ export function formatTimerClock(totalSeconds) {
 }
 
 /**
+ * Return the bottom display label for a timer step:
+ * - "Count Down" for the yellow countdown timer
+ * - "[name of exercise]" for the green exercise timer
+ * - "Rest" for the blue rest timer
+ */
+export function getTimerBottomLabel(step) {
+  if (!step) return '';
+  if (step.type === 'countdown') {
+    return step.customLabel || 'Count Down';
+  }
+  if (step.type === 'rest') {
+    return step.customLabel || 'Rest';
+  }
+  return step.exerciseName || 'Work';
+}
+
+/**
  * Return the default work/rest configuration for an exercise inside a given workout type.
  */
 export function getDefaultExerciseTimerConfig(workout) {
@@ -303,7 +320,7 @@ export function buildStockTimerSequence(
         type: 'rest',
         phaseLabel: customRestLabel || `Rest · ${setTag}`,
         exerciseId: ex?.id || null,
-        exerciseName: ex ? `Rest (${ex.name})` : 'Rest',
+        exerciseName: 'Rest',
         roundNumber,
         setNumber,
         totalSets,
@@ -529,7 +546,7 @@ export function buildStockTimerSequence(
         type: 'rest',
         phaseLabel: `Pyramid Rest · End of Set ${setNum}/${rungs.length}`,
         exerciseId: lastEx?.id || null,
-        exerciseName: `Rest after Set ${setNum}`,
+        exerciseName: 'Rest',
         roundNumber: setNum,
         setNumber: setNum,
         totalSets: rungs.length,
@@ -604,7 +621,7 @@ export function buildStockTimerSequence(
         type: 'rest',
         phaseLabel: `Round ${round.roundNumber} Recovery Rest`,
         exerciseId: ex2?.id || ex1?.id || null,
-        exerciseName: 'Rest before next Duo',
+        exerciseName: 'Rest',
         roundNumber: round.roundNumber,
         setNumber: 1,
         totalSets: 1,
@@ -692,7 +709,7 @@ export function buildCustomPresetTimerSequence(
         type: 'rest',
         phaseLabel: `Rest · Pair ${p + 1}/${totalPairs}`,
         exerciseId: ex?.id || null,
-        exerciseName: `Rest (${p + 1}/${totalPairs})`,
+        exerciseName: 'Rest',
         roundNumber: (round?.roundNumber) || 1,
         setNumber: p + 1,
         totalSets: totalPairs,
@@ -709,7 +726,7 @@ export function buildCustomPresetTimerSequence(
 /**
  * Ensure the timer sequence always starts with a 10-second yellow countdown and has "Up Next" metadata.
  */
-export function finalizeWithCountdown(rawSteps, countdownDuration = 10) {
+export function finalizeWithCountdown(rawSteps, countdownDuration = 10, customCountdownLabel = null) {
   const workAndRest = rawSteps.filter(s => s.type !== 'countdown');
   const firstStep = workAndRest[0];
 
@@ -718,7 +735,8 @@ export function finalizeWithCountdown(rawSteps, countdownDuration = 10) {
     type: 'countdown',
     phaseLabel: '10s Prep Countdown',
     exerciseId: firstStep?.exerciseId || null,
-    exerciseName: firstStep ? `Get Ready: ${firstStep.exerciseName}` : 'Get Ready',
+    exerciseName: customCountdownLabel || 'Count Down',
+    customLabel: customCountdownLabel || null,
     roundNumber: firstStep?.roundNumber || 1,
     setNumber: 0,
     totalSets: firstStep?.totalSets || 0,

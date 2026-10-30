@@ -116,7 +116,8 @@ async function runBrowserCDPTests(wsUrl) {
   async function evalInPage(fnStr) {
     const res = await send('Runtime.evaluate', {
       expression: `(${fnStr})()`,
-      returnByValue: true
+      returnByValue: true,
+      awaitPromise: true
     });
     if (res.exceptionDetails) {
       throw new Error(JSON.stringify(res.exceptionDetails));
@@ -530,8 +531,8 @@ async function runBrowserCDPTests(wsUrl) {
           `  ✅ PASS: "${selectXCheck.btnLabel}" modal selected 8 exercises and auto-slotted them across 4 Duo rounds with 0 overload warnings`
         );
 
-        console.log('\n--- 11. Requirement 5: Timed HIIT Exercise Timer, 10s Yellow Countdown, Customizer & Reset on Type Change ---');
-        const timerCheck = await evalInPage(() => {
+        console.log('\n--- 11. Requirement 5: Timed HIIT Exercise Timer, 10s Yellow Countdown, Sliding Fill, Bottom Labels & Reset ---');
+        const timerCheck = await evalInPage(async () => {
           const typeSelect = document.getElementById('workoutTypeSelect');
           typeSelect.value = 'Timed Duos (40/20)';
           typeSelect.dispatchEvent(new Event('change'));
@@ -545,24 +546,52 @@ async function runBrowserCDPTests(wsUrl) {
           document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
 
           const timerModal = document.getElementById('timerModal');
+          const stageCard = document.getElementById('timerStageCard');
+          const stageFill = document.getElementById('timerStageFill');
+          const bottomLabelEl = document.getElementById('timerActiveExerciseName');
+          const clockEl = document.getElementById('timerClockDisplay');
+
           const timerOpen = timerModal && !timerModal.hidden;
-          const step0Clock = document.getElementById('timerClockDisplay')?.innerText.trim();
-          const step0StageClass = document.getElementById('timerStageCard')?.className || '';
+          const step0Clock = clockEl?.innerText.trim();
+          const step0StageClass = stageCard?.className || '';
           const step0Phase = document.getElementById('timerPhaseBadge')?.innerText.trim();
+          const step0BottomLabel = bottomLabelEl?.innerText.trim();
+          const step0TextColor = getComputedStyle(bottomLabelEl).color;
+          const step0FillBg = getComputedStyle(stageFill).backgroundColor;
+          const stageGreyBg = getComputedStyle(stageCard).backgroundColor;
+          const step0InitialFillStyle = stageFill?.style.height;
+
+          // Verify bottom label is physically below the clock inside the timer stage card
+          const clockRect = clockEl.getBoundingClientRect();
+          const bottomLabelRect = bottomLabelEl.getBoundingClientRect();
+          const bottomLabelBelowClock = bottomLabelRect.top >= clockRect.bottom - 4;
+
           const timelineChipsCount = document.querySelectorAll('#timerSequenceTimeline .timer-seq-chip').length;
-          const clockFontSize = parseFloat(getComputedStyle(document.getElementById('timerClockDisplay')).fontSize);
+          const clockFontSize = parseFloat(getComputedStyle(clockEl).fontSize);
           const noOverflowInTimer = document.documentElement.scrollWidth <= window.innerWidth;
+
+          // Verify the lighter colored fill slides down as the timer runs
+          document.getElementById('timerStartPauseBtn').click();
+          await new Promise(r => setTimeout(r, 350));
+          const runningFillPct = parseFloat(stageFill.style.height);
+          document.getElementById('timerStartPauseBtn').click(); // Pause
 
           // Skip from Step 0 (10s yellow countdown) -> Step 1 (40s green work on Exercise 1)
           document.getElementById('timerNextStepBtn').click();
-          const step1Clock = document.getElementById('timerClockDisplay')?.innerText.trim();
-          const step1StageClass = document.getElementById('timerStageCard')?.className || '';
-          const step1ExName = document.getElementById('timerActiveExerciseName')?.innerText.trim();
+          const step1Clock = clockEl?.innerText.trim();
+          const step1StageClass = stageCard?.className || '';
+          const step1ExName = bottomLabelEl?.innerText.trim();
+          const step1TextColor = getComputedStyle(bottomLabelEl).color;
+          const step1FillBg = getComputedStyle(stageFill).backgroundColor;
+          const step1ResetFillStyle = stageFill?.style.height;
 
           // Skip from Step 1 (40s green work) -> Step 2 (20s blue rest)
           document.getElementById('timerNextStepBtn').click();
-          const step2Clock = document.getElementById('timerClockDisplay')?.innerText.trim();
-          const step2StageClass = document.getElementById('timerStageCard')?.className || '';
+          const step2Clock = clockEl?.innerText.trim();
+          const step2StageClass = stageCard?.className || '';
+          const step2BottomLabel = bottomLabelEl?.innerText.trim();
+          const step2TextColor = getComputedStyle(bottomLabelEl).color;
+          const step2FillBg = getComputedStyle(stageFill).backgroundColor;
 
           // Open Customize view, customize Exercise 1 work duration to 50s & orange, add an extra interval, and apply
           document.getElementById('toggleTimerCustomizerBtn').click();
@@ -578,10 +607,10 @@ async function runBrowserCDPTests(wsUrl) {
           document.getElementById('applyTimerCustomizationBtn').click();
 
           // Verify customized sequence starts at 00:10 yellow countdown and Step 1 is 00:50 orange
-          const customStep0Clock = document.getElementById('timerClockDisplay')?.innerText.trim();
+          const customStep0Clock = clockEl?.innerText.trim();
           document.getElementById('timerNextStepBtn').click();
-          const customStep1Clock = document.getElementById('timerClockDisplay')?.innerText.trim();
-          const customStep1Class = document.getElementById('timerStageCard')?.className || '';
+          const customStep1Clock = clockEl?.innerText.trim();
+          const customStep1Class = stageCard?.className || '';
 
           // Close timer modal and select a different workout type ("Timed Trios (40/20)") -> verify timer resets!
           document.getElementById('closeTimerModalBtn').click();
@@ -591,8 +620,8 @@ async function runBrowserCDPTests(wsUrl) {
           document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
           const trioChipsCount = document.querySelectorAll('#timerSequenceTimeline .timer-seq-chip').length;
           document.getElementById('timerNextStepBtn').click();
-          const trioStep1Clock = document.getElementById('timerClockDisplay')?.innerText.trim();
-          const trioStep1Class = document.getElementById('timerStageCard')?.className || '';
+          const trioStep1Clock = clockEl?.innerText.trim();
+          const trioStep1Class = stageCard?.className || '';
           document.getElementById('closeTimerModalBtn').click();
 
           return {
@@ -601,14 +630,27 @@ async function runBrowserCDPTests(wsUrl) {
             step0Clock,
             step0IsYellow: step0StageClass.includes('timer-color-yellow'),
             step0Phase,
+            step0BottomLabel,
+            step0TextColor,
+            step0FillBg,
+            stageGreyBg,
+            step0InitialFillStyle,
+            bottomLabelBelowClock,
+            runningFillPct,
             timelineChipsCount,
             clockFontSize,
             noOverflowInTimer,
             step1Clock,
             step1IsGreen: step1StageClass.includes('timer-color-green'),
             step1MatchesExercise: step1ExName === round1Ex1Name,
+            step1TextColor,
+            step1FillBg,
+            step1ResetFillStyle,
             step2Clock,
             step2IsBlue: step2StageClass.includes('timer-color-blue'),
+            step2BottomLabel,
+            step2TextColor,
+            step2FillBg,
             customStep0Clock,
             customStep1Clock,
             customStep1IsOrange: customStep1Class.includes('timer-color-orange'),
@@ -621,14 +663,27 @@ async function runBrowserCDPTests(wsUrl) {
           !timerCheck.timerOpen ||
           timerCheck.step0Clock !== '00:10' ||
           !timerCheck.step0IsYellow ||
+          timerCheck.step0BottomLabel !== 'Count Down' ||
+          timerCheck.step0TextColor !== 'rgb(113, 63, 18)' ||
+          timerCheck.step0FillBg !== 'rgb(254, 240, 138)' ||
+          timerCheck.stageGreyBg !== 'rgb(226, 232, 240)' ||
+          timerCheck.step0InitialFillStyle !== '100%' ||
+          !timerCheck.bottomLabelBelowClock ||
+          !(timerCheck.runningFillPct < 99 && timerCheck.runningFillPct > 80) ||
           timerCheck.timelineChipsCount !== 13 ||
           timerCheck.clockFontSize < 60 ||
           !timerCheck.noOverflowInTimer ||
           timerCheck.step1Clock !== '00:40' ||
           !timerCheck.step1IsGreen ||
           !timerCheck.step1MatchesExercise ||
+          timerCheck.step1TextColor !== 'rgb(20, 83, 45)' ||
+          timerCheck.step1FillBg !== 'rgb(187, 247, 208)' ||
+          timerCheck.step1ResetFillStyle !== '100%' ||
           timerCheck.step2Clock !== '00:20' ||
           !timerCheck.step2IsBlue ||
+          timerCheck.step2BottomLabel !== 'Rest' ||
+          timerCheck.step2TextColor !== 'rgb(30, 58, 138)' ||
+          timerCheck.step2FillBg !== 'rgb(191, 219, 254)' ||
           timerCheck.customStep0Clock !== '00:10' ||
           timerCheck.customStep1Clock !== '00:50' ||
           !timerCheck.customStep1IsOrange ||
@@ -638,7 +693,7 @@ async function runBrowserCDPTests(wsUrl) {
           throw new Error('HIIT Timer & Customizer check failed: ' + JSON.stringify(timerCheck));
         }
         console.log(
-          `  ✅ PASS: HIIT Timer verified (10s yellow countdown -> 6 pairs of 40s green / 20s blue, font=${timerCheck.clockFontSize}px, customizer & reset on workout type change)`
+          `  ✅ PASS: HIIT Timer verified ("Count Down" dark yellow -> "[Exercise]" dark green -> "Rest" dark blue, sliding fill ${timerCheck.runningFillPct.toFixed(1)}% over grey)`
         );
 
         console.log('\n--- 12. Mobile Viewport Screenshot Capture ---');

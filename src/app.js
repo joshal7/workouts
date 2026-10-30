@@ -24,6 +24,7 @@ import {
   CUSTOM_TIMER_PRESETS,
   isTimedHiitWorkout,
   formatTimerClock,
+  getTimerBottomLabel,
   getDefaultExerciseTimerConfig,
   buildStockTimerSequence,
   buildCustomPresetTimerSequence,
@@ -77,6 +78,7 @@ const timerState = {
   steps: [],
   currentStepIndex: 0,
   remainingSeconds: 10,
+  remainingMs: 10000,
   isRunning: false,
   intervalId: null,
   customizerOpen: false
@@ -549,9 +551,11 @@ function rebuildTimerSteps(resetCursor = true) {
   if (!wkState) return;
 
   if (timerState.customStepsOverride && timerState.customStepsOverride.length > 0) {
+    const cdOverride = timerState.customStepsOverride.find(s => s.type === 'countdown');
     timerState.steps = finalizeWithCountdown(
       timerState.customStepsOverride.filter(s => s.type !== 'countdown'),
-      timerState.countdownDuration
+      timerState.countdownDuration,
+      cdOverride?.customLabel || null
     );
   } else if (timerState.mode === 'custom-preset') {
     timerState.steps = buildCustomPresetTimerSequence(timerState.presetId, wkState, {
@@ -571,7 +575,9 @@ function rebuildTimerSteps(resetCursor = true) {
 
   if (resetCursor || timerState.currentStepIndex >= timerState.steps.length) {
     timerState.currentStepIndex = 0;
-    timerState.remainingSeconds = timerState.steps[0]?.duration || timerState.countdownDuration || 10;
+    const initDur = timerState.steps[0]?.duration || timerState.countdownDuration || 10;
+    timerState.remainingSeconds = initDur;
+    timerState.remainingMs = initDur * 1000;
   }
 }
 
@@ -718,16 +724,27 @@ function renderTimerExecutionView() {
 
   document.getElementById('timerPhaseBadge').textContent = step.phaseLabel || step.type.toUpperCase();
   document.getElementById('timerStepCounter').textContent = `Step ${idx + 1} of ${steps.length}`;
-  document.getElementById('timerActiveExerciseName').textContent = step.exerciseName || 'Work';
+  document.getElementById('timerActiveExerciseName').textContent = getTimerBottomLabel(step);
   document.getElementById('timerClockDisplay').textContent = formatTimerClock(timerState.remainingSeconds);
 
   const totalDur = Math.max(1, step.duration || 1);
-  const pct = Math.max(0, Math.min(100, (timerState.remainingSeconds / totalDur) * 100));
-  document.getElementById('timerProgressBar').style.width = `${pct}%`;
+  const totalMs = totalDur * 1000;
+  const effectiveMs =
+    typeof timerState.remainingMs === 'number' &&
+    Math.ceil(timerState.remainingMs / 1000) === timerState.remainingSeconds
+      ? timerState.remainingMs
+      : timerState.remainingSeconds * 1000;
+  const pct = Math.max(0, Math.min(100, (effectiveMs / totalMs) * 100));
+
+  const stageFill = document.getElementById('timerStageFill');
+  if (stageFill) {
+    stageFill.style.height = `${pct}%`;
+  }
 
   const nextStep = steps[idx + 1];
+  const nextLabel = nextStep ? getTimerBottomLabel(nextStep) : '';
   document.getElementById('timerUpNextText').textContent = nextStep
-    ? `Up Next: ${nextStep.exerciseName} (${nextStep.duration}s ${TIMER_COLORS[nextStep.color]?.label || nextStep.color})`
+    ? `Up Next: ${nextLabel} (${nextStep.duration}s ${TIMER_COLORS[nextStep.color]?.label || nextStep.color})`
     : 'Final Interval — Finish Strong!';
 
   const playBtn = document.getElementById('timerStartPauseBtn');
@@ -740,7 +757,7 @@ function renderTimerExecutionView() {
       const col = TIMER_COLORS[s.color] ? s.color : 'green';
       const shortName =
         s.type === 'countdown'
-          ? 'Countdown'
+          ? 'Count Down'
           : s.type === 'rest'
           ? 'Rest'
           : (s.exerciseName || 'Work').slice(0, 14);
@@ -909,32 +926,66 @@ function toggleTimerPlayPause() {
   }
 
   timerState.isRunning = true;
+  if (
+    typeof timerState.remainingMs !== 'number' ||
+    timerState.remainingMs <= 0 ||
+    Math.ceil(timerState.remainingMs / 1000) !== timerState.remainingSeconds
+  ) {
+    const startDur =
+      timerState.remainingSeconds > 0
+        ? timerState.remainingSeconds
+        : timerState.steps[timerState.currentStepIndex]?.duration || 10;
+    timerState.remainingSeconds = startDur;
+    timerState.remainingMs = startDur * 1000;
+  }
+
+  let lastTickTime = Date.now();
   renderTimerExecutionView();
 
   timerState.intervalId = setInterval(() => {
-    if (timerState.remainingSeconds > 1) {
-      timerState.remainingSeconds -= 1;
-      if (timerState.remainingSeconds <= 3) {
-        playTimerBeep(660, 80);
+    const now = Date.now();
+    const deltaMs = Math.max(0, now - lastTickTime);
+    lastTickTime = now;
+
+    timerState.remainingMs = Math.max(0, timerState.remainingMs - deltaMs);
+    const currentStep = timerState.steps[timerState.currentStepIndex];
+    const totalMs = Math.max(1000, (currentStep?.duration || 1) * 1000);
+
+    if (timerState.remainingMs > 0) {
+      const nextSec = Math.ceil(timerState.remainingMs / 1000);
+      if (nextSec !== timerState.remainingSeconds) {
+        timerState.remainingSeconds = nextSec;
+        if (timerState.remainingSeconds <= 3 && timerState.remainingSeconds >= 1) {
+          playTimerBeep(660, 80);
+        }
+        renderTimerExecutionView();
+      } else {
+        const pct = Math.max(0, Math.min(100, (timerState.remainingMs / totalMs) * 100));
+        const stageFill = document.getElementById('timerStageFill');
+        if (stageFill) {
+          stageFill.style.height = `${pct}%`;
+        }
       }
-      renderTimerExecutionView();
     } else {
       // Advance to next interval step
       if (timerState.currentStepIndex < timerState.steps.length - 1) {
         timerState.currentStepIndex += 1;
-        timerState.remainingSeconds = timerState.steps[timerState.currentStepIndex].duration;
+        const nextDur = timerState.steps[timerState.currentStepIndex].duration;
+        timerState.remainingSeconds = nextDur;
+        timerState.remainingMs = nextDur * 1000;
         playTimerBeep(980, 180);
         renderTimerExecutionView();
       } else {
-        // Timer finished
+        // Timer finished -> full grey (0% fill)
         timerState.remainingSeconds = 0;
+        timerState.remainingMs = 0;
         stopTimerLoop();
         playTimerBeep(1200, 300);
         renderTimerExecutionView();
         showToast('Timer complete!');
       }
     }
-  }, 1000);
+  }, 50);
 }
 
 // ============================================================================
@@ -1576,7 +1627,9 @@ function bindEvents() {
     if (timerState.currentStepIndex > 0) {
       timerState.currentStepIndex -= 1;
     }
-    timerState.remainingSeconds = timerState.steps[timerState.currentStepIndex]?.duration || 10;
+    const dur = timerState.steps[timerState.currentStepIndex]?.duration || 10;
+    timerState.remainingSeconds = dur;
+    timerState.remainingMs = dur * 1000;
     renderTimerExecutionView();
   });
 
@@ -1585,14 +1638,18 @@ function bindEvents() {
     if (timerState.currentStepIndex < timerState.steps.length - 1) {
       timerState.currentStepIndex += 1;
     }
-    timerState.remainingSeconds = timerState.steps[timerState.currentStepIndex]?.duration || 10;
+    const dur = timerState.steps[timerState.currentStepIndex]?.duration || 10;
+    timerState.remainingSeconds = dur;
+    timerState.remainingMs = dur * 1000;
     renderTimerExecutionView();
   });
 
   document.getElementById('timerResetBtn').addEventListener('click', () => {
     stopTimerLoop();
     timerState.currentStepIndex = 0;
-    timerState.remainingSeconds = timerState.steps[0]?.duration || timerState.countdownDuration || 10;
+    const dur = timerState.steps[0]?.duration || timerState.countdownDuration || 10;
+    timerState.remainingSeconds = dur;
+    timerState.remainingMs = dur * 1000;
     renderTimerExecutionView();
   });
 
@@ -1603,7 +1660,9 @@ function bindEvents() {
     const idx = Number(chip.getAttribute('data-step-index'));
     if (!Number.isNaN(idx) && timerState.steps[idx]) {
       timerState.currentStepIndex = idx;
-      timerState.remainingSeconds = timerState.steps[idx].duration;
+      const dur = timerState.steps[idx].duration;
+      timerState.remainingSeconds = dur;
+      timerState.remainingMs = dur * 1000;
       renderTimerExecutionView();
     }
   });
@@ -1758,6 +1817,7 @@ function bindEvents() {
       cloned[idx].color = fieldEl.value;
     } else if (field === 'exerciseName') {
       cloned[idx].exerciseName = fieldEl.value;
+      cloned[idx].customLabel = fieldEl.value;
     }
     timerState.customStepsOverride = cloned;
     rebuildTimerSteps(true);

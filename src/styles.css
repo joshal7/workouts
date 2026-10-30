@@ -1242,57 +1242,125 @@ html, body {
   flex: 1;
 }
 
-/* Large Color-Coded Stage Card */
+/* Large Color-Coded Stage Card with Sliding Colored Fill over Grey Base */
 .timer-stage-card {
+  position: relative;
+  overflow: hidden;
   border-radius: 18px;
   padding: 18px 16px;
-  border: 3px solid #facc15;
-  background: #fef9c3;
+  border: 3px solid #eab308;
+  background: #e2e8f0;
   color: #713f12;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   text-align: center;
-  gap: 10px;
-  min-height: 290px;
+  min-height: 280px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.timer-stage-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  background: #fef08a;
+  z-index: 0;
+  pointer-events: none;
+  transition: height 0.06s linear;
+}
+
+.timer-stage-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .timer-stage-card.timer-color-yellow {
-  background: #fef08a;
   border-color: #eab308;
   color: #713f12;
 }
 
+.timer-stage-card.timer-color-yellow .timer-stage-fill {
+  background: #fef08a;
+}
+
+.timer-stage-card.timer-color-yellow .timer-bottom-label {
+  color: #713f12;
+}
+
 .timer-stage-card.timer-color-green {
-  background: #bbf7d0;
   border-color: #16a34a;
   color: #14532d;
 }
 
+.timer-stage-card.timer-color-green .timer-stage-fill {
+  background: #bbf7d0;
+}
+
+.timer-stage-card.timer-color-green .timer-bottom-label {
+  color: #14532d;
+}
+
 .timer-stage-card.timer-color-blue {
-  background: #bfdbfe;
   border-color: #2563eb;
   color: #1e3a8a;
 }
 
+.timer-stage-card.timer-color-blue .timer-stage-fill {
+  background: #bfdbfe;
+}
+
+.timer-stage-card.timer-color-blue .timer-bottom-label {
+  color: #1e3a8a;
+}
+
 .timer-stage-card.timer-color-red {
-  background: #fecaca;
   border-color: #dc2626;
   color: #7f1d1d;
 }
 
+.timer-stage-card.timer-color-red .timer-stage-fill {
+  background: #fecaca;
+}
+
+.timer-stage-card.timer-color-red .timer-bottom-label {
+  color: #7f1d1d;
+}
+
 .timer-stage-card.timer-color-orange {
-  background: #fed7aa;
   border-color: #ea580c;
   color: #7c2d12;
 }
 
+.timer-stage-card.timer-color-orange .timer-stage-fill {
+  background: #fed7aa;
+}
+
+.timer-stage-card.timer-color-orange .timer-bottom-label {
+  color: #7c2d12;
+}
+
 .timer-stage-card.timer-color-purple {
-  background: #e9d5ff;
   border-color: #9333ea;
+  color: #581c87;
+}
+
+.timer-stage-card.timer-color-purple .timer-stage-fill {
+  background: #e9d5ff;
+}
+
+.timer-stage-card.timer-color-purple .timer-bottom-label {
   color: #581c87;
 }
 
@@ -1320,44 +1388,36 @@ html, body {
   opacity: 0.85;
 }
 
-.timer-exercise-display {
-  font-size: clamp(20px, 5.5vw, 28px);
-  font-weight: 800;
-  line-height: 1.2;
-  max-width: 100%;
-  word-break: break-word;
-}
-
 .timer-big-clock {
   font-size: clamp(78px, 23vw, 128px);
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   line-height: 0.98;
   letter-spacing: -2px;
-  margin: 4px 0;
+  margin: 6px 0;
+  color: inherit;
 }
 
-.timer-progress-track {
+.timer-bottom-label {
   width: 100%;
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.65);
-  overflow: hidden;
-}
-
-.timer-progress-fill {
-  height: 100%;
-  background: currentColor;
-  border-radius: 999px;
-  transition: width 0.2s linear;
+  font-size: clamp(22px, 6vw, 32px);
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: -0.3px;
+  padding: 6px 12px 2px;
+  max-width: 100%;
+  word-break: break-word;
+  color: inherit;
 }
 
 .timer-up-next {
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 700;
-  padding: 4px 10px;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 6px 12px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.65);
+  background: #f1f5f9;
 }
 
 /* Sequence Timeline Strip */

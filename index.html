@@ -360,26 +360,25 @@
         <!-- View A: Large High-Visibility Timer Execution View -->
         <div id="timerExecutionView" class="timer-execution-view">
           <div id="timerStageCard" class="timer-stage-card timer-color-yellow">
-            <div class="timer-stage-top">
-              <span id="timerPhaseBadge" class="timer-phase-badge">10s PREP COUNTDOWN</span>
-              <span id="timerStepCounter" class="timer-step-counter">Step 1 of 13</span>
-            </div>
+            <div id="timerStageFill" class="timer-stage-fill" style="height: 100%"></div>
+            <div class="timer-stage-content">
+              <div class="timer-stage-top">
+                <span id="timerPhaseBadge" class="timer-phase-badge">10s PREP COUNTDOWN</span>
+                <span id="timerStepCounter" class="timer-step-counter">Step 1 of 13</span>
+              </div>
 
-            <div id="timerActiveExerciseName" class="timer-exercise-display">
-              Get Ready
-            </div>
+              <div id="timerClockDisplay" class="timer-big-clock" aria-live="assertive">
+                00:10
+              </div>
 
-            <div id="timerClockDisplay" class="timer-big-clock" aria-live="assertive">
-              00:10
+              <div id="timerActiveExerciseName" class="timer-bottom-label">
+                Count Down
+              </div>
             </div>
+          </div>
 
-            <div class="timer-progress-track">
-              <div id="timerProgressBar" class="timer-progress-fill" style="width: 100%"></div>
-            </div>
-
-            <div id="timerUpNextText" class="timer-up-next">
-              Up Next: Exercise 1
-            </div>
+          <div id="timerUpNextText" class="timer-up-next">
+            Up Next: Exercise 1
           </div>
 
           <!-- Visual Sequence Strip (10s Yellow -> 40s Green -> 20s Blue ...) -->
