@@ -1,4 +1,4 @@
-import { DataService } from './services/dataService.js';
+import { DataService } from './services/dataService.js?v=16';
 import {
   generateWorkout,
   generateWorkoutFromSelectedExercises,
@@ -16,12 +16,12 @@ import {
   getRandomEntry,
   getPrimaryMuscle,
   getPrimaryBodyArea
-} from './engine/workoutEngine.js';
+} from './engine/workoutEngine.js?v=16';
 import {
   analyzeMuscleLoad,
   applyBalancedRecommendation,
   SPECIFIC_MUSCLES
-} from './engine/muscleLoadAnalyzer.js';
+} from './engine/muscleLoadAnalyzer.js?v=16';
 import {
   TIMER_COLORS,
   CUSTOM_TIMER_PRESETS,
@@ -34,10 +34,8 @@ import {
   buildCustomPresetTimerSequence,
   finalizeWithCountdown,
   getStepStartSoundType,
-  shouldPlaySteadyTransitionPulse,
-  synthesizeCueWavDataUri,
-  buildRemainingTimelineCues
-} from './engine/timerEngine.js';
+  shouldPlaySteadyTransitionPulse
+} from './engine/timerEngine.js?v=16';
 
 const dataService = new DataService();
 
@@ -94,7 +92,8 @@ const timerState = {
   customizerOpen: false,
   soundLog: [],
   wakeLockActive: false,
-  audioSessionType: null
+  audioSessionType: null,
+  getAudioContextState: () => (sharedAudioCtx ? sharedAudioCtx.state : 'uncreated')
 };
 
 if (typeof window !== 'undefined') {
@@ -134,7 +133,11 @@ const els = {
 };
 
 async function bootstrap() {
-  await dataService.init('./data/sheet-data.json?v=15', './data/enrichments.json?v=15');
+  // Pre-configure OS Ambient audio mixing policy at startup so WebKit flushes AVAudioSessionCategoryAmbient
+  // long before any timer AudioContext is created or resumed (prevents synchronous click race condition).
+  configureAmbientAudioSession();
+
+  await dataService.init('./data/sheet-data.json?v=16', './data/enrichments.json?v=16');
   populateWorkoutTypeSelect();
   populateCustomTimerPresetsSelect();
   syncUIFromActiveProfile();
@@ -145,11 +148,11 @@ async function bootstrap() {
     const hadController = !!navigator.serviceWorker.controller;
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!hadController || refreshing) return;
+      if (!hadController || refreshing || timerState.isRunning) return;
       refreshing = true;
       window.location.reload();
     });
-    navigator.serviceWorker.register('./sw.js?v=15', { updateViaCache: 'none' }).then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=16', { updateViaCache: 'none' }).then(reg => {
       reg.update().catch(() => {});
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
@@ -710,6 +713,7 @@ function openTimerModal({
   }
 
   timerState.customizerOpen = !!openCustomizer;
+  configureAmbientAudioSession();
   renderTimerModal();
   els.timerModal.hidden = false;
 }
@@ -991,18 +995,21 @@ function renderTimerCustomizerView(wkState) {
 }
 
 // ============================================================================
-// Timer Audio Engine (Ambient Audio Mixing & Zero Background Audio Interruption)
+// Timer Audio Engine (Ambient Audio Mixing & Burst-Only Web Audio Cues)
 // ============================================================================
 let sharedAudioCtx = null;
 let activeWakeLockSentinel = null;
+let audioIdleSuspendTimer = null;
 
-function ensureAmbientAudioSession() {
-  // 1. Request OS Ambient audio session so our timer sounds MIX seamlessly with
-  //    background music, audiobooks, or podcasts (Libby, Hoopla, Spotify, Apple Podcasts, etc.)
-  //    and NEVER pause, interrupt, or duck them.
+function configureAmbientAudioSession() {
+  // Pre-configure OS Ambient audio session ahead of time so WebKit flushes AVAudioSessionCategoryAmbient
+  // before any AudioContext renders. Ambient overlays cleanly on top of music, books on tape, and podcasts
+  // (Libby, Hoopla, Spotify, Apple Music, Podcasts) without ever pausing or ducking them.
   try {
     if (typeof navigator !== 'undefined' && navigator.audioSession) {
-      navigator.audioSession.type = 'ambient';
+      if (navigator.audioSession.type !== 'ambient') {
+        navigator.audioSession.type = 'ambient';
+      }
       timerState.audioSessionType = navigator.audioSession.type || 'ambient';
     } else {
       timerState.audioSessionType = 'ambient-web-audio';
@@ -1010,19 +1017,52 @@ function ensureAmbientAudioSession() {
   } catch {
     timerState.audioSessionType = 'ambient-web-audio';
   }
+}
 
-  // 2. Ensure shared Web Audio API context is created and running on the ambient mixing bus
+function clearAudioIdleSuspendTimer() {
+  if (audioIdleSuspendTimer) {
+    clearTimeout(audioIdleSuspendTimer);
+    audioIdleSuspendTimer = null;
+  }
+}
+
+function suspendAudioContextNow() {
+  clearAudioIdleSuspendTimer();
   try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (AudioCtx) {
-      if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') {
-        sharedAudioCtx = new AudioCtx();
-      }
-      if (sharedAudioCtx.state === 'suspended') {
-        sharedAudioCtx.resume().catch(() => {});
-      }
+    if (sharedAudioCtx && sharedAudioCtx.state === 'running') {
+      sharedAudioCtx.suspend().catch(() => {});
     }
   } catch {}
+}
+
+function scheduleIdleAudioSuspend(delayMs) {
+  clearAudioIdleSuspendTimer();
+  audioIdleSuspendTimer = setTimeout(() => {
+    audioIdleSuspendTimer = null;
+    try {
+      if (sharedAudioCtx && sharedAudioCtx.state === 'running') {
+        sharedAudioCtx.suspend().catch(() => {});
+      }
+    } catch {}
+  }, delayMs);
+}
+
+function unlockAmbientAudioContextFromGesture() {
+  configureAmbientAudioSession();
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+    if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') {
+      sharedAudioCtx = new AudioCtx();
+    }
+    if (sharedAudioCtx.state === 'suspended') {
+      // Unlock user-gesture requirement on iOS Safari; we immediately suspend again once idle
+      sharedAudioCtx.resume().catch(() => {});
+    }
+    return sharedAudioCtx;
+  } catch {
+    return null;
+  }
 }
 
 async function requestScreenWakeLock() {
@@ -1087,20 +1127,23 @@ function scheduleSoundProfileOnContext(ctx, profile, startAtContextTime) {
 }
 
 function startTimerSessionKeepAlive() {
-  ensureAmbientAudioSession();
+  unlockAmbientAudioContextFromGesture();
   requestScreenWakeLock();
 }
 
 function stopTimerSessionKeepAlive() {
+  suspendAudioContextNow();
   releaseScreenWakeLock();
 }
 
 /**
- * Play one of the distinct timer sound cues:
+ * Play one of the distinct timer sound cues as a short ambient burst:
  * - 'work-start': bright rising double bell ding when starting an exercise block
  * - 'rest-start': warm descending two-tone chime when starting a rest block
  * - 'transition-pulse': steady light sound during a short transition / 10s countdown block
  * - 'workout-complete': 3-note completion fanfare
+ * Automatically suspends the AudioContext right after the beep finishes so no audio stream
+ * stays open when the timer is silent.
  */
 function playTimerSoundCue(cueType, stepIndex = timerState.currentStepIndex) {
   const profile = TIMER_SOUND_PROFILES[cueType] || TIMER_SOUND_PROFILES['transition-pulse'];
@@ -1117,27 +1160,52 @@ function playTimerSoundCue(cueType, stepIndex = timerState.currentStepIndex) {
     timerState.soundLog.shift();
   }
 
-  ensureAmbientAudioSession();
+  configureAmbientAudioSession();
+  clearAudioIdleSuspendTimer();
 
-  // Synthesize via Web Audio API directly on the ambient mixing bus.
-  // This mixes cleanly with Libby, Hoopla, Spotify, Apple Podcasts, etc.,
-  // without ever pausing, interrupting, or ducking them.
+  let maxNoteEndSec = 0.08;
+  for (const note of profile.notes) {
+    const endSec = note.startSec + note.durationSec;
+    if (endSec > maxNoteEndSec) maxNoteEndSec = endSec;
+  }
+
   try {
-    if (sharedAudioCtx) {
-      if (sharedAudioCtx.state === 'suspended') {
-        sharedAudioCtx.resume().catch(() => {});
-      }
-      scheduleSoundProfileOnContext(sharedAudioCtx, profile, sharedAudioCtx.currentTime);
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') {
+      sharedAudioCtx = new AudioCtx();
+    }
+
+    const emitNotesAndScheduleSuspend = () => {
+      if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') return;
+      scheduleSoundProfileOnContext(sharedAudioCtx, profile, sharedAudioCtx.currentTime + 0.008);
+      // Keep context open across consecutive 1s transition ticks, but suspend immediately (~150ms)
+      // after work-start, rest-start, or workout-complete chimes so silent intervals have zero active stream.
+      const idlePadSec =
+        profile.id === 'transition-pulse' && timerState.isRunning && timerState.remainingSeconds > 1
+          ? 1.15
+          : 0.15;
+      scheduleIdleAudioSuspend(Math.ceil((maxNoteEndSec + idlePadSec) * 1000));
+    };
+
+    if (sharedAudioCtx.state === 'running') {
+      emitNotesAndScheduleSuspend();
+    } else {
+      sharedAudioCtx
+        .resume()
+        .then(emitNotesAndScheduleSuspend)
+        .catch(() => {});
     }
   } catch {}
 }
 
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
-    if (!timerState.isRunning) return;
     if (!document.hidden) {
-      // Re-request wake lock when user switches back to workouts
-      requestScreenWakeLock();
+      configureAmbientAudioSession();
+      if (timerState.isRunning) {
+        requestScreenWakeLock();
+      }
     }
   });
 }
@@ -1165,13 +1233,15 @@ function toggleTimerPlayPause() {
 
   startTimerSessionKeepAlive();
 
-  // Play the initial cue if starting at the beginning of a step
+  // Play the initial cue if starting at the beginning of a step; otherwise suspend immediately after gesture unlock
   const initialStep = timerState.steps[timerState.currentStepIndex];
   if (
     initialStep &&
     Math.abs(timerState.remainingMs - (initialStep.duration || 10) * 1000) < 80
   ) {
     playTimerSoundCue(getStepStartSoundType(initialStep), timerState.currentStepIndex);
+  } else {
+    scheduleIdleAudioSuspend(120);
   }
 
   let lastTickTime = Date.now();
@@ -1889,7 +1959,10 @@ function bindEvents() {
     showToast('Timer updated');
   });
 
-  document.getElementById('timerStartPauseBtn').addEventListener('click', toggleTimerPlayPause);
+  const startPauseBtn = document.getElementById('timerStartPauseBtn');
+  startPauseBtn.addEventListener('pointerdown', configureAmbientAudioSession, { passive: true });
+  startPauseBtn.addEventListener('touchstart', configureAmbientAudioSession, { passive: true });
+  startPauseBtn.addEventListener('click', toggleTimerPlayPause);
 
   document.getElementById('timerPrevStepBtn').addEventListener('click', () => {
     stopTimerLoop();

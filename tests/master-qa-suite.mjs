@@ -63,6 +63,7 @@ async function ensureChromeRunning() {
     '--headless=new',
     '--remote-debugging-port=9222',
     '--disable-gpu',
+    '--autoplay-policy=no-user-gesture-required',
     '--user-data-dir=/tmp/chrome-master-qa',
     'http://127.0.0.1:8080/index.html'
   ], { stdio: 'ignore' });
@@ -140,9 +141,9 @@ async function runBrowserCDPTests(wsUrl) {
           mobile: true
         });
 
-        // Ensure page is on our app
+        // Ensure page is on our app (allow time for any SW controllerchange reload to settle)
         await send('Page.navigate', { url: 'http://127.0.0.1:8080/index.html' });
-        await new Promise(r => setTimeout(r, 600));
+        await new Promise(r => setTimeout(r, 1000));
 
         console.log('\n--- 1. Viewport, Light Blue Palette & Single-Screen Layout Check ---');
         const vpCheck = await evalInPage(() => {
@@ -695,13 +696,19 @@ async function runBrowserCDPTests(wsUrl) {
           ts.remainingSeconds = 1;
           ts.remainingMs = 60;
           await new Promise(r => setTimeout(r, 150));
+          const activeDuringBeep = ts.getAudioContextState() === 'running';
+          // Wait ~650ms while timer is STILL running during silent Rest so 'rest-start' chime finishes and auto-suspends
+          await new Promise(r => setTimeout(r, 650));
+          const autoSuspendedWhileSilentRunning =
+            activeDuringBeep && ts.isRunning === true && ts.getAudioContextState() === 'suspended';
           document.getElementById('timerStartPauseBtn').click(); // Pause
 
           const loggedCueTypes = ts.soundLog.map(s => s.cueType);
           const hasTransitionPulseCue = loggedCueTypes.includes('transition-pulse');
           const hasWorkStartCue = loggedCueTypes.includes('work-start');
           const hasRestStartCue = loggedCueTypes.includes('rest-start');
-          const audioSessionConfigured = !!ts.audioSessionType;
+          const audioSessionConfigured = String(ts.audioSessionType || '').startsWith('ambient');
+          const mediaSessionUntouched = !navigator.mediaSession?.metadata;
 
           document.getElementById('closeTimerModalBtn').click();
 
@@ -749,6 +756,8 @@ async function runBrowserCDPTests(wsUrl) {
             hasWorkStartCue,
             hasRestStartCue,
             audioSessionConfigured,
+            mediaSessionUntouched,
+            autoSuspendedWhileSilentRunning,
             loggedCueTypes
           };
         });
@@ -794,7 +803,9 @@ async function runBrowserCDPTests(wsUrl) {
           !timerCheck.hasTransitionPulseCue ||
           !timerCheck.hasWorkStartCue ||
           !timerCheck.hasRestStartCue ||
-          !timerCheck.audioSessionConfigured
+          !timerCheck.audioSessionConfigured ||
+          !timerCheck.mediaSessionUntouched ||
+          !timerCheck.autoSuspendedWhileSilentRunning
         ) {
           throw new Error('HIIT Timer & Customizer check failed: ' + JSON.stringify(timerCheck));
         }
