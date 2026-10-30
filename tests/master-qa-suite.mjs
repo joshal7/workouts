@@ -677,6 +677,32 @@ async function runBrowserCDPTests(wsUrl) {
           document.querySelector('[data-action="jump-timer-step"][data-step-index="4"]').click();
           const pyrTransClock = clockEl?.innerText.trim();
           const pyrTransLabel = bottomLabelEl?.innerText.trim();
+
+          // Verify distinct sound cues fire when transitioning across Transition -> Work -> Rest
+          const ts = window.__workoutTimerState;
+          ts.soundLog = [];
+          // Jump to Step 4 (Set 2 10s Transition), set remainingMs to 1150ms so in ~220ms it ticks 1s (transition-pulse)
+          document.querySelector('[data-action="jump-timer-step"][data-step-index="4"]').click();
+          ts.remainingSeconds = 2;
+          ts.remainingMs = 1150;
+          document.getElementById('timerStartPauseBtn').click();
+          await new Promise(r => setTimeout(r, 240));
+          // Now fast-forward remaining time of Step 4 (Transition) to 60ms so it advances into Step 5 (Work -> 'work-start')
+          ts.remainingSeconds = 1;
+          ts.remainingMs = 60;
+          await new Promise(r => setTimeout(r, 150));
+          // Now fast-forward remaining time of Step 5 (Work) to 60ms so it advances into Step 6 (Rest -> 'rest-start')
+          ts.remainingSeconds = 1;
+          ts.remainingMs = 60;
+          await new Promise(r => setTimeout(r, 150));
+          document.getElementById('timerStartPauseBtn').click(); // Pause
+
+          const loggedCueTypes = ts.soundLog.map(s => s.cueType);
+          const hasTransitionPulseCue = loggedCueTypes.includes('transition-pulse');
+          const hasWorkStartCue = loggedCueTypes.includes('work-start');
+          const hasRestStartCue = loggedCueTypes.includes('rest-start');
+          const audioSessionConfigured = !!ts.audioSessionType;
+
           document.getElementById('closeTimerModalBtn').click();
 
           return {
@@ -718,7 +744,12 @@ async function runBrowserCDPTests(wsUrl) {
             pyrRestClock,
             pyrRestLabel,
             pyrTransClock,
-            pyrTransLabel
+            pyrTransLabel,
+            hasTransitionPulseCue,
+            hasWorkStartCue,
+            hasRestStartCue,
+            audioSessionConfigured,
+            loggedCueTypes
           };
         });
         if (
@@ -759,7 +790,11 @@ async function runBrowserCDPTests(wsUrl) {
           timerCheck.pyrRestClock !== '01:00' ||
           timerCheck.pyrRestLabel !== 'Rest' ||
           timerCheck.pyrTransClock !== '00:10' ||
-          timerCheck.pyrTransLabel !== 'Transition'
+          timerCheck.pyrTransLabel !== 'Transition' ||
+          !timerCheck.hasTransitionPulseCue ||
+          !timerCheck.hasWorkStartCue ||
+          !timerCheck.hasRestStartCue ||
+          !timerCheck.audioSessionConfigured
         ) {
           throw new Error('HIIT Timer & Customizer check failed: ' + JSON.stringify(timerCheck));
         }

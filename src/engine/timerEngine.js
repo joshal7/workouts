@@ -807,3 +807,233 @@ export function getTimerSequenceSummary(steps) {
   }
   return `10s Yellow · ${workSteps.length} intervals (${firstWork.duration}s ${wCol})`;
 }
+
+/**
+ * Distinct sound profiles for:
+ * 1) Starting an exercise block ('work-start'): bright rising double-chime ding
+ * 2) Starting a rest block ('rest-start'): warm descending two-tone recovery bell
+ * 3) Steady light noise during a short transition block ('transition-pulse'): gentle steady marimba pulse
+ * 4) Finishing the entire timer ('workout-complete'): 3-note completion fanfare
+ */
+export const TIMER_SOUND_PROFILES = {
+  'work-start': {
+    id: 'work-start',
+    label: 'Exercise Block Start Ding',
+    durationSec: 0.44,
+    notes: [
+      { startSec: 0.0, durationSec: 0.16, freq: 880.0, overtoneFreq: 1760.0, gain: 0.42 },
+      { startSec: 0.14, durationSec: 0.30, freq: 1318.5, overtoneFreq: 2637.0, gain: 0.48 }
+    ]
+  },
+  'rest-start': {
+    id: 'rest-start',
+    label: 'Rest Block Start Chime',
+    durationSec: 0.50,
+    notes: [
+      { startSec: 0.0, durationSec: 0.20, freq: 783.99, overtoneFreq: 1174.66, gain: 0.38 },
+      { startSec: 0.18, durationSec: 0.32, freq: 523.25, overtoneFreq: 1046.5, gain: 0.42 }
+    ]
+  },
+  'transition-pulse': {
+    id: 'transition-pulse',
+    label: 'Steady Light Transition Pulse',
+    durationSec: 0.12,
+    notes: [
+      { startSec: 0.0, durationSec: 0.12, freq: 587.33, overtoneFreq: 880.0, gain: 0.16 }
+    ]
+  },
+  'workout-complete': {
+    id: 'workout-complete',
+    label: 'Workout Complete Fanfare',
+    durationSec: 0.65,
+    notes: [
+      { startSec: 0.0, durationSec: 0.16, freq: 523.25, overtoneFreq: 1046.5, gain: 0.38 },
+      { startSec: 0.16, durationSec: 0.16, freq: 659.25, overtoneFreq: 1318.5, gain: 0.40 },
+      { startSec: 0.32, durationSec: 0.33, freq: 1046.5, overtoneFreq: 2093.0, gain: 0.46 }
+    ]
+  }
+};
+
+/**
+ * Determine which sound cue plays at the start of a timer step:
+ * 1) 'work-start' when starting an exercise block (step.type === 'work')
+ * 2) 'rest-start' when starting a rest block (step.type === 'rest')
+ * 3) 'transition-pulse' when starting a short transition or countdown block
+ */
+export function getStepStartSoundType(step) {
+  if (!step) return 'transition-pulse';
+  if (step.type === 'work') return 'work-start';
+  if (step.type === 'rest') return 'rest-start';
+  return 'transition-pulse';
+}
+
+/**
+ * Return true if the step is a short transition / countdown block to another exercise
+ * that should emit a steady light pulse every second.
+ */
+export function shouldPlaySteadyTransitionPulse(step) {
+  if (!step) return false;
+  return step.type === 'transition' || step.type === 'countdown';
+}
+
+/**
+ * Build the complete schedule of upcoming audio cues ({ offsetSec, cueType, stepIndex })
+ * from the current step and remainingMs through the end of the timer sequence.
+ */
+export function buildRemainingTimelineCues(steps, currentStepIndex = 0, remainingMs = null) {
+  if (!Array.isArray(steps) || steps.length === 0 || currentStepIndex >= steps.length) {
+    return [];
+  }
+
+  const cues = [];
+  const firstStep = steps[currentStepIndex];
+  const fullFirstStepMs = Math.max(1, Number(firstStep?.duration) || 1) * 1000;
+  const startRemainingMs =
+    typeof remainingMs === 'number' && remainingMs > 0 ? remainingMs : fullFirstStepMs;
+
+  // If starting right at the beginning of the current step, emit its start cue at offset 0
+  if (Math.abs(startRemainingMs - fullFirstStepMs) < 50) {
+    cues.push({
+      offsetSec: 0,
+      cueType: getStepStartSoundType(firstStep),
+      stepIndex: currentStepIndex
+    });
+  }
+
+  // If the current step is a transition/countdown block, emit steady 1-second pulses for remaining whole seconds
+  if (shouldPlaySteadyTransitionPulse(firstStep)) {
+    const maxWholeSec = Math.floor((startRemainingMs - 50) / 1000);
+    for (let s = maxWholeSec; s >= 1; s--) {
+      const offsetSec = (startRemainingMs - s * 1000) / 1000;
+      if (offsetSec >= 0.05) {
+        cues.push({
+          offsetSec: Number(offsetSec.toFixed(3)),
+          cueType: 'transition-pulse',
+          stepIndex: currentStepIndex
+        });
+      }
+    }
+  }
+
+  let cursorSec = startRemainingMs / 1000;
+
+  for (let idx = currentStepIndex + 1; idx < steps.length; idx++) {
+    const step = steps[idx];
+    const dur = Math.max(1, Number(step?.duration) || 1);
+
+    // Start of block sound ('work-start', 'rest-start', or 'transition-pulse')
+    cues.push({
+      offsetSec: Number(cursorSec.toFixed(3)),
+      cueType: getStepStartSoundType(step),
+      stepIndex: idx
+    });
+
+    // Steady light noise every second during a short transition / countdown block
+    if (shouldPlaySteadyTransitionPulse(step)) {
+      for (let secElapsed = 1; secElapsed < dur; secElapsed++) {
+        cues.push({
+          offsetSec: Number((cursorSec + secElapsed).toFixed(3)),
+          cueType: 'transition-pulse',
+          stepIndex: idx
+        });
+      }
+    }
+
+    cursorSec += dur;
+  }
+
+  cues.push({
+    offsetSec: Number(cursorSec.toFixed(3)),
+    cueType: 'workout-complete',
+    stepIndex: steps.length - 1
+  });
+
+  return cues;
+}
+
+const wavUriCache = new Map();
+
+function encodeUint8ToBase64(bytes) {
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString('base64');
+  }
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+/**
+ * Synthesize a 16-bit mono PCM WAV data URI for a timer sound cue ('work-start', 'rest-start',
+ * 'transition-pulse', 'workout-complete', or 'keepalive').
+ * Playing PCM WAV via an HTML5 <audio> element uses the OS Media Playback channel, which
+ * plays even when the phone's hardware Silent switch is on and stays active during sleep.
+ */
+export function synthesizeCueWavDataUri(cueType = 'work-start') {
+  if (wavUriCache.has(cueType)) {
+    return wavUriCache.get(cueType);
+  }
+
+  const sampleRate = 22050;
+  const profile = TIMER_SOUND_PROFILES[cueType];
+  const durationSec = profile ? profile.durationSec : 1.0;
+  const numSamples = Math.max(1, Math.floor(sampleRate * durationSec));
+  const buffer = new ArrayBuffer(44 + numSamples * 2);
+  const view = new DataView(buffer);
+
+  const writeStr = (offset, str) => {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset + i, str.charCodeAt(i));
+    }
+  };
+
+  // Standard 44-byte RIFF WAVE header (16-bit mono PCM)
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + numSamples * 2, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // Mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, 'data');
+  view.setUint32(40, numSamples * 2, true);
+
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    let sample = 0;
+
+    if (profile) {
+      for (const note of profile.notes) {
+        if (t >= note.startSec && t <= note.startSec + note.durationSec) {
+          const localT = t - note.startSec;
+          const progress = localT / note.durationSec;
+          // Crisp bell attack (4ms) + exponential decay
+          const attack = Math.min(1, localT / 0.004);
+          const decay = Math.exp(-3.8 * progress);
+          const env = attack * decay * note.gain;
+          const fundamental = Math.sin(2 * Math.PI * note.freq * localT);
+          const overtone = note.overtoneFreq
+            ? 0.28 * Math.sin(2 * Math.PI * note.overtoneFreq * localT)
+            : 0;
+          sample += env * (fundamental + overtone);
+        }
+      }
+    } else {
+      // Sub-audible keepalive carrier so mobile OS never suspends the media playback session during sleep
+      sample = 0.0004 * Math.sin(2 * Math.PI * 60 * t);
+    }
+
+    const clamped = Math.max(-1, Math.min(1, sample));
+    view.setInt16(44 + i * 2, Math.round(clamped * 32767), true);
+  }
+
+  const uri = `data:audio/wav;base64,${encodeUint8ToBase64(new Uint8Array(buffer))}`;
+  wavUriCache.set(cueType, uri);
+  return uri;
+}

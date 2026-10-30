@@ -25,13 +25,18 @@ import {
 import {
   TIMER_COLORS,
   CUSTOM_TIMER_PRESETS,
+  TIMER_SOUND_PROFILES,
   isTimedHiitWorkout,
   formatTimerClock,
   getTimerBottomLabel,
   getDefaultExerciseTimerConfig,
   buildStockTimerSequence,
   buildCustomPresetTimerSequence,
-  finalizeWithCountdown
+  finalizeWithCountdown,
+  getStepStartSoundType,
+  shouldPlaySteadyTransitionPulse,
+  synthesizeCueWavDataUri,
+  buildRemainingTimelineCues
 } from './engine/timerEngine.js';
 
 const dataService = new DataService();
@@ -86,8 +91,15 @@ const timerState = {
   remainingMs: 10000,
   isRunning: false,
   intervalId: null,
-  customizerOpen: false
+  customizerOpen: false,
+  soundLog: [],
+  wakeLockActive: false,
+  audioSessionType: null
 };
+
+if (typeof window !== 'undefined') {
+  window.__workoutTimerState = timerState;
+}
 
 // DOM Elements
 const els = {
@@ -545,6 +557,7 @@ function stopTimerLoop() {
     timerState.intervalId = null;
   }
   timerState.isRunning = false;
+  stopSleepAndSilentKeepAlive();
 }
 
 function resetTimerForWorkoutType(workoutTypeKey) {
@@ -963,26 +976,256 @@ function renderTimerCustomizerView(wkState) {
     .join('');
 }
 
-function playTimerBeep(frequency = 880, durationMs = 120) {
+// ============================================================================
+// Timer Audio Engine (Silent-Switch Bypass, Sleep Keepalive & Distinct Cues)
+// ============================================================================
+let sharedAudioCtx = null;
+const preloadedCueAudios = new Map();
+let keepAliveAudioEl = null;
+let activeWakeLockSentinel = null;
+let scheduledBgNodes = [];
+
+function ensurePlaybackAudioSession() {
+  // 1. Force OS Media Playback session so audio plays even when the hardware Silent switch is ON (iOS 16.4+ / Safari)
+  try {
+    if (typeof navigator !== 'undefined' && navigator.audioSession) {
+      navigator.audioSession.type = 'playback';
+      timerState.audioSessionType = navigator.audioSession.type || 'playback';
+    } else {
+      timerState.audioSessionType = 'playback-html5-media';
+    }
+  } catch {
+    timerState.audioSessionType = 'playback-html5-media';
+  }
+
+  // 2. Ensure shared Web Audio API context is created and running
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
+    if (AudioCtx) {
+      if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') {
+        sharedAudioCtx = new AudioCtx();
+      }
+      if (sharedAudioCtx.state === 'suspended') {
+        sharedAudioCtx.resume().catch(() => {});
+      }
+    }
+  } catch {}
+
+  // 3. Preload HTML5 <audio> WAV elements on the Media Playback channel (bypasses hardware silent switch on iOS/Android)
+  try {
+    for (const cueType of ['work-start', 'rest-start', 'transition-pulse', 'workout-complete']) {
+      if (!preloadedCueAudios.has(cueType)) {
+        const audio = new Audio(synthesizeCueWavDataUri(cueType));
+        audio.preload = 'auto';
+        audio.playsInline = true;
+        preloadedCueAudios.set(cueType, audio);
+      }
+    }
+    if (!keepAliveAudioEl) {
+      keepAliveAudioEl = new Audio(synthesizeCueWavDataUri('keepalive'));
+      keepAliveAudioEl.loop = true;
+      keepAliveAudioEl.preload = 'auto';
+      keepAliveAudioEl.playsInline = true;
+    }
+  } catch {}
+}
+
+async function requestScreenWakeLock() {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.wakeLock?.request) {
+      if (activeWakeLockSentinel) {
+        await activeWakeLockSentinel.release().catch(() => {});
+      }
+      activeWakeLockSentinel = await navigator.wakeLock.request('screen');
+      timerState.wakeLockActive = true;
+      activeWakeLockSentinel.addEventListener('release', () => {
+        timerState.wakeLockActive = false;
+      });
+    }
+  } catch {
+    timerState.wakeLockActive = false;
+  }
+}
+
+function releaseScreenWakeLock() {
+  if (activeWakeLockSentinel) {
+    activeWakeLockSentinel.release().catch(() => {});
+    activeWakeLockSentinel = null;
+  }
+  timerState.wakeLockActive = false;
+}
+
+function clearBackgroundHardwareAudioCues() {
+  while (scheduledBgNodes.length > 0) {
+    const node = scheduledBgNodes.pop();
+    try {
+      node.stop();
+      node.disconnect();
+    } catch {}
+  }
+}
+
+function scheduleSoundProfileOnContext(ctx, profile, startAtContextTime) {
+  if (!ctx || !profile) return;
+  for (const note of profile.notes) {
+    const t0 = startAtContextTime + note.startSec;
+    const tEnd = t0 + note.durationSec;
+
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.value = frequency;
-    gain.gain.value = 0.08;
+    osc.frequency.setValueAtTime(note.freq, t0);
+
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.linearRampToValueAtTime(note.gain, t0 + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0005, tEnd);
+
     osc.connect(gain);
     gain.connect(ctx.destination);
-    osc.start();
-    setTimeout(() => {
-      osc.stop();
-      ctx.close().catch(() => {});
-    }, durationMs);
-  } catch {
-    // Ignore audio errors in headless or muted environments
+    osc.start(t0);
+    osc.stop(tEnd + 0.01);
+    scheduledBgNodes.push(osc);
+
+    if (note.overtoneFreq) {
+      const overOsc = ctx.createOscillator();
+      const overGain = ctx.createGain();
+      overOsc.type = 'triangle';
+      overOsc.frequency.setValueAtTime(note.overtoneFreq, t0);
+      overGain.gain.setValueAtTime(0.0001, t0);
+      overGain.gain.linearRampToValueAtTime(note.gain * 0.28, t0 + 0.005);
+      overGain.gain.exponentialRampToValueAtTime(0.0005, tEnd);
+      overOsc.connect(overGain);
+      overGain.connect(ctx.destination);
+      overOsc.start(t0);
+      overOsc.stop(tEnd + 0.01);
+      scheduledBgNodes.push(overOsc);
+    }
   }
+}
+
+function scheduleBackgroundHardwareAudioCues() {
+  clearBackgroundHardwareAudioCues();
+  if (!timerState.isRunning || !sharedAudioCtx) return;
+  try {
+    if (sharedAudioCtx.state === 'suspended') {
+      sharedAudioCtx.resume().catch(() => {});
+    }
+    const upcoming = buildRemainingTimelineCues(
+      timerState.steps,
+      timerState.currentStepIndex,
+      timerState.remainingMs
+    );
+    const nowCtx = sharedAudioCtx.currentTime;
+    for (const cue of upcoming) {
+      if (cue.offsetSec <= 0.02) continue;
+      const profile = TIMER_SOUND_PROFILES[cue.cueType];
+      if (profile) {
+        scheduleSoundProfileOnContext(sharedAudioCtx, profile, nowCtx + cue.offsetSec);
+      }
+    }
+  } catch {}
+}
+
+function startSleepAndSilentKeepAlive() {
+  ensurePlaybackAudioSession();
+  requestScreenWakeLock();
+
+  // Start looping Media Playback keepalive audio so the OS keeps audio & timers active when screen locks / sleeps
+  try {
+    if (keepAliveAudioEl) {
+      keepAliveAudioEl.currentTime = 0;
+      keepAliveAudioEl.play().catch(() => {});
+    }
+  } catch {}
+
+  // Register MediaSession metadata so lock screen treats the workout timer as active media playback
+  try {
+    if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
+      const wkName = dataService.getActiveProfile()?.activeWorkout?.workout?.name || 'HIIT Timer';
+      if (typeof MediaMetadata !== 'undefined') {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: wkName,
+          artist: 'Workout Timer',
+          album: 'Active Interval Session'
+        });
+      }
+      navigator.mediaSession.playbackState = 'playing';
+      navigator.mediaSession.setActionHandler('play', () => {
+        if (!timerState.isRunning) toggleTimerPlayPause();
+      });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        if (timerState.isRunning) toggleTimerPlayPause();
+      });
+    }
+  } catch {}
+}
+
+function stopSleepAndSilentKeepAlive() {
+  clearBackgroundHardwareAudioCues();
+  releaseScreenWakeLock();
+  try {
+    if (keepAliveAudioEl) {
+      keepAliveAudioEl.pause();
+    }
+    if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'paused';
+    }
+  } catch {}
+}
+
+/**
+ * Play one of the distinct timer sound cues:
+ * - 'work-start': bright rising double bell ding when starting an exercise block
+ * - 'rest-start': warm descending two-tone chime when starting a rest block
+ * - 'transition-pulse': steady light sound during a short transition / 10s countdown block
+ * - 'workout-complete': 3-note completion fanfare
+ */
+function playTimerSoundCue(cueType, stepIndex = timerState.currentStepIndex) {
+  const profile = TIMER_SOUND_PROFILES[cueType] || TIMER_SOUND_PROFILES['transition-pulse'];
+  const step = timerState.steps?.[stepIndex] || null;
+
+  timerState.soundLog.push({
+    cueType: profile.id,
+    stepIndex,
+    stepType: step?.type || null,
+    remainingSeconds: timerState.remainingSeconds,
+    timestamp: Date.now()
+  });
+  if (timerState.soundLog.length > 300) {
+    timerState.soundLog.shift();
+  }
+
+  ensurePlaybackAudioSession();
+
+  // 1. Play via HTML5 <audio> WAV on the Media Playback channel (ignores hardware Silent switch on iOS/Android)
+  try {
+    const baseAudio = preloadedCueAudios.get(profile.id);
+    if (baseAudio) {
+      baseAudio.currentTime = 0;
+      baseAudio.play().catch(() => {});
+    }
+  } catch {}
+
+  // 2. Also synthesize via Web Audio API for zero-latency crisp bell harmonics
+  try {
+    if (sharedAudioCtx && (!document.hidden || scheduledBgNodes.length === 0)) {
+      scheduleSoundProfileOnContext(sharedAudioCtx, profile, sharedAudioCtx.currentTime);
+    }
+  } catch {}
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (!timerState.isRunning) return;
+    if (document.hidden) {
+      // Phone screen locked / went to sleep -> pre-schedule all remaining cues on hardware audio clock
+      scheduleBackgroundHardwareAudioCues();
+    } else {
+      // Phone woke up -> clear remaining hardware pre-schedule and re-request wake lock
+      clearBackgroundHardwareAudioCues();
+      requestScreenWakeLock();
+    }
+  });
 }
 
 function toggleTimerPlayPause() {
@@ -1006,50 +1249,85 @@ function toggleTimerPlayPause() {
     timerState.remainingMs = startDur * 1000;
   }
 
+  startSleepAndSilentKeepAlive();
+
+  // Play the initial cue if starting at the beginning of a step
+  const initialStep = timerState.steps[timerState.currentStepIndex];
+  if (
+    initialStep &&
+    Math.abs(timerState.remainingMs - (initialStep.duration || 10) * 1000) < 80
+  ) {
+    playTimerSoundCue(getStepStartSoundType(initialStep), timerState.currentStepIndex);
+  }
+
   let lastTickTime = Date.now();
   renderTimerExecutionView();
 
   timerState.intervalId = setInterval(() => {
     const now = Date.now();
-    const deltaMs = Math.max(0, now - lastTickTime);
+    let deltaMs = Math.max(0, now - lastTickTime);
     lastTickTime = now;
 
-    timerState.remainingMs = Math.max(0, timerState.remainingMs - deltaMs);
-    const currentStep = timerState.steps[timerState.currentStepIndex];
-    const totalMs = Math.max(1000, (currentStep?.duration || 1) * 1000);
+    let stepChangedOrSecondTicked = false;
 
-    if (timerState.remainingMs > 0) {
-      const nextSec = Math.ceil(timerState.remainingMs / 1000);
-      if (nextSec !== timerState.remainingSeconds) {
-        timerState.remainingSeconds = nextSec;
-        if (timerState.remainingSeconds <= 3 && timerState.remainingSeconds >= 1) {
-          playTimerBeep(660, 80);
+    // Advance across one or more steps using wall-clock elapsed time (handles sleep/wake catch-up accurately)
+    while (deltaMs > 0 && timerState.isRunning) {
+      const currentStep = timerState.steps[timerState.currentStepIndex];
+      if (!currentStep) {
+        stopTimerLoop();
+        break;
+      }
+
+      if (deltaMs < timerState.remainingMs) {
+        const prevSec = timerState.remainingSeconds;
+        timerState.remainingMs = Math.max(0, timerState.remainingMs - deltaMs);
+        deltaMs = 0;
+        const nextSec = Math.ceil(timerState.remainingMs / 1000);
+        if (nextSec !== prevSec) {
+          timerState.remainingSeconds = nextSec;
+          stepChangedOrSecondTicked = true;
+          // Steady light sound every second during a short transition / countdown block
+          if (shouldPlaySteadyTransitionPulse(currentStep) && nextSec >= 1) {
+            playTimerSoundCue('transition-pulse', timerState.currentStepIndex);
+          }
         }
-        renderTimerExecutionView();
       } else {
-        const pct = Math.max(0, Math.min(100, (timerState.remainingMs / totalMs) * 100));
-        const stageFill = document.getElementById('timerStageFill');
-        if (stageFill) {
-          stageFill.style.height = `${pct}%`;
+        // Consume remaining time of current step and advance to next interval step
+        deltaMs -= timerState.remainingMs;
+        if (timerState.currentStepIndex < timerState.steps.length - 1) {
+          timerState.currentStepIndex += 1;
+          const nextStep = timerState.steps[timerState.currentStepIndex];
+          const nextDur = nextStep.duration;
+          timerState.remainingSeconds = nextDur;
+          timerState.remainingMs = nextDur * 1000;
+          stepChangedOrSecondTicked = true;
+          // Distinct noise when starting:
+          // 1) an exercise block ('work-start'),
+          // 2) a rest block ('rest-start'), or
+          // 3) a short transition block ('transition-pulse')
+          playTimerSoundCue(getStepStartSoundType(nextStep), timerState.currentStepIndex);
+        } else {
+          // Timer finished -> full grey (0% fill)
+          timerState.remainingSeconds = 0;
+          timerState.remainingMs = 0;
+          deltaMs = 0;
+          stepChangedOrSecondTicked = true;
+          stopTimerLoop();
+          playTimerSoundCue('workout-complete', timerState.currentStepIndex);
+          showToast('Timer complete!');
         }
       }
-    } else {
-      // Advance to next interval step
-      if (timerState.currentStepIndex < timerState.steps.length - 1) {
-        timerState.currentStepIndex += 1;
-        const nextDur = timerState.steps[timerState.currentStepIndex].duration;
-        timerState.remainingSeconds = nextDur;
-        timerState.remainingMs = nextDur * 1000;
-        playTimerBeep(980, 180);
-        renderTimerExecutionView();
-      } else {
-        // Timer finished -> full grey (0% fill)
-        timerState.remainingSeconds = 0;
-        timerState.remainingMs = 0;
-        stopTimerLoop();
-        playTimerBeep(1200, 300);
-        renderTimerExecutionView();
-        showToast('Timer complete!');
+    }
+
+    if (stepChangedOrSecondTicked) {
+      renderTimerExecutionView();
+    } else if (timerState.isRunning) {
+      const currentStep = timerState.steps[timerState.currentStepIndex];
+      const totalMs = Math.max(1000, (currentStep?.duration || 1) * 1000);
+      const pct = Math.max(0, Math.min(100, (timerState.remainingMs / totalMs) * 100));
+      const stageFill = document.getElementById('timerStageFill');
+      if (stageFill) {
+        stageFill.style.height = `${pct}%`;
       }
     }
   }, 50);

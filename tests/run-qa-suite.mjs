@@ -29,6 +29,7 @@ import {
 import {
   TIMER_COLORS,
   CUSTOM_TIMER_PRESETS,
+  TIMER_SOUND_PROFILES,
   isTimedHiitWorkout,
   formatTimerClock,
   getTimerBottomLabel,
@@ -36,7 +37,11 @@ import {
   buildStockTimerSequence,
   buildCustomPresetTimerSequence,
   finalizeWithCountdown,
-  getTimerSequenceSummary
+  getTimerSequenceSummary,
+  getStepStartSoundType,
+  shouldPlaySteadyTransitionPulse,
+  synthesizeCueWavDataUri,
+  buildRemainingTimelineCues
 } from '../src/engine/timerEngine.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1125,6 +1130,70 @@ test('swapExercisesAcrossRounds swaps an exercise from one round onto an exercis
   );
   assert.equal(swapped.rounds[0].slots[0].slotIndex, 0);
   assert.equal(swapped.rounds[1].slots[2].slotIndex, 2);
+});
+
+// ----------------------------------------------------------------------------
+// 12. TIMER AUDIO CUES (WORK START DING, REST START CHIME, STEADY TRANSITION PULSE & SILENT/SLEEP WAV)
+// ----------------------------------------------------------------------------
+console.log('\n12. Timer Audio Cues, Steady Transition Pulse & Silent/Sleep Playback Synthesis');
+
+test('Distinct audio profiles and step sound classification for Work Start, Rest Start, and Transition Pulse', () => {
+  assert.equal(getStepStartSoundType({ type: 'work' }), 'work-start');
+  assert.equal(getStepStartSoundType({ type: 'rest' }), 'rest-start');
+  assert.equal(getStepStartSoundType({ type: 'transition' }), 'transition-pulse');
+  assert.equal(getStepStartSoundType({ type: 'countdown' }), 'transition-pulse');
+
+  assert.equal(shouldPlaySteadyTransitionPulse({ type: 'transition' }), true);
+  assert.equal(shouldPlaySteadyTransitionPulse({ type: 'countdown' }), true);
+  assert.equal(shouldPlaySteadyTransitionPulse({ type: 'work' }), false);
+  assert.equal(shouldPlaySteadyTransitionPulse({ type: 'rest' }), false);
+
+  // Verify the 3 sound profiles have distinct frequencies and durations
+  const workNotes = TIMER_SOUND_PROFILES['work-start'].notes;
+  const restNotes = TIMER_SOUND_PROFILES['rest-start'].notes;
+  const transNotes = TIMER_SOUND_PROFILES['transition-pulse'].notes;
+
+  assert.ok(workNotes[1].freq > workNotes[0].freq, 'Work start ding should be a rising two-tone bell');
+  assert.ok(restNotes[1].freq < restNotes[0].freq, 'Rest start chime should be a descending two-tone bell');
+  assert.equal(transNotes.length, 1, 'Transition pulse should be a steady light single-note pulse');
+
+  // Verify valid RIFF WAVE PCM data URIs are generated for all cues + keepalive
+  for (const cue of ['work-start', 'rest-start', 'transition-pulse', 'workout-complete', 'keepalive']) {
+    const uri = synthesizeCueWavDataUri(cue);
+    assert.ok(uri.startsWith('data:audio/wav;base64,UklGR'), `Invalid WAV RIFF header for ${cue}`);
+  }
+});
+
+test('buildRemainingTimelineCues schedules steady 1s transition pulses, work-start dings, and rest-start chimes accurately', () => {
+  const wk = generateWorkout(sheetData, { workoutType: '6 Excercise Pyramid' });
+  const seq = buildStockTimerSequence(wk);
+  // Step 0: Countdown (10s) -> 10 steady transition-pulse cues at 0s..9s
+  // Step 1: Set 1 Ex 1 (30s work) -> 'work-start' at 10s
+  // Step 2: Set 1 Rest (60s rest) -> 'rest-start' at 40s
+  // Step 3: Set 2 Ex 1 (30s work) -> 'work-start' at 100s
+  // Step 4: Set 2 Transition (10s transition) -> 10 steady 'transition-pulse' cues at 130s..139s
+  // Step 5: Set 2 Ex 2 (30s work) -> 'work-start' at 140s
+  const cues = buildRemainingTimelineCues(seq, 0, 10000);
+
+  const step0Pulses = cues.filter(c => c.stepIndex === 0);
+  assert.equal(step0Pulses.length, 10, '10s countdown should emit 10 steady transition-pulse ticks');
+  assert.ok(step0Pulses.every(c => c.cueType === 'transition-pulse'));
+
+  const step1Cues = cues.filter(c => c.stepIndex === 1);
+  assert.equal(step1Cues.length, 1);
+  assert.equal(step1Cues[0].cueType, 'work-start');
+  assert.equal(step1Cues[0].offsetSec, 10);
+
+  const step2Cues = cues.filter(c => c.stepIndex === 2);
+  assert.equal(step2Cues.length, 1);
+  assert.equal(step2Cues[0].cueType, 'rest-start');
+  assert.equal(step2Cues[0].offsetSec, 40);
+
+  const step4Pulses = cues.filter(c => c.stepIndex === 4);
+  assert.equal(step4Pulses.length, 10, '10s transition between exercises should emit 10 steady transition-pulse ticks');
+  assert.ok(step4Pulses.every(c => c.cueType === 'transition-pulse'));
+  assert.equal(step4Pulses[0].offsetSec, 130);
+  assert.equal(step4Pulses[9].offsetSec, 139);
 });
 
 console.log(`\n🎉 ALL ${passed} QA TEST SUITES PASSED SUCCESSFULLY!`);
