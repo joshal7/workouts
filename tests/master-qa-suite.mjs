@@ -477,7 +477,11 @@ async function runBrowserCDPTests(wsUrl) {
           typeSelect.value = 'Strength Duos';
           typeSelect.dispatchEvent(new Event('change'));
 
-          // 1) Tap "Core" to deselect -> turns grey, yellow bar hidden, 50%/50% Upper/Lower, 1 handle
+          const getActiveExerciseTitles = () =>
+            Array.from(document.querySelectorAll('.exercise-title-text')).map(el => el.innerText.trim());
+          const titlesBeforeFocusAdjust = getActiveExerciseTitles();
+
+          // 1) Tap "Core" to deselect -> turns grey, yellow bar hidden, 50%/50% Upper/Lower, 1 handle (workout NOT changed yet!)
           coreBtn.click();
           const coreDeselectedGrey = getComputedStyle(coreBtn).color;
           const coreSegHidden = segCore.hidden === true;
@@ -487,8 +491,9 @@ async function runBrowserCDPTests(wsUrl) {
             core: document.getElementById('focusPctCore').innerText.trim(),
             lower: document.getElementById('focusPctLower').innerText.trim()
           };
+          const titlesAfterDeselectBeforeGen = getActiveExerciseTitles();
 
-          // 2) Drag the single handle to 75% of track width -> snaps to 75% Upper / 25% Lower -> 6 Upper + 2 Lower, max 1 Lower per Duo round!
+          // 2) Drag the single handle to 75% of track width -> snaps to 75% Upper / 25% Lower (workout STILL unchanged until Generate Workout!)
           const trackRect = track.getBoundingClientRect();
           const thumb0 = document.querySelector('#focusHandlesLayer .focus-slider-thumb');
           const startX = trackRect.left + trackRect.width * 0.5;
@@ -501,6 +506,13 @@ async function runBrowserCDPTests(wsUrl) {
             upper: document.getElementById('focusPctUpper').innerText.trim(),
             lower: document.getElementById('focusPctLower').innerText.trim()
           };
+          const titlesAfterDragBeforeGen = getActiveExerciseTitles();
+          const workoutUnchangedBeforeGenerate =
+            JSON.stringify(titlesBeforeFocusAdjust) === JSON.stringify(titlesAfterDeselectBeforeGen) &&
+            JSON.stringify(titlesBeforeFocusAdjust) === JSON.stringify(titlesAfterDragBeforeGen);
+
+          // Now hit Generate Workout -> applies 75% Upper / 25% Lower -> 6 Upper + 2 Lower, max 1 Lower per Duo round!
+          document.getElementById('generateWorkoutBtn').click();
 
           const legMuscles = ['Glutes', 'Quads', 'Hamstrings'];
           const roundLegCounts = Array.from(document.querySelectorAll('.round-card')).map(card => {
@@ -565,6 +577,7 @@ async function runBrowserCDPTests(wsUrl) {
           thumbs2[1].dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: x67, pointerId: 3, button: 0 }));
           track.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: x67, pointerId: 3 }));
           track.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: x67, pointerId: 3 }));
+          document.getElementById('generateWorkoutBtn').click();
 
           // Test Swap Modal muscle filter pill ("Hamstrings" and "Legs and Core")
           document.querySelector('.exercise-slot[data-round-index="0"][data-slot-index="0"] .swap-trigger-btn').click();
@@ -596,6 +609,7 @@ async function runBrowserCDPTests(wsUrl) {
             handlesAfterDeselectCore,
             pctAfterDeselectCore,
             pctAfterDrag75,
+            workoutUnchangedBeforeGenerate,
             totalLower75,
             maxLowerPerRound75,
             bannersOnAuto75,
@@ -628,6 +642,7 @@ async function runBrowserCDPTests(wsUrl) {
           filterCheck.pctAfterDeselectCore.lower !== '50%' ||
           filterCheck.pctAfterDrag75.upper !== '75%' ||
           filterCheck.pctAfterDrag75.lower !== '25%' ||
+          !filterCheck.workoutUnchangedBeforeGenerate ||
           filterCheck.totalLower75 !== 2 ||
           filterCheck.maxLowerPerRound75 > 1 ||
           filterCheck.bannersOnAuto75 !== 0 ||

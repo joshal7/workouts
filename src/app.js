@@ -1,4 +1,4 @@
-import { DataService } from './services/dataService.js?v=17';
+import { DataService } from './services/dataService.js?v=18';
 import {
   FOCUS_SNAP_STEPS,
   DEFAULT_FOCUS_WEIGHTS,
@@ -25,12 +25,12 @@ import {
   getRandomEntry,
   getPrimaryMuscle,
   getPrimaryBodyArea
-} from './engine/workoutEngine.js?v=17';
+} from './engine/workoutEngine.js?v=18';
 import {
   analyzeMuscleLoad,
   applyBalancedRecommendation,
   SPECIFIC_MUSCLES
-} from './engine/muscleLoadAnalyzer.js?v=17';
+} from './engine/muscleLoadAnalyzer.js?v=18';
 import {
   TIMER_COLORS,
   CUSTOM_TIMER_PRESETS,
@@ -44,7 +44,7 @@ import {
   finalizeWithCountdown,
   getStepStartSoundType,
   shouldPlaySteadyTransitionPulse
-} from './engine/timerEngine.js?v=17';
+} from './engine/timerEngine.js?v=18';
 
 const dataService = new DataService();
 
@@ -164,7 +164,7 @@ async function bootstrap() {
   // long before any timer AudioContext is created or resumed (prevents synchronous click race condition).
   configureAmbientAudioSession();
 
-  await dataService.init('./data/sheet-data.json?v=17', './data/enrichments.json?v=17');
+  await dataService.init('./data/sheet-data.json?v=18', './data/enrichments.json?v=18');
   populateWorkoutTypeSelect();
   populateCustomTimerPresetsSelect();
   syncUIFromActiveProfile();
@@ -179,7 +179,7 @@ async function bootstrap() {
       refreshing = true;
       window.location.reload();
     });
-    navigator.serviceWorker.register('./sw.js?v=17', { updateViaCache: 'none' }).then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=18', { updateViaCache: 'none' }).then(reg => {
       reg.update().catch(() => {});
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
@@ -1614,17 +1614,18 @@ function renderSwapExerciseList() {
     pool = [...dataService.sheetData.exercises];
   } else {
     // If user explicitly clicked a muscle group filter pill in the Swap modal,
-    // use that muscle filter rather than locking to Focus slider weights
+    // use that muscle filter rather than locking to the active workout's Focus weights
     const hasExplicitChip = currentSwapMuscleFilter !== 'All';
+    const activeFocus = normalizeFocusWeights(wkState.inputs || {});
     pool = filterEligibleExercises(dataService.sheetData.exercises, {
       workoutCategory: wkState.inputs.effectiveWorkoutCategory,
       bodyCategory: hasExplicitChip
         ? currentSwapMuscleFilter
-        : deriveBodyCategoryFromFocus(focusState.weights, focusState.enabled),
+        : deriveBodyCategoryFromFocus(activeFocus.weights, activeFocus.enabled),
       muscleGroup: hasExplicitChip ? currentSwapMuscleFilter : null,
-      focusWeights: hasExplicitChip ? null : focusState.weights,
-      focusEnabled: hasExplicitChip ? null : focusState.enabled,
-      equipment: els.equipmentSelect.value || wkState.inputs.equipment,
+      focusWeights: hasExplicitChip ? null : activeFocus.weights,
+      focusEnabled: hasExplicitChip ? null : activeFocus.enabled,
+      equipment: wkState.inputs.equipment || els.equipmentSelect.value,
       excludedExerciseIds: profile.excludedExerciseIds || []
     });
   }
@@ -1911,6 +1912,7 @@ function bindFocusSliderEvents() {
   if (!els.focusSliderSection || !els.focusBarTrack) return;
 
   // 1. Tapping Upper Body, Core, or Lower Body label toggles deselection/reselection
+  //    (updates Focus UI only; workout does not change until user taps Generate Workout)
   els.focusSliderSection.addEventListener('click', e => {
     const labelBtn = e.target.closest('[data-focus-area]');
     if (!labelBtn) return;
@@ -1923,7 +1925,6 @@ function bindFocusSliderEvents() {
     if (result.changed) {
       focusState = { weights: result.weights, enabled: result.enabled };
       renderFocusSliderUI();
-      handleGenerateWorkout(true);
     }
   });
 
@@ -2016,7 +2017,6 @@ function bindFocusSliderEvents() {
 
   function finishFocusDrag(e) {
     if (!dragSession || (e && e.pointerId !== dragSession.pointerId)) return;
-    const prevWeights = dragSession.initialWeights;
     dragSession = null;
     els.focusBarTrack.classList.remove('is-dragging');
     try {
@@ -2025,15 +2025,13 @@ function bindFocusSliderEvents() {
       }
     } catch {}
     renderFocusSliderUI(null);
-    if (weightsDiffer(prevWeights, focusState.weights)) {
-      handleGenerateWorkout(true);
-    }
   }
 
   els.focusBarTrack.addEventListener('pointerup', finishFocusDrag);
   els.focusBarTrack.addEventListener('pointercancel', finishFocusDrag);
 
   // 3. Keyboard arrow accessibility along FOCUS_SNAP_STEPS
+  //    (updates Focus UI only; workout does not change until user taps Generate Workout)
   els.focusBarTrack.addEventListener('keydown', e => {
     const thumb = e.target.closest('[data-handle-index]');
     if (!thumb) return;
@@ -2067,7 +2065,6 @@ function bindFocusSliderEvents() {
       nextIdx = FOCUS_SNAP_STEPS.length - 1;
     }
 
-    const prevWeights = { ...focusState.weights };
     const updated = updateFocusFromHandleDrag(
       focusState.weights,
       focusState.enabled,
@@ -2076,9 +2073,6 @@ function bindFocusSliderEvents() {
     );
     focusState.weights = updated.weights;
     renderFocusSliderUI(null);
-    if (weightsDiffer(prevWeights, focusState.weights)) {
-      handleGenerateWorkout(true);
-    }
   });
 }
 
