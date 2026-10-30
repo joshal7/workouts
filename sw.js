@@ -1,4 +1,4 @@
-const CACHE_NAME = 'joshal-workout-pwa-v5';
+const CACHE_NAME = 'joshal-workout-pwa-v6';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ const CORE_ASSETS = [
   './src/services/dataService.js',
   './src/engine/workoutEngine.js',
   './src/engine/muscleLoadAnalyzer.js',
+  './src/engine/timerEngine.js',
   './data/sheet-data.json',
   './data/enrichments.json',
   './diagrams/app-icon.svg'

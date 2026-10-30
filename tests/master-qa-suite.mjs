@@ -350,12 +350,312 @@ async function runBrowserCDPTests(wsUrl) {
         }
         console.log('  ✅ PASS: Profile/login button removed, top-nav has settings only, and clutter completely removed');
 
-        console.log('\n--- 8. Mobile Viewport Screenshot Capture ---');
+        console.log('\n--- 8. Requirement 1: Filter by Muscle Group Across Main Dropdown, Swap Modal & Settings ---');
+        const filterCheck = await evalInPage(() => {
+          // Reset optionsPerSlot to 1 for clean inspection
+          document.getElementById('settingsBtn').click();
+          document.querySelector('[data-options-count="1"]').click();
+
+          // Test exclusion muscle filter pill in Settings modal
+          const exclTricepsPill = document.querySelector('#exclusionMuscleFilterBar [data-muscle-filter="Triceps"]');
+          exclTricepsPill.click();
+          const exclItems = Array.from(document.querySelectorAll('#exclusionChecklist .exclusion-row')).map(
+            el => el.innerText
+          );
+          const allExclValid = exclItems.length >= 4;
+          // Reset exclusion filter pill back to All and close settings
+          document.querySelector('#exclusionMuscleFilterBar [data-muscle-filter="All"]').click();
+          document.querySelector('[data-close-modal="settingsModal"]').click();
+
+          // Test main Focus dropdown (#bodyCategorySelect) filtering by specific muscle group "Glutes"
+          const focusSelect = document.getElementById('bodyCategorySelect');
+          focusSelect.value = 'Glutes';
+          focusSelect.dispatchEvent(new Event('change'));
+
+          const slotMetasGlutes = Array.from(document.querySelectorAll('.exercise-slot .exercise-inline-meta')).map(
+            el => el.innerText
+          );
+          const allSlotsHaveGlutes = slotMetasGlutes.length > 0 && slotMetasGlutes.every(txt => txt.includes('Glutes'));
+
+          // Test Swap Modal muscle filter pill ("Hamstrings")
+          document.querySelector('.exercise-slot[data-round-index="0"][data-slot-index="0"] .swap-trigger-btn').click();
+          const swapHamPill = document.querySelector('#swapMuscleFilterBar [data-muscle-filter="Hamstrings"]');
+          swapHamPill.click();
+          const swapItems = Array.from(document.querySelectorAll('#swapExerciseList .swap-option-item')).map(
+            el => el.innerText
+          );
+          const allSwapHaveHamstrings = swapItems.length >= 4;
+          document.querySelector('[data-close-modal="swapModal"]').click();
+
+          // Reset Focus dropdown back to All
+          focusSelect.value = 'All';
+          focusSelect.dispatchEvent(new Event('change'));
+
+          return {
+            allExclValid,
+            exclCount: exclItems.length,
+            allSlotsHaveGlutes,
+            glutesSlotCount: slotMetasGlutes.length,
+            allSwapHaveHamstrings,
+            swapHamCount: swapItems.length
+          };
+        });
+        if (!filterCheck.allExclValid || !filterCheck.allSlotsHaveGlutes || !filterCheck.allSwapHaveHamstrings) {
+          throw new Error('Muscle group filter check failed: ' + JSON.stringify(filterCheck));
+        }
+        console.log(
+          `  ✅ PASS: Muscle group filtering verified across Main Focus (Glutes: ${filterCheck.glutesSlotCount} slots), Swap Modal (Hamstrings: ${filterCheck.swapHamCount}), and Settings (Triceps: ${filterCheck.exclCount})`
+        );
+
+        console.log('\n--- 9. Requirement 2 & 3: Dismiss Overload Warning & Replacement Exercises Never Trigger New Warnings ---');
+        const dismissAndReplaceCheck = await evalInPage(() => {
+          const typeSelect = document.getElementById('workoutTypeSelect');
+          typeSelect.value = 'Strength Duos';
+          typeSelect.dispatchEvent(new Event('change'));
+
+          // Manually create a Triceps overload in Round 1 (slot 0 = Skull Crushers, slot 1 = Tricep kick backs)
+          document.querySelector('.exercise-slot[data-round-index="0"][data-slot-index="0"] .swap-trigger-btn').click();
+          const swapInput = document.getElementById('swapSearchInput');
+          swapInput.value = 'Skull Crushers';
+          swapInput.dispatchEvent(new Event('input'));
+          document.querySelector('#swapExerciseList .swap-option-item').click();
+
+          document.querySelector('.exercise-slot[data-round-index="0"][data-slot-index="1"] .swap-trigger-btn').click();
+          swapInput.value = 'Tricep kick backs';
+          swapInput.dispatchEvent(new Event('input'));
+          document.querySelector('#swapExerciseList .swap-option-item').click();
+
+          const bannerBeforeDismiss = document.querySelector('.overload-banner');
+          const hasBannerBefore = !!bannerBeforeDismiss;
+          const dismissBtn = bannerBeforeDismiss?.querySelector('[data-action="dismiss-warning"]');
+          dismissBtn?.click();
+          const bannerAfterDismiss = document.querySelector('.overload-banner');
+
+          // Now generate a fresh Strength Trios workout, trigger overload again, and test replacement recommendation from Balance Modal
+          document.getElementById('generateWorkoutBtn').click();
+          document.querySelector('.exercise-slot[data-round-index="0"][data-slot-index="0"] .swap-trigger-btn').click();
+          swapInput.value = 'Skull Crushers';
+          swapInput.dispatchEvent(new Event('input'));
+          document.querySelector('#swapExerciseList .swap-option-item').click();
+
+          document.querySelector('.exercise-slot[data-round-index="0"][data-slot-index="1"] .swap-trigger-btn').click();
+          swapInput.value = 'Tricep kick backs';
+          swapInput.dispatchEvent(new Event('input'));
+          document.querySelector('#swapExerciseList .swap-option-item').click();
+
+          const bannerForModal = document.querySelector('.overload-banner');
+          bannerForModal.querySelector('[data-action="open-balance-modal"]').click();
+          const recBtn = document.querySelector('#balanceRecommendationsList [data-action="apply-balance-choice"]');
+          const recName = recBtn?.innerText.trim();
+          recBtn?.click();
+
+          const bannersAfterRec = document.querySelectorAll('.overload-banner').length;
+
+          return {
+            hasBannerBefore,
+            dismissedCleanly: !bannerAfterDismiss,
+            recName,
+            zeroWarningsAfterReplacement: bannersAfterRec === 0
+          };
+        });
+        if (
+          !dismissAndReplaceCheck.hasBannerBefore ||
+          !dismissAndReplaceCheck.dismissedCleanly ||
+          !dismissAndReplaceCheck.zeroWarningsAfterReplacement
+        ) {
+          throw new Error('Dismiss & replacement check failed: ' + JSON.stringify(dismissAndReplaceCheck));
+        }
+        console.log('  ✅ PASS: Overload warning dismisses in 1 tap and replacement recommendations trigger 0 new warnings');
+
+        console.log('\n--- 10. Requirement 4: Select X Exercises From List & Auto-Slot Muscle Distribution ---');
+        const selectXCheck = await evalInPage(() => {
+          const typeSelect = document.getElementById('workoutTypeSelect');
+          typeSelect.value = 'Timed Duos (40/20)';
+          typeSelect.dispatchEvent(new Event('change'));
+
+          const btnLabel = document.getElementById('selectExercisesBtn')?.innerText.trim();
+          document.getElementById('selectExercisesBtn').click();
+
+          const modal = document.getElementById('selectExercisesModal');
+          const modalOpen = modal && !modal.hidden;
+
+          // Filter by Chest first and pick 2 Chest exercises
+          document.querySelector('#selectExercisesMuscleFilterBar [data-muscle-filter="Chest"]').click();
+          const chestItems = document.querySelectorAll('#selectExercisesList [data-action="toggle-custom-select-exercise"]');
+          chestItems[0]?.click();
+          chestItems[1]?.click();
+
+          // Filter by Back and pick 2 Back exercises
+          document.querySelector('#selectExercisesMuscleFilterBar [data-muscle-filter="Back"]').click();
+          const backItems = document.querySelectorAll('#selectExercisesList [data-action="toggle-custom-select-exercise"]');
+          backItems[0]?.click();
+          backItems[1]?.click();
+
+          // Use Auto-Fill Remaining to pick the remaining 4 balanced exercises
+          document.getElementById('autoFillRemainingBtn').click();
+
+          const confirmBtn = document.getElementById('confirmSelectExercisesBtn');
+          const confirmEnabled = !confirmBtn.disabled;
+          const confirmText = confirmBtn.innerText.trim();
+
+          confirmBtn.click();
+          const modalClosed = modal.hidden;
+          const roundCount = document.querySelectorAll('.round-card').length;
+          const slotCount = document.querySelectorAll('.exercise-slot').length;
+          const overloadBanners = document.querySelectorAll('.overload-banner').length;
+
+          return {
+            btnLabel,
+            modalOpen,
+            confirmEnabled,
+            confirmText,
+            modalClosed,
+            roundCount,
+            slotCount,
+            overloadBanners
+          };
+        });
+        if (
+          selectXCheck.btnLabel !== 'Select 8 Exercises' ||
+          !selectXCheck.modalOpen ||
+          !selectXCheck.confirmEnabled ||
+          !selectXCheck.modalClosed ||
+          selectXCheck.roundCount !== 4 ||
+          selectXCheck.slotCount !== 8 ||
+          selectXCheck.overloadBanners !== 0
+        ) {
+          throw new Error('Select X Exercises check failed: ' + JSON.stringify(selectXCheck));
+        }
+        console.log(
+          `  ✅ PASS: "${selectXCheck.btnLabel}" modal selected 8 exercises and auto-slotted them across 4 Duo rounds with 0 overload warnings`
+        );
+
+        console.log('\n--- 11. Requirement 5: Timed HIIT Exercise Timer, 10s Yellow Countdown, Customizer & Reset on Type Change ---');
+        const timerCheck = await evalInPage(() => {
+          const typeSelect = document.getElementById('workoutTypeSelect');
+          typeSelect.value = 'Timed Duos (40/20)';
+          typeSelect.dispatchEvent(new Event('change'));
+
+          const timerBarVisible = !document.getElementById('workoutTimerBar').hidden;
+          const round1Ex1Name = document
+            .querySelector('.exercise-slot[data-round-index="0"][data-slot-index="0"] .exercise-title-text')
+            ?.innerText.trim();
+
+          // Open Round 1 timer (40/20 x 6)
+          document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
+
+          const timerModal = document.getElementById('timerModal');
+          const timerOpen = timerModal && !timerModal.hidden;
+          const step0Clock = document.getElementById('timerClockDisplay')?.innerText.trim();
+          const step0StageClass = document.getElementById('timerStageCard')?.className || '';
+          const step0Phase = document.getElementById('timerPhaseBadge')?.innerText.trim();
+          const timelineChipsCount = document.querySelectorAll('#timerSequenceTimeline .timer-seq-chip').length;
+          const clockFontSize = parseFloat(getComputedStyle(document.getElementById('timerClockDisplay')).fontSize);
+          const noOverflowInTimer = document.documentElement.scrollWidth <= window.innerWidth;
+
+          // Skip from Step 0 (10s yellow countdown) -> Step 1 (40s green work on Exercise 1)
+          document.getElementById('timerNextStepBtn').click();
+          const step1Clock = document.getElementById('timerClockDisplay')?.innerText.trim();
+          const step1StageClass = document.getElementById('timerStageCard')?.className || '';
+          const step1ExName = document.getElementById('timerActiveExerciseName')?.innerText.trim();
+
+          // Skip from Step 1 (40s green work) -> Step 2 (20s blue rest)
+          document.getElementById('timerNextStepBtn').click();
+          const step2Clock = document.getElementById('timerClockDisplay')?.innerText.trim();
+          const step2StageClass = document.getElementById('timerStageCard')?.className || '';
+
+          // Open Customize view, customize Exercise 1 work duration to 50s & orange, add an extra interval, and apply
+          document.getElementById('toggleTimerCustomizerBtn').click();
+          const workInput = document.querySelector('[data-ex-timer-field="workDuration"]');
+          workInput.value = '50';
+          workInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+          const workColorSelect = document.querySelector('[data-ex-timer-field="workColor"]');
+          workColorSelect.value = 'orange';
+          workColorSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+          document.querySelector('[data-action="add-exercise-extra-time"]').click();
+          document.getElementById('applyTimerCustomizationBtn').click();
+
+          // Verify customized sequence starts at 00:10 yellow countdown and Step 1 is 00:50 orange
+          const customStep0Clock = document.getElementById('timerClockDisplay')?.innerText.trim();
+          document.getElementById('timerNextStepBtn').click();
+          const customStep1Clock = document.getElementById('timerClockDisplay')?.innerText.trim();
+          const customStep1Class = document.getElementById('timerStageCard')?.className || '';
+
+          // Close timer modal and select a different workout type ("Timed Trios (40/20)") -> verify timer resets!
+          document.getElementById('closeTimerModalBtn').click();
+          typeSelect.value = 'Timed Trios (40/20)';
+          typeSelect.dispatchEvent(new Event('change'));
+
+          document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
+          const trioChipsCount = document.querySelectorAll('#timerSequenceTimeline .timer-seq-chip').length;
+          document.getElementById('timerNextStepBtn').click();
+          const trioStep1Clock = document.getElementById('timerClockDisplay')?.innerText.trim();
+          const trioStep1Class = document.getElementById('timerStageCard')?.className || '';
+          document.getElementById('closeTimerModalBtn').click();
+
+          return {
+            timerBarVisible,
+            timerOpen,
+            step0Clock,
+            step0IsYellow: step0StageClass.includes('timer-color-yellow'),
+            step0Phase,
+            timelineChipsCount,
+            clockFontSize,
+            noOverflowInTimer,
+            step1Clock,
+            step1IsGreen: step1StageClass.includes('timer-color-green'),
+            step1MatchesExercise: step1ExName === round1Ex1Name,
+            step2Clock,
+            step2IsBlue: step2StageClass.includes('timer-color-blue'),
+            customStep0Clock,
+            customStep1Clock,
+            customStep1IsOrange: customStep1Class.includes('timer-color-orange'),
+            trioChipsCount,
+            trioResetTo40Green: trioStep1Clock === '00:40' && trioStep1Class.includes('timer-color-green')
+          };
+        });
+        if (
+          !timerCheck.timerBarVisible ||
+          !timerCheck.timerOpen ||
+          timerCheck.step0Clock !== '00:10' ||
+          !timerCheck.step0IsYellow ||
+          timerCheck.timelineChipsCount !== 13 ||
+          timerCheck.clockFontSize < 60 ||
+          !timerCheck.noOverflowInTimer ||
+          timerCheck.step1Clock !== '00:40' ||
+          !timerCheck.step1IsGreen ||
+          !timerCheck.step1MatchesExercise ||
+          timerCheck.step2Clock !== '00:20' ||
+          !timerCheck.step2IsBlue ||
+          timerCheck.customStep0Clock !== '00:10' ||
+          timerCheck.customStep1Clock !== '00:50' ||
+          !timerCheck.customStep1IsOrange ||
+          timerCheck.trioChipsCount !== 19 ||
+          !timerCheck.trioResetTo40Green
+        ) {
+          throw new Error('HIIT Timer & Customizer check failed: ' + JSON.stringify(timerCheck));
+        }
+        console.log(
+          `  ✅ PASS: HIIT Timer verified (10s yellow countdown -> 6 pairs of 40s green / 20s blue, font=${timerCheck.clockFontSize}px, customizer & reset on workout type change)`
+        );
+
+        console.log('\n--- 12. Mobile Viewport Screenshot Capture ---');
         const screenshotData = await send('Page.captureScreenshot', { format: 'png' });
         fs.writeFileSync('/tmp/workout-mobile-screenshot.png', Buffer.from(screenshotData.data, 'base64'));
-        console.log('  ✅ PASS: Mobile screenshot saved to /tmp/workout-mobile-screenshot.png');
+        // Also capture the full-screen executed HIIT timer view
+        await evalInPage(() => {
+          document.querySelector('[data-action="open-round-timer"][data-round-index="0"]')?.click();
+        });
+        const timerScreenshotData = await send('Page.captureScreenshot', { format: 'png' });
+        fs.writeFileSync('/tmp/workout-timer-screenshot.png', Buffer.from(timerScreenshotData.data, 'base64'));
+        await evalInPage(() => {
+          document.getElementById('closeTimerModalBtn')?.click();
+        });
+        console.log('  ✅ PASS: Mobile screenshots saved to /tmp/workout-mobile-screenshot.png and /tmp/workout-timer-screenshot.png');
 
-        console.log('\n--- 9. QA Gallery All 68 Diagrams Render & No Audit Box Check ---');
+        console.log('\n--- 13. QA Gallery All 68 Diagrams Render, Muscle Filter & No Audit Box Check ---');
         await send('Emulation.setDeviceMetricsOverride', {
           width: 1280,
           height: 900,
@@ -379,12 +679,37 @@ async function runBrowserCDPTests(wsUrl) {
             })
             .filter(x => !x.complete || x.w !== 680 || x.h !== 248);
           const auditBoxes = document.querySelectorAll('.audit-note-box').length;
-          return { totalCards: cards.length, brokenCount: broken.length, broken, auditBoxes };
+
+          // Test clicking the "Glutes" muscle filter button in QA Gallery
+          const glutesBtn = document.querySelector('.qa-filter-bar [data-filter="Glutes"]');
+          glutesBtn?.click();
+          const glutesCards = Array.from(document.querySelectorAll('article.qa-card'));
+          const allGlutesValid =
+            glutesCards.length > 0 && glutesCards.length < 68 && glutesCards.every(c => c.innerText.includes('Glutes'));
+
+          // Reset to All
+          document.querySelector('.qa-filter-bar [data-filter="all"]')?.click();
+
+          return {
+            totalCards: cards.length,
+            brokenCount: broken.length,
+            broken,
+            auditBoxes,
+            glutesCardCount: glutesCards.length,
+            allGlutesValid
+          };
         });
-        if (galleryCheck.totalCards !== 68 || galleryCheck.brokenCount > 0 || galleryCheck.auditBoxes > 0) {
+        if (
+          galleryCheck.totalCards !== 68 ||
+          galleryCheck.brokenCount > 0 ||
+          galleryCheck.auditBoxes > 0 ||
+          !galleryCheck.allGlutesValid
+        ) {
           throw new Error('QA Gallery check failed: ' + JSON.stringify(galleryCheck));
         }
-        console.log('  ✅ PASS: All 68/68 exercise SVG diagrams rendered cleanly (680x248) with 0 broken images and 0 audit update boxes');
+        console.log(
+          `  ✅ PASS: All 68/68 exercise SVG diagrams rendered cleanly (680x248) and QA Gallery muscle filter verified (${galleryCheck.glutesCardCount} Glutes exercises)`
+        );
 
         ws.close();
         resolve();

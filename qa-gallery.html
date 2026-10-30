@@ -52,8 +52,14 @@
     .qa-filter-bar {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 6px;
       margin-bottom: 18px;
+      align-items: center;
+    }
+    .qa-filter-bar .secondary-pill-btn.active {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+      color: #ffffff;
     }
   </style>
 </head>
@@ -68,11 +74,20 @@
     </header>
 
     <div class="qa-filter-bar">
-      <input id="qaSearch" type="search" placeholder="Search exercise, muscle, equipment, or pose..." class="search-input" style="max-width:340px;" />
-      <button class="secondary-pill-btn" data-filter="all" type="button">All (68)</button>
+      <input id="qaSearch" type="search" placeholder="Search exercise, muscle, equipment, or pose..." class="search-input" style="max-width:300px;" />
+      <button class="secondary-pill-btn active" data-filter="all" type="button">All (68)</button>
       <button class="secondary-pill-btn" data-filter="Upper Body" type="button">Upper Body</button>
       <button class="secondary-pill-btn" data-filter="Core" type="button">Core</button>
       <button class="secondary-pill-btn" data-filter="Legs" type="button">Legs</button>
+      <button class="secondary-pill-btn" data-filter="Chest" type="button">Chest</button>
+      <button class="secondary-pill-btn" data-filter="Back" type="button">Back</button>
+      <button class="secondary-pill-btn" data-filter="Shoulders" type="button">Shoulders</button>
+      <button class="secondary-pill-btn" data-filter="Biceps" type="button">Biceps</button>
+      <button class="secondary-pill-btn" data-filter="Triceps" type="button">Triceps</button>
+      <button class="secondary-pill-btn" data-filter="Abs" type="button">Abs</button>
+      <button class="secondary-pill-btn" data-filter="Glutes" type="button">Glutes</button>
+      <button class="secondary-pill-btn" data-filter="Quads" type="button">Quads</button>
+      <button class="secondary-pill-btn" data-filter="Hamstrings" type="button">Hamstrings</button>
     </div>
 
     <div id="qaExerciseGrid" class="qa-grid"></div>
@@ -81,6 +96,7 @@
   <script type="module">
     import { DataService } from './src/services/dataService.js';
     import { SPECIFIC_MUSCLES } from './src/engine/muscleLoadAnalyzer.js';
+    import { filterExercisesByMuscleAndQuery } from './src/engine/workoutEngine.js';
 
     const ds = new DataService();
     await ds.init('./data/sheet-data.json', './data/enrichments.json');
@@ -90,16 +106,10 @@
     const searchInput = document.getElementById('qaSearch');
 
     function render() {
-      const q = (searchInput.value || '').trim().toLowerCase();
-      const list = ds.sheetData.exercises.filter(ex => {
-        if (['Upper Body', 'Core', 'Legs'].includes(activeFilter) && ex.bodyCategories[activeFilter] !== 'Pri') {
-          return false;
-        }
-        if (q) {
-          const hay = `${ex.name} ${ex.equipment} ${ex.enrichment?.summary || ''} ${ex.enrichment?.pose || ''}`.toLowerCase();
-          return hay.includes(q);
-        }
-        return true;
+      const q = (searchInput.value || '').trim();
+      const list = filterExercisesByMuscleAndQuery(ds.sheetData.exercises, {
+        muscleFilter: activeFilter,
+        query: q
       });
 
       grid.innerHTML = list.map(ex => {
@@ -138,6 +148,7 @@
     document.querySelectorAll('[data-filter]').forEach(btn => {
       btn.addEventListener('click', () => {
         activeFilter = btn.getAttribute('data-filter');
+        document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b === btn));
         render();
       });
     });

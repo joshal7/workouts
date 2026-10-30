@@ -7,11 +7,15 @@ import { DataService } from '../src/services/dataService.js';
 import {
   generateWorkout,
   filterEligibleExercises,
+  filterExercisesByMuscleAndQuery,
   getActiveSlotExercise,
   swapExerciseInSlot,
   getValidReplacementCandidates,
   getWorkoutCheckMode,
-  getConsolidatedWorkoutSubtitle
+  getConsolidatedWorkoutSubtitle,
+  getTargetExerciseCount,
+  autoSlotExercises,
+  generateWorkoutFromSelectedExercises
 } from '../src/engine/workoutEngine.js';
 import {
   analyzeMuscleLoad,
@@ -19,6 +23,17 @@ import {
   formatCombinedMuscles,
   SPECIFIC_MUSCLES
 } from '../src/engine/muscleLoadAnalyzer.js';
+import {
+  TIMER_COLORS,
+  CUSTOM_TIMER_PRESETS,
+  isTimedHiitWorkout,
+  formatTimerClock,
+  getDefaultExerciseTimerConfig,
+  buildStockTimerSequence,
+  buildCustomPresetTimerSequence,
+  finalizeWithCountdown,
+  getTimerSequenceSummary
+} from '../src/engine/timerEngine.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
@@ -476,6 +491,487 @@ test('HTML/CSS/JS UI audit: Light motif, hyperlinked workout type, and removed S
   assert.ok(!html.includes('exerciseModalAuditBox') && !html.includes('audit-note-box'), 'Audit box must be removed from index.html');
   assert.ok(!galleryHtml.includes('audit-note-box') && !galleryHtml.includes('Audit Update:'), 'Audit box must be removed from qa-gallery.html');
   assert.ok(!appJs.includes('exerciseModalAuditBox'), 'Audit box logic must be removed from src/app.js');
+});
+
+// ----------------------------------------------------------------------------
+// 6. REQUIREMENT 1: FILTER BY MUSCLE GROUP & BODY AREA
+// ----------------------------------------------------------------------------
+console.log('\n6. Requirement 1: Filter by Muscle Group & Body Area');
+
+test('filterEligibleExercises filters accurately across all Body Areas and all 9 Specific Muscle Groups', () => {
+  const bodyAreas = ['All', 'Upper Body', 'Core', 'Legs', 'Upper Body and Core', 'Legs and Core', 'Upper Body and Legs'];
+  for (const area of bodyAreas) {
+    const pool = filterEligibleExercises(sheetData.exercises, {
+      workoutCategory: 'Either',
+      bodyCategory: area,
+      equipment: 'Any'
+    });
+    assert.ok(pool.length > 0, `Expected non-empty pool for bodyCategory="${area}"`);
+    for (const ex of pool) {
+      if (area === 'Upper Body' || area === 'Core' || area === 'Legs') {
+        assert.equal(ex.bodyCategories[area], 'Pri', `${ex.name} must have ${area}: Pri`);
+      } else if (area === 'Upper Body and Core') {
+        assert.ok(ex.bodyCategories['Upper Body'] === 'Pri' || ex.bodyCategories['Core'] === 'Pri');
+      } else if (area === 'Legs and Core') {
+        assert.ok(ex.bodyCategories['Legs'] === 'Pri' || ex.bodyCategories['Core'] === 'Pri');
+      } else if (area === 'Upper Body and Legs') {
+        assert.ok(ex.bodyCategories['Upper Body'] === 'Pri' || ex.bodyCategories['Legs'] === 'Pri');
+      }
+    }
+  }
+
+  for (const muscle of SPECIFIC_MUSCLES) {
+    const pool = filterEligibleExercises(sheetData.exercises, {
+      workoutCategory: 'Either',
+      bodyCategory: muscle,
+      equipment: 'Any'
+    });
+    assert.ok(pool.length >= 2, `Expected at least 2 exercises for specific muscle "${muscle}"`);
+    for (const ex of pool) {
+      assert.ok(
+        ex.muscles[muscle] === 'Pri' || ex.muscles[muscle] === 'Sec',
+        `${ex.name} in ${muscle} pool must target ${muscle} as Pri or Sec`
+      );
+    }
+  }
+});
+
+test('filterExercisesByMuscleAndQuery filters by muscle pill AND search text (name, muscle, equipment, body area)', () => {
+  for (const muscle of SPECIFIC_MUSCLES) {
+    const list = filterExercisesByMuscleAndQuery(sheetData.exercises, {
+      muscleFilter: muscle,
+      query: ''
+    });
+    assert.ok(list.length >= 2, `Expected exercises for muscleFilter=${muscle}`);
+    for (const ex of list) {
+      assert.ok(ex.muscles[muscle] === 'Pri' || ex.muscles[muscle] === 'Sec');
+    }
+    // Primary exercises should be sorted before Secondary exercises
+    const firstSecIdx = list.findIndex(e => e.muscles[muscle] !== 'Pri');
+    if (firstSecIdx !== -1) {
+      for (let i = firstSecIdx; i < list.length; i++) {
+        assert.notEqual(list[i].muscles[muscle], 'Pri', 'Primary muscle matches must sort before Secondary');
+      }
+    }
+  }
+
+  // Search by muscle name text when muscleFilter = 'All'
+  const hamMatches = filterExercisesByMuscleAndQuery(sheetData.exercises, {
+    muscleFilter: 'All',
+    query: 'hamstrings'
+  });
+  assert.ok(hamMatches.length >= 4);
+  for (const ex of hamMatches) {
+    assert.ok(ex.muscles.Hamstrings === 'Pri' || ex.muscles.Hamstrings === 'Sec');
+  }
+});
+
+// ----------------------------------------------------------------------------
+// 7. REQUIREMENT 2: ALLOW USER TO DISMISS MUSCLE OVERLOAD WARNINGS
+// ----------------------------------------------------------------------------
+console.log('\n7. Requirement 2: Dismiss Muscle Overload Warning');
+
+test('analyzeMuscleLoad suppresses warnings whose warning.id or round key is in dismissedWarnings', () => {
+  let wk = generateWorkout(sheetData, {
+    workoutCategory: 'Strength',
+    bodyCategory: 'All',
+    equipment: 'Any',
+    workoutType: 'Strength Duos'
+  });
+  const byId = Object.fromEntries(sheetData.exercises.map(e => [e.id, e]));
+  // Trigger Chest overload in Round 1 and Triceps overload in Round 2
+  wk = swapExerciseInSlot(wk, 0, 0, byId['push-ups']);
+  wk = swapExerciseInSlot(wk, 0, 1, byId['chest-flys']);
+  wk = swapExerciseInSlot(wk, 1, 0, byId['skull-crushers']);
+  wk = swapExerciseInSlot(wk, 1, 1, byId['tricep-kick-backs']);
+
+  const before = analyzeMuscleLoad(wk, sheetData, [], []);
+  assert.equal(before.warnings.length, 2, 'Should have 2 warnings before dismissal');
+  const r1WarnId = before.warnings.find(w => w.roundIndex === 0).id;
+  const r2WarnId = before.warnings.find(w => w.roundIndex === 1).id;
+
+  // Dismiss Round 1 warning by ID
+  const afterDismissR1 = analyzeMuscleLoad(wk, sheetData, [], [r1WarnId]);
+  assert.equal(afterDismissR1.warnings.length, 1, 'Round 1 warning should be dismissed');
+  assert.equal(afterDismissR1.warnings[0].id, r2WarnId, 'Round 2 warning should remain');
+
+  // Dismiss Round 2 warning by round key
+  const afterDismissBoth = analyzeMuscleLoad(wk, sheetData, [], [r1WarnId, 'round-1']);
+  assert.equal(afterDismissBoth.warnings.length, 0, 'All warnings should be dismissed');
+  assert.equal(afterDismissBoth.hasWarnings, false);
+});
+
+// ----------------------------------------------------------------------------
+// 8. REQUIREMENT 3: ZERO NEW WARNINGS ON NEW WORKOUTS OR REPLACEMENT EXERCISES
+// ----------------------------------------------------------------------------
+console.log('\n8. Requirement 3: Newly Generated Workouts & Replacement Exercises Never Trigger New Warnings');
+
+test('Newly generated workouts across all filters & multi-option selections produce 0 overload warnings', () => {
+  const workoutCats = ['Either', 'Strength', 'HIIT'];
+  const bodyCats = [
+    'All',
+    'Upper Body',
+    'Core',
+    'Legs',
+    'Upper Body and Core',
+    'Legs and Core',
+    'Upper Body and Legs',
+    ...SPECIFIC_MUSCLES
+  ];
+  const equips = ['Any', 'Weights', 'Bands', 'Nothing'];
+  const workoutTypes = sheetData.workouts.map(w => w.name);
+
+  for (const workoutCategory of workoutCats) {
+    for (const bodyCategory of bodyCats) {
+      for (const equipment of equips) {
+        for (const workoutType of workoutTypes) {
+          const wk = generateWorkout(sheetData, {
+            workoutCategory,
+            bodyCategory,
+            equipment,
+            workoutType,
+            optionsPerSlot: 2
+          });
+          const analysis = analyzeMuscleLoad(wk, sheetData, []);
+          assert.equal(
+            analysis.warnings.length,
+            0,
+            `Generated workout triggered unexpected warning for (${workoutCategory}, ${bodyCategory}, ${equipment}, ${workoutType}): ${analysis.warnings.map(w => w.message).join('; ')}`
+          );
+
+          // Also verify selecting Option 2 on slot 0 in Round 1 does not trigger a warning
+          if (wk.rounds[0].slots[0].options.length > 1) {
+            const wkOpt2 = structuredClone(wk);
+            wkOpt2.rounds[0].slots[0].selectedOptionIndex = 1;
+            const analysisOpt2 = analyzeMuscleLoad(wkOpt2, sheetData, []);
+            assert.equal(
+              analysisOpt2.warnings.length,
+              0,
+              `Selecting Option 2 triggered warning for (${workoutCategory}, ${bodyCategory}, ${equipment}, ${workoutType}): ${analysisOpt2.warnings.map(w => w.message).join('; ')}`
+            );
+          }
+        }
+      }
+    }
+  }
+});
+
+test('Every recommended replacement exercise in warning.recommendations resolves the overload and triggers 0 new warnings', () => {
+  const overloadPairs = [
+    ['push-ups', 'chest-flys'],
+    ['skull-crushers', 'tricep-kick-backs'],
+    ['shoulder-press', 'arnold-press'],
+    ['rows', 'pull-ups'],
+    ['crunches', 'plank'],
+    ['frog-pumps', 'single-leg-band-glute-bridge'],
+    ['squats', 'lunges-split-squats'],
+    ['single-leg-deadlift', 'trx-hamstring-curls']
+  ];
+  const byId = Object.fromEntries(sheetData.exercises.map(e => [e.id, e]));
+
+  let verifiedRecs = 0;
+  for (const workoutType of ['Strength Duos', 'Strength Trios', 'Strength Quads', 'Timed Duos (40/20)', 'Timed Trios (40/20)']) {
+    for (const [idA, idB] of overloadPairs) {
+      let wk = generateWorkout(sheetData, {
+        workoutCategory: 'Either',
+        bodyCategory: 'All',
+        equipment: 'Any',
+        workoutType
+      });
+      wk = swapExerciseInSlot(wk, 0, 0, byId[idA]);
+      wk = swapExerciseInSlot(wk, 0, 1, byId[idB]);
+
+      const analysis = analyzeMuscleLoad(wk, sheetData, []);
+      const r0Warn = analysis.warnings.find(w => w.roundIndex === 0);
+      assert.ok(r0Warn, `Expected overload warning for ${idA} + ${idB} in ${workoutType}`);
+      assert.ok(r0Warn.recommendations.length > 0, `Expected recommendations for ${idA} + ${idB}`);
+
+      for (let recIdx = 0; recIdx < r0Warn.recommendations.length; recIdx++) {
+        let balanced = applyBalancedRecommendation(wk, r0Warn, recIdx);
+        let afterAnalysis = analyzeMuscleLoad(balanced, sheetData, []);
+        let afterR0Warnings = afterAnalysis.warnings.filter(w => w.roundIndex === 0);
+
+        // Must NEVER trigger a new muscle overload warning that wasn't already in r0Warn.overloadedMuscles
+        const newlyOverloaded = afterR0Warnings.flatMap(w =>
+          w.overloadedMuscles.filter(m => !r0Warn.overloadedMuscles.includes(m))
+        );
+        assert.equal(
+          newlyOverloaded.length,
+          0,
+          `Recommendation #${recIdx} (${r0Warn.recommendations[recIdx].exercise.name}) triggered a NEW muscle warning: ${newlyOverloaded.join(', ')}`
+        );
+
+        // If 3 slots in a Trio/Quad had the same muscle, a second 1-tap balance resolves the remaining pair
+        if (afterR0Warnings.length > 0) {
+          balanced = applyBalancedRecommendation(balanced, afterR0Warnings[0], 0);
+          afterAnalysis = analyzeMuscleLoad(balanced, sheetData, []);
+          afterR0Warnings = afterAnalysis.warnings.filter(w => w.roundIndex === 0);
+        }
+
+        assert.equal(
+          afterR0Warnings.length,
+          0,
+          `Recommendation #${recIdx} (${r0Warn.recommendations[recIdx].exercise.name}) for ${idA}+${idB} in ${workoutType} left unresolved warning: ${afterR0Warnings.map(w => w.message).join('; ')}`
+        );
+        verifiedRecs++;
+      }
+    }
+  }
+  console.log(`     (Verified ${verifiedRecs} replacement recommendations with 0 new warnings)`);
+});
+
+// ----------------------------------------------------------------------------
+// 9. REQUIREMENT 4: SELECT X EXERCISES & AUTO-SLOT MUSCLE DISTRIBUTION
+// ----------------------------------------------------------------------------
+console.log('\n9. Requirement 4: Select X Exercises & Auto-Slot Muscle Distribution');
+
+test('getTargetExerciseCount returns X = rounds * exercisesPerRound for all 11 workout types', () => {
+  const expectedCounts = {
+    'strength-duos': 8,
+    'strength-trios': 9,
+    'strength-quads': 8,
+    '8-excercises-40-20': 8,
+    'timed-duos-40-20': 8,
+    'timed-trios-40-20': 9,
+    '6-excercise-pyramid': 6,
+    '10-to-1-to-10': 5,
+    '30-20-10-10-20-30': 8,
+    '5-constant-5-change-40-20': 8,
+    '8x8-duos': 8
+  };
+  for (const wk of sheetData.workouts) {
+    assert.equal(
+      getTargetExerciseCount(wk),
+      expectedCounts[wk.id],
+      `Expected target exercise count ${expectedCounts[wk.id]} for ${wk.name}`
+    );
+  }
+});
+
+test('autoSlotExercises & generateWorkoutFromSelectedExercises separate same-muscle exercises into balanced pairs and trios with 0 overload warnings', () => {
+  const byId = Object.fromEntries(sheetData.exercises.map(e => [e.id, e]));
+
+  // Test 1: 8 exercises for Timed Duos (40/20) intentionally clustered in pairs of identical muscles:
+  // 2 Chest, 2 Back, 2 Quads, 2 Glutes
+  const clustered8 = [
+    byId['push-ups'],
+    byId['chest-flys'],
+    byId['rows'],
+    byId['pull-ups'],
+    byId['squats'],
+    byId['lunges-split-squats'],
+    byId['frog-pumps'],
+    byId['single-leg-band-glute-bridge']
+  ];
+  const wkDuos = generateWorkoutFromSelectedExercises(sheetData, clustered8, {
+    workoutCategory: 'HIIT',
+    bodyCategory: 'All',
+    equipment: 'Any',
+    workoutType: 'Timed Duos (40/20)'
+  });
+
+  assert.equal(wkDuos.rounds.length, 4);
+  for (const r of wkDuos.rounds) {
+    assert.equal(r.slots.length, 2);
+    const m0 = Object.keys(r.slots[0].options[0].muscles).find(m => r.slots[0].options[0].muscles[m] === 'Pri');
+    const m1 = Object.keys(r.slots[1].options[0].muscles).find(m => r.slots[1].options[0].muscles[m] === 'Pri');
+    assert.notEqual(m0, m1, `Duo Round ${r.roundNumber} should not pair two ${m0} exercises together`);
+  }
+  const analysisDuos = analyzeMuscleLoad(wkDuos, sheetData, []);
+  assert.equal(analysisDuos.warnings.length, 0, 'Auto-slotted Duos workout must have 0 muscle overload warnings');
+
+  // Test 2: 9 exercises for Timed Trios (40/20) intentionally clustered in triples:
+  // 3 Chest (Upper), 3 Abs (Core), 3 Quads (Legs) -> should auto-slot into 3 Trios each containing 1 Chest + 1 Abs + 1 Quads!
+  const clustered9 = [
+    byId['push-ups'],
+    byId['chest-flys'],
+    byId['3-stop-pushups'],
+    byId['crunches'],
+    byId['plank'],
+    byId['bicycle-crunches'],
+    byId['squats'],
+    byId['lunges-split-squats'],
+    byId['sumo-squats']
+  ];
+  const wkTrios = generateWorkoutFromSelectedExercises(sheetData, clustered9, {
+    workoutCategory: 'HIIT',
+    bodyCategory: 'All',
+    equipment: 'Any',
+    workoutType: 'Timed Trios (40/20)'
+  });
+
+  assert.equal(wkTrios.rounds.length, 3);
+  for (const r of wkTrios.rounds) {
+    assert.equal(r.slots.length, 3);
+    const priMuscles = r.slots.map(s =>
+      Object.keys(s.options[0].muscles).find(m => s.options[0].muscles[m] === 'Pri')
+    );
+    assert.equal(new Set(priMuscles).size, 3, `Trio Round ${r.roundNumber} must have 3 distinct primary muscles, got ${priMuscles.join(', ')}`);
+  }
+  const analysisTrios = analyzeMuscleLoad(wkTrios, sheetData, []);
+  assert.equal(analysisTrios.warnings.length, 0, 'Auto-slotted Trios workout must have 0 muscle overload warnings');
+
+  // Test 3: Single-round 6-Exercise Pyramid sequence optimization avoids adjacent same-muscle exercises
+  const clustered6 = [
+    byId['push-ups'],
+    byId['chest-flys'],
+    byId['rows'],
+    byId['pull-ups'],
+    byId['squats'],
+    byId['lunges-split-squats']
+  ];
+  const slotted6 = autoSlotExercises(clustered6, 1, 6);
+  assert.equal(slotted6.length, 1);
+  assert.equal(slotted6[0].length, 6);
+  for (let i = 1; i < 6; i++) {
+    const prevPri = Object.keys(slotted6[0][i - 1].muscles).find(m => slotted6[0][i - 1].muscles[m] === 'Pri');
+    const currPri = Object.keys(slotted6[0][i].muscles).find(m => slotted6[0][i].muscles[m] === 'Pri');
+    assert.notEqual(prevPri, currPri, `Adjacent exercises in 6-Exercise Pyramid should not share primary muscle ${currPri}`);
+  }
+});
+
+// ----------------------------------------------------------------------------
+// 10. REQUIREMENT 5: TIMED HIIT TUNED TIMERS & CUSTOM TIMERS
+// ----------------------------------------------------------------------------
+console.log('\n10. Requirement 5: Timed HIIT Exercise Timer & Custom Timer Engine');
+
+test('Timed Duos (40/20) round timer starts with 10s yellow countdown followed by 6 pairs of 40s green and 20s blue intervals', () => {
+  const wk = generateWorkout(sheetData, {
+    workoutCategory: 'HIIT',
+    bodyCategory: 'All',
+    equipment: 'Any',
+    workoutType: 'Timed Duos (40/20)'
+  });
+  assert.equal(isTimedHiitWorkout(wk.workout), true);
+
+  const seq = buildStockTimerSequence(wk, { roundIndex: 0 });
+  // 1 countdown + 6 * 2 (work + rest) = 13 steps
+  assert.equal(seq.length, 13, `Expected 13 timer steps for 40x20 duo (1 countdown + 6 pairs), got ${seq.length}`);
+
+  // Step 0: 10s yellow countdown
+  assert.equal(seq[0].type, 'countdown');
+  assert.equal(seq[0].duration, 10);
+  assert.equal(seq[0].color, 'yellow');
+  assert.equal(formatTimerClock(seq[0].duration), '00:10');
+
+  const exA = getActiveSlotExercise(wk.rounds[0].slots[0]).name;
+  const exB = getActiveSlotExercise(wk.rounds[0].slots[1]).name;
+
+  // Steps 1..12: 6 pairs of 40s green work and 20s blue rest
+  for (let pairIdx = 0; pairIdx < 6; pairIdx++) {
+    const workStep = seq[1 + pairIdx * 2];
+    const restStep = seq[2 + pairIdx * 2];
+    const expectedExName = pairIdx % 2 === 0 ? exA : exB;
+
+    assert.equal(workStep.type, 'work');
+    assert.equal(workStep.duration, 40);
+    assert.equal(workStep.color, 'green');
+    assert.equal(workStep.exerciseName, expectedExName);
+
+    assert.equal(restStep.type, 'rest');
+    assert.equal(restStep.duration, 20);
+    assert.equal(restStep.color, 'blue');
+  }
+});
+
+test('Timed Trios (40/20) round timer starts with 10s yellow countdown followed by 9 pairs of 40s green and 20s blue intervals', () => {
+  const wk = generateWorkout(sheetData, {
+    workoutCategory: 'HIIT',
+    bodyCategory: 'All',
+    equipment: 'Any',
+    workoutType: 'Timed Trios (40/20)'
+  });
+  const seq = buildStockTimerSequence(wk, { roundIndex: 0 });
+  assert.equal(seq.length, 19, 'Expected 19 steps (1 yellow countdown + 9 green/blue pairs)');
+  assert.equal(seq[0].duration, 10);
+  assert.equal(seq[0].color, 'yellow');
+
+  for (let pairIdx = 0; pairIdx < 9; pairIdx++) {
+    assert.equal(seq[1 + pairIdx * 2].duration, 40);
+    assert.equal(seq[1 + pairIdx * 2].color, 'green');
+    assert.equal(seq[2 + pairIdx * 2].duration, 20);
+    assert.equal(seq[2 + pairIdx * 2].color, 'blue');
+  }
+});
+
+test('All other Timed HIIT formats (30-20-10-10-20-30, 6 Excercise Pyramid, 5 Constant 5 Change, 8 excercises 40/20, 8x8 Duos) tune accurately and start with 10s yellow countdown', () => {
+  // 1. 30-20-10-10-20-30
+  const wkWave = generateWorkout(sheetData, { workoutType: '30-20-10-10-20-30' });
+  const seqWave = buildStockTimerSequence(wkWave);
+  assert.equal(seqWave[0].duration, 10);
+  assert.equal(seqWave[0].color, 'yellow');
+  const waveWorkDurations = seqWave.filter(s => s.type === 'work').slice(0, 6).map(s => s.duration);
+  assert.deepEqual(waveWorkDurations, [30, 20, 10, 10, 20, 30]);
+
+  // 2. 6 Excercise Pyramid
+  const wkPyr = generateWorkout(sheetData, { workoutType: '6 Excercise Pyramid' });
+  const seqPyr = buildStockTimerSequence(wkPyr);
+  assert.equal(seqPyr[0].duration, 10);
+  assert.equal(seqPyr[0].color, 'yellow');
+  // Set 1 has 1 work step, Set 2 has 2, ..., Set 6 has 6, Set 7 has 5, ..., Set 11 has 1 -> total work steps = 1+2+3+4+5+6+5+4+3+2+1 = 36
+  const pyrWorkSteps = seqPyr.filter(s => s.type === 'work');
+  assert.equal(pyrWorkSteps.length, 36);
+  assert.ok(pyrWorkSteps.every(s => s.duration === 30 && s.color === 'green'));
+
+  // 3. 5 Constant 5 Change (40/20) per round = 10 pairs of 40s green / 20s blue
+  const wk55 = generateWorkout(sheetData, { workoutType: '5 Constant 5 Change (40/20)' });
+  const seq55 = buildStockTimerSequence(wk55, { roundIndex: 0 });
+  assert.equal(seq55.length, 1 + 20);
+  assert.equal(seq55[0].color, 'yellow');
+
+  // 4. 8 excercises (40/20) = 24 pairs of 40s green / 20s blue
+  const wk8 = generateWorkout(sheetData, { workoutType: '8 excercises (40/20)' });
+  const seq8 = buildStockTimerSequence(wk8);
+  assert.equal(seq8.length, 1 + 48);
+
+  // 5. 8x8 Duos per round = 10s yellow countdown + 480s green AMRAP
+  const wk8x8 = generateWorkout(sheetData, { workoutType: '8x8 Duos' });
+  const seq8x8 = buildStockTimerSequence(wk8x8, { roundIndex: 0 });
+  assert.equal(seq8x8[0].duration, 10);
+  assert.equal(seq8x8[0].color, 'yellow');
+  assert.equal(seq8x8[1].duration, 480);
+  assert.equal(seq8x8[1].color, 'green');
+});
+
+test('Custom Timer presets and per-exercise timer configs customize durations, colors, and added intervals while preserving 10s yellow countdown', () => {
+  const wk = generateWorkout(sheetData, { workoutType: 'Timed Duos (40/20)' });
+  const ex0 = getActiveSlotExercise(wk.rounds[0].slots[0]);
+
+  const exerciseConfigs = {
+    [ex0.id]: {
+      workDuration: 45,
+      workColor: 'orange',
+      restDuration: 15,
+      restColor: 'purple',
+      extraIntervals: [{ duration: 10, color: 'red', label: 'Burnout Hold' }]
+    }
+  };
+
+  const seqCustomEx = buildStockTimerSequence(wk, {
+    roundIndex: 0,
+    slotIndex: 0,
+    exerciseConfigs
+  });
+  assert.equal(seqCustomEx[0].duration, 10);
+  assert.equal(seqCustomEx[0].color, 'yellow');
+  assert.equal(seqCustomEx[1].duration, 45);
+  assert.equal(seqCustomEx[1].color, 'orange');
+  assert.equal(seqCustomEx[1].exerciseName, ex0.name);
+  assert.equal(seqCustomEx[2].duration, 15);
+  assert.equal(seqCustomEx[2].color, 'purple');
+  assert.equal(seqCustomEx[3].duration, 10);
+  assert.equal(seqCustomEx[3].color, 'red');
+  assert.equal(seqCustomEx[3].phaseLabel, 'Burnout Hold');
+
+  // Custom preset sequence
+  for (const preset of CUSTOM_TIMER_PRESETS) {
+    const pSeq = buildCustomPresetTimerSequence(preset.id, wk);
+    assert.equal(pSeq[0].duration, 10);
+    assert.equal(pSeq[0].color, 'yellow');
+    assert.ok(pSeq.length >= 3);
+    const summary = getTimerSequenceSummary(pSeq);
+    assert.ok(summary.includes('10s Yellow'));
+  }
 });
 
 console.log(`\n🎉 ALL ${passed} QA TEST SUITES PASSED SUCCESSFULLY!`);

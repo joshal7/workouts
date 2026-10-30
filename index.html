@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Workouts — joshal.com</title>
-  <meta name="description" content="Minimalist HIIT & Strength Workout Generator PWA with multi-frame exercise diagrams and smart muscle balancing." />
+  <meta name="description" content="Minimalist HIIT & Strength Workout Generator PWA with multi-frame exercise diagrams, custom exercise slotting, and HIIT interval timer." />
   
   <!-- iOS PWA Meta Tags -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -62,12 +62,26 @@
             <label for="bodyCategorySelect">Focus</label>
             <div class="select-wrapper">
               <select id="bodyCategorySelect">
-                <option value="All">All</option>
-                <option value="Upper Body">Upper Body</option>
-                <option value="Core">Core</option>
-                <option value="Legs">Legs</option>
-                <option value="Upper Body and Core">Upper &amp; Core</option>
-                <option value="Legs and Core">Legs &amp; Core</option>
+                <optgroup label="Body Areas">
+                  <option value="All">All</option>
+                  <option value="Upper Body">Upper Body</option>
+                  <option value="Core">Core</option>
+                  <option value="Legs">Legs</option>
+                  <option value="Upper Body and Core">Upper &amp; Core</option>
+                  <option value="Legs and Core">Legs &amp; Core</option>
+                  <option value="Upper Body and Legs">Upper &amp; Legs</option>
+                </optgroup>
+                <optgroup label="Muscle Groups">
+                  <option value="Chest">Chest</option>
+                  <option value="Back">Back</option>
+                  <option value="Shoulders">Shoulders</option>
+                  <option value="Biceps">Biceps</option>
+                  <option value="Triceps">Triceps</option>
+                  <option value="Abs">Abs</option>
+                  <option value="Glutes">Glutes</option>
+                  <option value="Quads">Quads</option>
+                  <option value="Hamstrings">Hamstrings</option>
+                </optgroup>
               </select>
             </div>
           </div>
@@ -98,18 +112,30 @@
           <button id="generateWorkoutBtn" class="generate-btn" type="button">
             Generate Workout
           </button>
+          <button id="selectExercisesBtn" class="select-exercises-btn" type="button">
+            Select 9 Exercises
+          </button>
         </div>
       </section>
 
       <!-- Active Workout Section -->
       <section id="workoutSection" class="workout-section" aria-live="polite">
-        <!-- Consolidated Single-Look Workout Header Bar (Workout Type is a Hyperlink) -->
+        <!-- Consolidated Single-Look Workout Header Bar (Workout Type is a Hyperlink + HIIT Timer Controls) -->
         <div class="card workout-header-card">
           <div class="workout-consolidated-bar">
             <a href="#workout-format" id="workoutTitleBtn" class="workout-type-link">
               <span id="workoutNameText">Timed Trios (40/20)</span>
             </a>
             <span class="workout-consolidated-meta" id="workoutMetaSummary">3 rounds · 3 exercises · 3 sets</span>
+          </div>
+          <div id="workoutTimerBar" class="workout-timer-bar">
+            <button id="openWorkoutTimerBtn" class="timer-launch-btn" type="button">
+              <span class="timer-icon-dot"></span>
+              <span id="workoutTimerBtnLabel">Timer (10s + 9× 40/20)</span>
+            </button>
+            <button id="openCustomTimerBtn" class="timer-custom-btn" type="button">
+              Custom Timer
+            </button>
           </div>
         </div>
 
@@ -207,6 +233,7 @@
               <button id="swapFilterMatchingBtn" class="seg-btn active" type="button">Matching Filters</button>
               <button id="swapFilterAllBtn" class="seg-btn" type="button">All Exercises</button>
             </div>
+            <div id="swapMuscleFilterBar" class="muscle-filter-bar" role="group" aria-label="Filter by muscle group"></div>
           </div>
         </div>
 
@@ -227,6 +254,9 @@
       <div class="sheet-content">
         <p id="balanceModalDescription" class="modal-lead"></p>
         <div id="balanceRecommendationsList" class="swap-exercise-list"></div>
+        <button id="dismissWarningModalBtn" class="secondary-pill-btn full-width-link" type="button">
+          Dismiss Overload Warning
+        </button>
       </div>
     </div>
 
@@ -257,7 +287,8 @@
             <button id="clearExclusionsBtn" class="text-link-btn" type="button">Include All</button>
           </div>
           <p class="settings-help">Uncheck exercises to exclude them from your workouts.</p>
-          <input id="exclusionSearchInput" type="search" placeholder="Filter exercises..." class="search-input" />
+          <input id="exclusionSearchInput" type="search" placeholder="Filter exercises or muscles..." class="search-input" />
+          <div id="exclusionMuscleFilterBar" class="muscle-filter-bar" role="group" aria-label="Filter exclusions by muscle group"></div>
           <div id="exclusionChecklist" class="exclusion-checklist"></div>
         </div>
 
@@ -265,6 +296,155 @@
           <a href="./qa-gallery.html" class="secondary-pill-btn full-width-link">
             View All 68 Exercise Diagrams →
           </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Select X Exercises (Custom Exercise Picker & Auto-Slotter) Modal -->
+    <div id="selectExercisesModal" class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="selectExercisesModalTitle" hidden>
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div>
+          <span class="eyebrow-label" id="selectExercisesEyebrow">CUSTOM EXERCISE PICKER</span>
+          <h2 id="selectExercisesModalTitle" class="sheet-title">Select 9 Exercises (0/9)</h2>
+        </div>
+        <button class="close-sheet-btn" data-close-modal="selectExercisesModal" type="button" aria-label="Close">✕</button>
+      </div>
+      <div class="sheet-content">
+        <div class="custom-select-toolbar">
+          <div class="custom-select-status-row">
+            <span id="selectExercisesDistributionText" class="settings-help">Pick exercises and the app will auto-slot them to balance muscle groups per round.</span>
+            <div class="custom-select-quick-btns">
+              <button id="autoFillRemainingBtn" class="text-link-btn" type="button">Auto-Fill Rest</button>
+              <button id="clearSelectedExercisesBtn" class="text-link-btn" type="button">Clear</button>
+            </div>
+          </div>
+          <input id="selectExercisesSearchInput" type="search" placeholder="Search exercises or muscles..." class="search-input" />
+          <div class="segmented-control" role="tablist">
+            <button id="selectFilterMatchingBtn" class="seg-btn active" type="button">Matching Filters</button>
+            <button id="selectFilterAllBtn" class="seg-btn" type="button">All Exercises</button>
+          </div>
+          <div id="selectExercisesMuscleFilterBar" class="muscle-filter-bar" role="group" aria-label="Filter by muscle group"></div>
+        </div>
+
+        <div id="selectExercisesList" class="swap-exercise-list"></div>
+
+        <div class="sheet-footer-actions">
+          <button id="confirmSelectExercisesBtn" class="primary-action-btn" type="button">
+            Auto-Slot Selected Exercises (0/9)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. Large High-Visibility HIIT & Custom Timer Modal -->
+    <div id="timerModal" class="timer-fullscreen-modal" role="dialog" aria-modal="true" aria-labelledby="timerModalTitle" hidden>
+      <div class="timer-modal-inner">
+        <!-- Top Header Bar -->
+        <div class="timer-top-bar">
+          <div>
+            <span class="eyebrow-label" id="timerModalEyebrow">HIIT INTERVAL TIMER</span>
+            <h2 id="timerModalTitle" class="timer-workout-title">Timed Duos (40/20)</h2>
+          </div>
+          <div class="timer-top-actions">
+            <button id="toggleTimerCustomizerBtn" class="secondary-pill-btn" type="button">
+              Customize
+            </button>
+            <button id="closeTimerModalBtn" class="close-sheet-btn" type="button" aria-label="Close Timer">✕</button>
+          </div>
+        </div>
+
+        <!-- Scope Selector (Round 1, Round 2, etc.) -->
+        <div id="timerScopePills" class="timer-scope-pills" role="tablist" aria-label="Timer Round Scope"></div>
+
+        <!-- View A: Large High-Visibility Timer Execution View -->
+        <div id="timerExecutionView" class="timer-execution-view">
+          <div id="timerStageCard" class="timer-stage-card timer-color-yellow">
+            <div class="timer-stage-top">
+              <span id="timerPhaseBadge" class="timer-phase-badge">10s PREP COUNTDOWN</span>
+              <span id="timerStepCounter" class="timer-step-counter">Step 1 of 13</span>
+            </div>
+
+            <div id="timerActiveExerciseName" class="timer-exercise-display">
+              Get Ready
+            </div>
+
+            <div id="timerClockDisplay" class="timer-big-clock" aria-live="assertive">
+              00:10
+            </div>
+
+            <div class="timer-progress-track">
+              <div id="timerProgressBar" class="timer-progress-fill" style="width: 100%"></div>
+            </div>
+
+            <div id="timerUpNextText" class="timer-up-next">
+              Up Next: Exercise 1
+            </div>
+          </div>
+
+          <!-- Visual Sequence Strip (10s Yellow -> 40s Green -> 20s Blue ...) -->
+          <div id="timerSequenceTimeline" class="timer-sequence-timeline" aria-label="Timer Intervals"></div>
+
+          <!-- Large Touch Transport Controls -->
+          <div class="timer-controls-row">
+            <button id="timerPrevStepBtn" class="timer-ctrl-btn" type="button" aria-label="Previous Interval">⏮ Prev</button>
+            <button id="timerStartPauseBtn" class="timer-play-btn" type="button">▶ Start</button>
+            <button id="timerNextStepBtn" class="timer-ctrl-btn" type="button" aria-label="Next Interval">Next ⏭</button>
+            <button id="timerResetBtn" class="timer-ctrl-btn" type="button" aria-label="Reset Timer">↺ Reset</button>
+          </div>
+        </div>
+
+        <!-- View B: Custom Timer & Stock Timer Customizer View -->
+        <div id="timerCustomizerView" class="timer-customizer-view" hidden>
+          <div class="settings-block">
+            <h3>Timer Mode &amp; Presets</h3>
+            <div class="segmented-control">
+              <button id="timerModeStockBtn" class="seg-btn active" type="button">Tuned Stock Timer</button>
+              <button id="timerModeCustomBtn" class="seg-btn" type="button">Custom Timer Preset</button>
+            </div>
+            <div id="customPresetSelectorBox" class="custom-preset-box" hidden>
+              <label for="customTimerPresetSelect" class="settings-help">Select Custom Timer Template:</label>
+              <select id="customTimerPresetSelect" class="search-input"></select>
+            </div>
+            <div class="countdown-config-row">
+              <label for="timerCountdownInput">Yellow Prep Countdown (sec):</label>
+              <input id="timerCountdownInput" type="number" min="1" max="60" value="10" class="timer-num-input" />
+            </div>
+          </div>
+
+          <div class="settings-block">
+            <h3>Per-Exercise Durations &amp; Colors</h3>
+            <p class="settings-help">Customize work/rest durations, change colors, or add extra times for any exercise in this workout.</p>
+            <div id="perExerciseTimerList" class="per-exercise-timer-list"></div>
+          </div>
+
+          <div class="settings-block">
+            <div class="exclusion-header-row">
+              <h3>Interval Sequence Steps</h3>
+              <button id="resetStockTimerBtn" class="text-link-btn" type="button">Reset to Default Stock</button>
+            </div>
+            <p class="settings-help">Add new times, or edit duration, color, and label for any interval step.</p>
+            <div class="add-interval-row">
+              <input id="newIntervalLabelInput" type="text" placeholder="Exercise or label..." class="search-input add-interval-label" />
+              <input id="newIntervalDurationInput" type="number" min="1" max="3600" value="30" class="timer-num-input" aria-label="New interval duration in seconds" />
+              <select id="newIntervalColorSelect" class="timer-color-select" aria-label="New interval color">
+                <option value="green">Green</option>
+                <option value="blue">Blue</option>
+                <option value="yellow">Yellow</option>
+                <option value="red">Red</option>
+                <option value="orange">Orange</option>
+                <option value="purple">Purple</option>
+              </select>
+              <button id="addCustomIntervalBtn" class="secondary-pill-btn" type="button">+ Add Time</button>
+            </div>
+            <div id="customIntervalStepsList" class="custom-interval-steps-list"></div>
+          </div>
+
+          <div class="sheet-footer-actions">
+            <button id="applyTimerCustomizationBtn" class="primary-action-btn" type="button">
+              Done &amp; Return to Timer
+            </button>
+          </div>
         </div>
       </div>
     </div>
