@@ -447,10 +447,13 @@ export function buildStockTimerSequence(
       }
     }
   } else if (wkId === '8-excercises-40-20') {
-    // 1 round of 8 exercises repeated for 3 sets -> 24 pairs of 40s green + 20s blue
+    // 8 exercises repeated for 3 rounds/sets -> 8 pairs per round, or 24 pairs for full workout
     const round = workoutState.rounds[0];
     const sets = Number(workout.setsPerRound) || 3;
-    for (let s = 0; s < sets; s++) {
+    const passIndices = includeAllRounds
+      ? Array.from({ length: sets }, (_, i) => i)
+      : [Math.min(sets - 1, Math.max(0, Number(roundIndex) || 0))];
+    for (const s of passIndices) {
       for (let sl = 0; sl < round.slots.length; sl++) {
         const ex = getActiveSlotExercise(round.slots[sl]);
         if (!ex) continue;
@@ -596,8 +599,8 @@ export function buildStockTimerSequence(
       });
     }
   } else if (wkId === '8x8-duos') {
-    // 4 rounds, 2 exercises per round, 8-minute (480s) AMRAP per round + 60s rest
-    for (const { round } of targetRounds) {
+    // 4 rounds, 2 exercises per round, 8-minute (480s) AMRAP per round (+ 60s rest between rounds when timing full workout)
+    targetRounds.forEach(({ round }, rIdx) => {
       const ex1 = getActiveSlotExercise(round.slots[0]);
       const ex2 = getActiveSlotExercise(round.slots[1]);
       const comboName = [ex1?.name, ex2?.name].filter(Boolean).join(' ↔ ');
@@ -616,20 +619,22 @@ export function buildStockTimerSequence(
         duration: cfg.workDuration,
         color: cfg.workColor
       });
-      steps.push({
-        id: `step-${steps.length + 1}`,
-        type: 'rest',
-        phaseLabel: `Round ${round.roundNumber} Recovery Rest`,
-        exerciseId: ex2?.id || ex1?.id || null,
-        exerciseName: 'Rest',
-        roundNumber: round.roundNumber,
-        setNumber: 1,
-        totalSets: 1,
-        pairIndex: pairCounter.count,
-        duration: cfg.restDuration,
-        color: cfg.restColor
-      });
-    }
+      if (targetRounds.length > 1 && rIdx < targetRounds.length - 1 && cfg.restDuration > 0) {
+        steps.push({
+          id: `step-${steps.length + 1}`,
+          type: 'rest',
+          phaseLabel: `Round ${round.roundNumber} Recovery Rest`,
+          exerciseId: ex2?.id || ex1?.id || null,
+          exerciseName: 'Rest',
+          roundNumber: round.roundNumber,
+          setNumber: 1,
+          totalSets: 1,
+          pairIndex: pairCounter.count,
+          duration: cfg.restDuration,
+          color: cfg.restColor
+        });
+      }
+    });
   } else {
     // Generic fallback for any other workout type (e.g. 10-to-1-to-10, Strength Quads, etc.)
     for (const { round } of targetRounds) {
@@ -664,61 +669,68 @@ export function buildStockTimerSequence(
 export function buildCustomPresetTimerSequence(
   presetId,
   workoutState,
-  { roundIndex = 0, countdownDuration = 10, exerciseConfigs = {} } = {}
+  { roundIndex = 0, includeAllRounds = false, countdownDuration = 10, exerciseConfigs = {} } = {}
 ) {
   const preset =
     CUSTOM_TIMER_PRESETS.find(p => p.id === presetId) || CUSTOM_TIMER_PRESETS[0];
 
+  const allRounds = workoutState?.rounds || [];
   const safeRoundIdx = Math.min(
-    (workoutState?.rounds?.length || 1) - 1,
+    Math.max(0, allRounds.length - 1),
     Math.max(0, Number(roundIndex) || 0)
   );
-  const round = workoutState?.rounds?.[safeRoundIdx];
-  const exList = (round?.slots || [])
-    .map(s => getActiveSlotExercise(s))
-    .filter(Boolean);
+  const targetRounds =
+    includeAllRounds && allRounds.length > 1
+      ? allRounds
+      : [allRounds[safeRoundIdx]].filter(Boolean);
 
   const steps = [];
-  const totalPairs = preset.pairs || 6;
+  const totalPairsPerRound = preset.pairs || 6;
 
-  for (let p = 0; p < totalPairs; p++) {
-    const ex = exList.length > 0 ? exList[p % exList.length] : null;
-    const customEx = (ex && exerciseConfigs[ex.id]) || {};
-    const wDur = Number(customEx.workDuration ?? preset.workDuration) || preset.workDuration;
-    const wCol = customEx.workColor || preset.workColor || 'green';
-    const rDur = Number(customEx.restDuration ?? preset.restDuration) || preset.restDuration;
-    const rCol = customEx.restColor || preset.restColor || 'blue';
+  targetRounds.forEach(round => {
+    const exList = (round?.slots || [])
+      .map(s => getActiveSlotExercise(s))
+      .filter(Boolean);
 
-    steps.push({
-      id: `step-${steps.length + 1}`,
-      type: 'work',
-      phaseLabel: `${preset.name} · Pair ${p + 1}/${totalPairs}`,
-      exerciseId: ex?.id || null,
-      exerciseName: ex?.name || `Work Interval ${p + 1}`,
-      roundNumber: (round?.roundNumber) || 1,
-      setNumber: p + 1,
-      totalSets: totalPairs,
-      pairIndex: p + 1,
-      duration: wDur,
-      color: wCol
-    });
+    for (let p = 0; p < totalPairsPerRound; p++) {
+      const ex = exList.length > 0 ? exList[p % exList.length] : null;
+      const customEx = (ex && exerciseConfigs[ex.id]) || {};
+      const wDur = Number(customEx.workDuration ?? preset.workDuration) || preset.workDuration;
+      const wCol = customEx.workColor || preset.workColor || 'green';
+      const rDur = Number(customEx.restDuration ?? preset.restDuration) || preset.restDuration;
+      const rCol = customEx.restColor || preset.restColor || 'blue';
 
-    if (rDur > 0) {
       steps.push({
         id: `step-${steps.length + 1}`,
-        type: 'rest',
-        phaseLabel: `Rest · Pair ${p + 1}/${totalPairs}`,
+        type: 'work',
+        phaseLabel: `${preset.name} · Round ${round?.roundNumber || 1} · Pair ${p + 1}/${totalPairsPerRound}`,
         exerciseId: ex?.id || null,
-        exerciseName: 'Rest',
-        roundNumber: (round?.roundNumber) || 1,
+        exerciseName: ex?.name || `Work Interval ${p + 1}`,
+        roundNumber: round?.roundNumber || 1,
         setNumber: p + 1,
-        totalSets: totalPairs,
+        totalSets: totalPairsPerRound,
         pairIndex: p + 1,
-        duration: rDur,
-        color: rCol
+        duration: wDur,
+        color: wCol
       });
+
+      if (rDur > 0) {
+        steps.push({
+          id: `step-${steps.length + 1}`,
+          type: 'rest',
+          phaseLabel: `Rest · Round ${round?.roundNumber || 1} · Pair ${p + 1}/${totalPairsPerRound}`,
+          exerciseId: ex?.id || null,
+          exerciseName: 'Rest',
+          roundNumber: round?.roundNumber || 1,
+          setNumber: p + 1,
+          totalSets: totalPairsPerRound,
+          pairIndex: p + 1,
+          duration: rDur,
+          color: rCol
+        });
+      }
     }
-  }
+  });
 
   return finalizeWithCountdown(steps, countdownDuration);
 }

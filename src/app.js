@@ -36,7 +36,10 @@ const dataService = new DataService();
 const MUSCLE_FILTER_PILLS = [
   { value: 'All', label: 'All' },
   { value: 'Upper Body', label: 'Upper Body' },
+  { value: 'Lower Body', label: 'Lower Body' },
   { value: 'Core', label: 'Core' },
+  { value: 'Lower Body and Core', label: 'Lower Body & Core' },
+  { value: 'Upper Body and Core', label: 'Upper Body & Core' },
   { value: 'Legs', label: 'Legs' },
   { value: 'Chest', label: 'Chest' },
   { value: 'Back', label: 'Back' },
@@ -400,18 +403,6 @@ function renderActiveWorkout() {
           `;
         }
 
-        const slotTimerBtnHtml = showTimedHiitControls
-          ? `<button
-              type="button"
-              class="slot-timer-btn"
-              data-action="open-exercise-timer"
-              data-round-index="${roundIndex}"
-              data-slot-index="${slotIndex}"
-              title="Timer for ${activeEx.name}"
-              aria-label="Open timer for ${activeEx.name}"
-            >⏱</button>`
-          : '';
-
         return `
           <div class="exercise-slot ${isSlotAllDone ? 'completed' : ''}" data-round-index="${roundIndex}" data-slot-index="${slotIndex}">
             ${multiTabsHtml}
@@ -432,7 +423,6 @@ function renderActiveWorkout() {
               </div>
 
               <div class="slot-actions">
-                ${slotTimerBtnHtml}
                 <button
                   type="button"
                   class="swap-trigger-btn"
@@ -560,6 +550,7 @@ function rebuildTimerSteps(resetCursor = true) {
   } else if (timerState.mode === 'custom-preset') {
     timerState.steps = buildCustomPresetTimerSequence(timerState.presetId, wkState, {
       roundIndex: timerState.roundIndex,
+      includeAllRounds: timerState.includeAllRounds,
       countdownDuration: timerState.countdownDuration,
       exerciseConfigs: timerState.exerciseConfigs
     });
@@ -593,10 +584,28 @@ function updateWorkoutTimerBarUI(wkState) {
     rebuildTimerSteps(false);
   }
 
-  const workSteps = timerState.steps.filter(s => s.type === 'work');
+  // Top workout timer button always reflects the full workout sequence
+  const fullWorkoutSteps = timerState.customStepsOverride
+    ? timerState.steps
+    : timerState.mode === 'custom-preset'
+    ? buildCustomPresetTimerSequence(timerState.presetId, wkState, {
+        roundIndex: 0,
+        includeAllRounds: true,
+        countdownDuration: timerState.countdownDuration,
+        exerciseConfigs: timerState.exerciseConfigs
+      })
+    : buildStockTimerSequence(wkState, {
+        roundIndex: 0,
+        slotIndex: null,
+        includeAllRounds: true,
+        exerciseConfigs: timerState.exerciseConfigs,
+        countdownDuration: timerState.countdownDuration
+      });
+
+  const workSteps = fullWorkoutSteps.filter(s => s.type === 'work');
   const firstWork = workSteps[0];
-  const firstRest = timerState.steps.find(s => s.type === 'rest');
-  const cdSec = timerState.steps[0]?.duration || 10;
+  const firstRest = fullWorkoutSteps.find(s => s.type === 'rest');
+  const cdSec = fullWorkoutSteps[0]?.duration || 10;
 
   if (isHiit) {
     els.openWorkoutTimerBtn.hidden = false;
@@ -614,7 +623,12 @@ function updateWorkoutTimerBarUI(wkState) {
   }
 }
 
-function openTimerModal({ roundIndex = 0, slotIndex = null, openCustomizer = false } = {}) {
+function openTimerModal({
+  roundIndex = 0,
+  slotIndex = null,
+  includeAllRounds = false,
+  openCustomizer = false
+} = {}) {
   const wkState = dataService.getActiveProfile().activeWorkout;
   if (!wkState) return;
 
@@ -624,11 +638,13 @@ function openTimerModal({ roundIndex = 0, slotIndex = null, openCustomizer = fal
   }
 
   const scopeChanged =
-    timerState.roundIndex !== roundIndex || timerState.slotIndex !== slotIndex;
+    timerState.roundIndex !== roundIndex ||
+    timerState.slotIndex !== slotIndex ||
+    timerState.includeAllRounds !== includeAllRounds;
 
   timerState.roundIndex = roundIndex;
   timerState.slotIndex = slotIndex;
-  timerState.includeAllRounds = false;
+  timerState.includeAllRounds = includeAllRounds;
 
   if (scopeChanged || timerState.steps.length === 0 || !timerState.isRunning) {
     stopTimerLoop();
@@ -650,8 +666,11 @@ function renderTimerModal() {
   if (!wkState) return;
 
   const wk = wkState.workout || {};
+  const scopeTag = timerState.includeAllRounds
+    ? 'FULL WORKOUT TIMER'
+    : `ROUND ${timerState.roundIndex + 1} TIMER`;
   document.getElementById('timerModalEyebrow').textContent =
-    timerState.mode === 'custom-preset' ? 'CUSTOM INTERVAL TIMER' : 'TUNED HIIT TIMER';
+    timerState.mode === 'custom-preset' ? `CUSTOM TIMER · ${scopeTag}` : `TUNED HIIT · ${scopeTag}`;
   document.getElementById('timerModalTitle').textContent = wk.name || 'Workout Timer';
 
   const toggleBtn = document.getElementById('toggleTimerCustomizerBtn');
@@ -683,6 +702,21 @@ function renderTimerScopePills(wkState) {
         `<button type="button" class="timer-scope-pill ${isAct ? 'active' : ''}" data-timer-round="${r}">Round ${r + 1} (10 Pairs)</button>`
       );
     }
+    const allAct = timerState.includeAllRounds;
+    pills.push(
+      `<button type="button" class="timer-scope-pill ${allAct ? 'active' : ''}" data-timer-all-rounds="true">All Rounds</button>`
+    );
+  } else if (wkId === '8-excercises-40-20') {
+    for (let r = 0; r < 3; r++) {
+      const isAct = !timerState.includeAllRounds && timerState.roundIndex === r && timerState.slotIndex === null;
+      pills.push(
+        `<button type="button" class="timer-scope-pill ${isAct ? 'active' : ''}" data-timer-round="${r}">Round ${r + 1} (8 Pairs)</button>`
+      );
+    }
+    const allAct = timerState.includeAllRounds;
+    pills.push(
+      `<button type="button" class="timer-scope-pill ${allAct ? 'active' : ''}" data-timer-all-rounds="true">All Rounds</button>`
+    );
   } else if (wkState.rounds.length > 1) {
     wkState.rounds.forEach((r, idx) => {
       const isAct = !timerState.includeAllRounds && timerState.roundIndex === idx && timerState.slotIndex === null;
@@ -1596,13 +1630,23 @@ function bindEvents() {
     showToast(`Auto-slotted ${targetCustomExerciseCount} exercises`);
   });
 
-  // Workout Timer Bar buttons
+  // Workout Timer Bar buttons (Top Timer defaults to Full Workout)
   els.openWorkoutTimerBtn.addEventListener('click', () => {
-    openTimerModal({ roundIndex: timerState.roundIndex || 0, slotIndex: null, openCustomizer: false });
+    openTimerModal({
+      roundIndex: 0,
+      slotIndex: null,
+      includeAllRounds: true,
+      openCustomizer: false
+    });
   });
 
   els.openCustomTimerBtn.addEventListener('click', () => {
-    openTimerModal({ roundIndex: timerState.roundIndex || 0, slotIndex: null, openCustomizer: true });
+    openTimerModal({
+      roundIndex: 0,
+      slotIndex: null,
+      includeAllRounds: true,
+      openCustomizer: true
+    });
   });
 
   // Timer Modal internal controls
@@ -1966,13 +2010,10 @@ function bindEvents() {
     } else if (action === 'open-swap-modal') {
       openSwapModal(roundIndex, slotIndex);
     } else if (action === 'open-round-timer') {
-      openTimerModal({ roundIndex, slotIndex: null, openCustomizer: false });
-    } else if (action === 'open-exercise-timer') {
-      const wkId = wkState.workout?.id || '';
-      const useSingleExScope = wkId === '30-20-10-10-20-30';
       openTimerModal({
         roundIndex,
-        slotIndex: useSingleExScope ? slotIndex : null,
+        slotIndex: null,
+        includeAllRounds: false,
         openCustomizer: false
       });
     } else if (action === 'auto-balance') {

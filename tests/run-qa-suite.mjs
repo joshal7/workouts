@@ -500,7 +500,17 @@ test('HTML/CSS/JS UI audit: Light motif, hyperlinked workout type, and removed S
 console.log('\n6. Requirement 1: Filter by Muscle Group & Body Area');
 
 test('filterEligibleExercises filters accurately across all Body Areas and all 9 Specific Muscle Groups', () => {
-  const bodyAreas = ['All', 'Upper Body', 'Core', 'Legs', 'Upper Body and Core', 'Legs and Core', 'Upper Body and Legs'];
+  const bodyAreas = [
+    'All',
+    'Upper Body',
+    'Lower Body',
+    'Core',
+    'Legs',
+    'Lower Body and Core',
+    'Upper Body and Core',
+    'Legs and Core',
+    'Upper Body and Legs'
+  ];
   for (const area of bodyAreas) {
     const pool = filterEligibleExercises(sheetData.exercises, {
       workoutCategory: 'Either',
@@ -511,9 +521,11 @@ test('filterEligibleExercises filters accurately across all Body Areas and all 9
     for (const ex of pool) {
       if (area === 'Upper Body' || area === 'Core' || area === 'Legs') {
         assert.equal(ex.bodyCategories[area], 'Pri', `${ex.name} must have ${area}: Pri`);
+      } else if (area === 'Lower Body') {
+        assert.equal(ex.bodyCategories['Legs'], 'Pri', `${ex.name} must have Legs: Pri for Lower Body`);
       } else if (area === 'Upper Body and Core') {
         assert.ok(ex.bodyCategories['Upper Body'] === 'Pri' || ex.bodyCategories['Core'] === 'Pri');
-      } else if (area === 'Legs and Core') {
+      } else if (area === 'Legs and Core' || area === 'Lower Body and Core') {
         assert.ok(ex.bodyCategories['Legs'] === 'Pri' || ex.bodyCategories['Core'] === 'Pri');
       } else if (area === 'Upper Body and Legs') {
         assert.ok(ex.bodyCategories['Upper Body'] === 'Pri' || ex.bodyCategories['Legs'] === 'Pri');
@@ -925,10 +937,12 @@ test('All other Timed HIIT formats (30-20-10-10-20-30, 6 Excercise Pyramid, 5 Co
   assert.equal(seq55.length, 1 + 20);
   assert.equal(seq55[0].color, 'yellow');
 
-  // 4. 8 excercises (40/20) = 24 pairs of 40s green / 20s blue
+  // 4. 8 excercises (40/20): 1 round = 8 pairs (1 + 16), Full workout (all 3 rounds) = 24 pairs (1 + 48)
   const wk8 = generateWorkout(sheetData, { workoutType: '8 excercises (40/20)' });
-  const seq8 = buildStockTimerSequence(wk8);
-  assert.equal(seq8.length, 1 + 48);
+  const seq8Round = buildStockTimerSequence(wk8, { includeAllRounds: false });
+  assert.equal(seq8Round.length, 1 + 16);
+  const seq8Full = buildStockTimerSequence(wk8, { includeAllRounds: true });
+  assert.equal(seq8Full.length, 1 + 48);
 
   // 5. 8x8 Duos per round = 10s yellow countdown + 480s green AMRAP
   const wk8x8 = generateWorkout(sheetData, { workoutType: '8x8 Duos' });

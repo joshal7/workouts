@@ -368,8 +368,16 @@ async function runBrowserCDPTests(wsUrl) {
           document.querySelector('#exclusionMuscleFilterBar [data-muscle-filter="All"]').click();
           document.querySelector('[data-close-modal="settingsModal"]').click();
 
-          // Test main Focus dropdown (#bodyCategorySelect) filtering by specific muscle group "Glutes"
+          // Test main Focus dropdown (#bodyCategorySelect) filtering by specific muscle group "Glutes" and "Lower Body and Core"
           const focusSelect = document.getElementById('bodyCategorySelect');
+          const hasLowerBodyOpt = !!focusSelect.querySelector('option[value="Lower Body"]');
+          const hasCoreOpt = !!focusSelect.querySelector('option[value="Core"]');
+          const hasLowerBodyAndCoreOpt = !!focusSelect.querySelector('option[value="Lower Body and Core"]');
+
+          focusSelect.value = 'Lower Body and Core';
+          focusSelect.dispatchEvent(new Event('change'));
+          const lowerAndCoreSlotsCount = document.querySelectorAll('.exercise-slot').length;
+
           focusSelect.value = 'Glutes';
           focusSelect.dispatchEvent(new Event('change'));
 
@@ -378,8 +386,11 @@ async function runBrowserCDPTests(wsUrl) {
           );
           const allSlotsHaveGlutes = slotMetasGlutes.length > 0 && slotMetasGlutes.every(txt => txt.includes('Glutes'));
 
-          // Test Swap Modal muscle filter pill ("Hamstrings")
+          // Test Swap Modal muscle filter pill ("Hamstrings" and "Lower Body and Core")
           document.querySelector('.exercise-slot[data-round-index="0"][data-slot-index="0"] .swap-trigger-btn').click();
+          const hasSwapLowerBodyAndCorePill = !!document.querySelector(
+            '#swapMuscleFilterBar [data-muscle-filter="Lower Body and Core"]'
+          );
           const swapHamPill = document.querySelector('#swapMuscleFilterBar [data-muscle-filter="Hamstrings"]');
           swapHamPill.click();
           const swapItems = Array.from(document.querySelectorAll('#swapExerciseList .swap-option-item')).map(
@@ -393,6 +404,11 @@ async function runBrowserCDPTests(wsUrl) {
           focusSelect.dispatchEvent(new Event('change'));
 
           return {
+            hasLowerBodyOpt,
+            hasCoreOpt,
+            hasLowerBodyAndCoreOpt,
+            lowerAndCoreSlotsCount,
+            hasSwapLowerBodyAndCorePill,
             allExclValid,
             exclCount: exclItems.length,
             allSlotsHaveGlutes,
@@ -401,7 +417,16 @@ async function runBrowserCDPTests(wsUrl) {
             swapHamCount: swapItems.length
           };
         });
-        if (!filterCheck.allExclValid || !filterCheck.allSlotsHaveGlutes || !filterCheck.allSwapHaveHamstrings) {
+        if (
+          !filterCheck.hasLowerBodyOpt ||
+          !filterCheck.hasCoreOpt ||
+          !filterCheck.hasLowerBodyAndCoreOpt ||
+          filterCheck.lowerAndCoreSlotsCount === 0 ||
+          !filterCheck.hasSwapLowerBodyAndCorePill ||
+          !filterCheck.allExclValid ||
+          !filterCheck.allSlotsHaveGlutes ||
+          !filterCheck.allSwapHaveHamstrings
+        ) {
           throw new Error('Muscle group filter check failed: ' + JSON.stringify(filterCheck));
         }
         console.log(
@@ -538,11 +563,17 @@ async function runBrowserCDPTests(wsUrl) {
           typeSelect.dispatchEvent(new Event('change'));
 
           const timerBarVisible = !document.getElementById('workoutTimerBar').hidden;
+          const individualExerciseTimerCount = document.querySelectorAll('.slot-timer-btn, [data-action="open-exercise-timer"]').length;
           const round1Ex1Name = document
             .querySelector('.exercise-slot[data-round-index="0"][data-slot-index="0"] .exercise-title-text')
             ?.innerText.trim();
 
-          // Open Round 1 timer (40/20 x 6)
+          // Verify Top Timer opens Full Workout (all 4 rounds = 24 pairs = 49 steps)
+          document.getElementById('openWorkoutTimerBtn').click();
+          const fullWorkoutChipsCount = document.querySelectorAll('#timerSequenceTimeline .timer-seq-chip').length;
+          document.getElementById('closeTimerModalBtn').click();
+
+          // Open Round 1 timer (just Round 1 = 40/20 x 6 = 13 steps)
           document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
 
           const timerModal = document.getElementById('timerModal');
@@ -626,6 +657,8 @@ async function runBrowserCDPTests(wsUrl) {
 
           return {
             timerBarVisible,
+            individualExerciseTimerCount,
+            fullWorkoutChipsCount,
             timerOpen,
             step0Clock,
             step0IsYellow: step0StageClass.includes('timer-color-yellow'),
@@ -660,6 +693,8 @@ async function runBrowserCDPTests(wsUrl) {
         });
         if (
           !timerCheck.timerBarVisible ||
+          timerCheck.individualExerciseTimerCount !== 0 ||
+          timerCheck.fullWorkoutChipsCount !== 49 ||
           !timerCheck.timerOpen ||
           timerCheck.step0Clock !== '00:10' ||
           !timerCheck.step0IsYellow ||

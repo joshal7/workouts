@@ -22,11 +22,15 @@ export const SPECIFIC_MUSCLE_LIST = [
 export const MAX_BODY_CATEGORY_PERCENTAGES = {
   'All': 0.33,
   'Upper Body': 1.0,
+  'Lower Body': 1.0,
   'Core': 1.0,
   'Legs': 1.0,
   'Upper Body and Core': 0.5,
+  'Lower Body and Core': 0.5,
+  'Lower Body & Core': 0.5,
   'Legs and Core': 0.5,
-  'Upper Body and Legs': 0.5
+  'Upper Body and Legs': 0.5,
+  'Upper Body and Lower Body': 0.5
 };
 
 const CONTINUOUS_WORKOUT_IDS = new Set([
@@ -162,17 +166,25 @@ export function filterEligibleExercises(allExercises, {
     pool = pool.filter(ex => ex.bodyCategories['Upper Body'] === 'Pri');
   } else if (targetFilter === 'Core') {
     pool = pool.filter(ex => ex.bodyCategories['Core'] === 'Pri');
-  } else if (targetFilter === 'Legs') {
+  } else if (targetFilter === 'Legs' || targetFilter === 'Lower Body') {
     pool = pool.filter(ex => ex.bodyCategories['Legs'] === 'Pri');
-  } else if (targetFilter === 'Upper Body and Core') {
+  } else if (targetFilter === 'Upper Body and Core' || targetFilter === 'Upper & Core') {
     pool = pool.filter(
       ex => ex.bodyCategories['Upper Body'] === 'Pri' || ex.bodyCategories['Core'] === 'Pri'
     );
-  } else if (targetFilter === 'Legs and Core') {
+  } else if (
+    targetFilter === 'Legs and Core' ||
+    targetFilter === 'Lower Body and Core' ||
+    targetFilter === 'Lower Body & Core'
+  ) {
     pool = pool.filter(
       ex => ex.bodyCategories['Legs'] === 'Pri' || ex.bodyCategories['Core'] === 'Pri'
     );
-  } else if (targetFilter === 'Upper Body and Legs') {
+  } else if (
+    targetFilter === 'Upper Body and Legs' ||
+    targetFilter === 'Upper Body and Lower Body' ||
+    targetFilter === 'Upper & Lower Body'
+  ) {
     pool = pool.filter(
       ex => ex.bodyCategories['Upper Body'] === 'Pri' || ex.bodyCategories['Legs'] === 'Pri'
     );
@@ -196,17 +208,27 @@ export function filterExercisesByMuscleAndQuery(exercises, {
   let result = [...exercises];
 
   if (muscleFilter && muscleFilter !== 'All' && muscleFilter !== 'all') {
-    if (BODY_AREAS.includes(muscleFilter)) {
+    if (muscleFilter === 'Lower Body' || muscleFilter === 'Legs') {
+      result = result.filter(ex => ex.bodyCategories?.['Legs'] === 'Pri');
+    } else if (BODY_AREAS.includes(muscleFilter)) {
       result = result.filter(ex => ex.bodyCategories?.[muscleFilter] === 'Pri');
-    } else if (muscleFilter === 'Upper Body and Core') {
+    } else if (muscleFilter === 'Upper Body and Core' || muscleFilter === 'Upper & Core') {
       result = result.filter(
         ex => ex.bodyCategories?.['Upper Body'] === 'Pri' || ex.bodyCategories?.['Core'] === 'Pri'
       );
-    } else if (muscleFilter === 'Legs and Core') {
+    } else if (
+      muscleFilter === 'Legs and Core' ||
+      muscleFilter === 'Lower Body and Core' ||
+      muscleFilter === 'Lower Body & Core'
+    ) {
       result = result.filter(
         ex => ex.bodyCategories?.['Legs'] === 'Pri' || ex.bodyCategories?.['Core'] === 'Pri'
       );
-    } else if (muscleFilter === 'Upper Body and Legs') {
+    } else if (
+      muscleFilter === 'Upper Body and Legs' ||
+      muscleFilter === 'Upper Body and Lower Body' ||
+      muscleFilter === 'Upper & Lower Body'
+    ) {
       result = result.filter(
         ex => ex.bodyCategories?.['Upper Body'] === 'Pri' || ex.bodyCategories?.['Legs'] === 'Pri'
       );
@@ -223,7 +245,6 @@ export function filterExercisesByMuscleAndQuery(exercises, {
     const matchedMuscle = SPECIFIC_MUSCLE_LIST.find(
       m => m.toLowerCase() === q || m.toLowerCase().startsWith(q) && q.length >= 3
     );
-    const matchedArea = BODY_AREAS.find(a => a.toLowerCase() === q || a.toLowerCase().includes(q) && q.length >= 4);
 
     result = result.filter(ex => {
       const priMuscles = Object.entries(ex.muscles || {})
@@ -240,6 +261,7 @@ export function filterExercisesByMuscleAndQuery(exercises, {
       if ((ex.equipment || '').toLowerCase().includes(q)) return true;
       if (priMuscles.some(m => m.includes(q))) return true;
       if (priAreas.some(a => a.includes(q))) return true;
+      if (('lower body'.includes(q) && q.length >= 4) && ex.bodyCategories?.['Legs'] === 'Pri') return true;
       if (allMuscles.some(m => m.includes(q))) return true;
       if (ex.enrichment?.pose && ex.enrichment.pose.toLowerCase().includes(q)) return true;
       return false;
