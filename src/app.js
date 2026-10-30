@@ -638,11 +638,14 @@ function updateWorkoutTimerBarUI(wkState) {
 
   const workSteps = fullWorkoutSteps.filter(s => s.type === 'work');
   const firstWork = workSteps[0];
+  const firstTransition = fullWorkoutSteps.find(s => s.type === 'transition');
   const firstRest = fullWorkoutSteps.find(s => s.type === 'rest');
   const cdSec = fullWorkoutSteps[0]?.duration || 10;
 
   els.openWorkoutTimerBtn.hidden = false;
-  if (firstWork && firstRest) {
+  if (firstWork && firstTransition && firstRest) {
+    els.workoutTimerBtnLabel.textContent = `Timer (${cdSec}s Yellow · ${workSteps.length}× ${firstWork.duration}s / ${firstTransition.duration}s trans / ${firstRest.duration}s rest)`;
+  } else if (firstWork && firstRest) {
     els.workoutTimerBtnLabel.textContent = `Timer (${cdSec}s Yellow · ${workSteps.length}× ${firstWork.duration}s/${firstRest.duration}s)`;
   } else if (firstWork) {
     els.workoutTimerBtnLabel.textContent = `Timer (${cdSec}s Yellow · ${workSteps.length}× ${firstWork.duration}s)`;
@@ -820,6 +823,8 @@ function renderTimerExecutionView() {
       const shortName =
         s.type === 'countdown'
           ? 'Count Down'
+          : s.type === 'transition'
+          ? 'Transition'
           : s.type === 'rest'
           ? 'Rest'
           : (s.exerciseName || 'Work').slice(0, 14);

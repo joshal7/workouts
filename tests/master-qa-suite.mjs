@@ -666,6 +666,19 @@ async function runBrowserCDPTests(wsUrl) {
           const trioStep1Class = stageCard?.className || '';
           document.getElementById('closeTimerModalBtn').click();
 
+          // Switch to "6 Excercise Pyramid" and verify 10s "Transition" between exercises & 60s "Rest" at end of set
+          typeSelect.value = '6 Excercise Pyramid';
+          typeSelect.dispatchEvent(new Event('change'));
+          document.getElementById('openWorkoutTimerBtn').click();
+          // Step 0 = Countdown (10s), Step 1 = Set 1 Ex 1 (30s), Step 2 = Set 1 Rest (60s), Step 3 = Set 2 Ex 1 (30s), Step 4 = Set 2 Transition (10s)
+          document.querySelector('[data-action="jump-timer-step"][data-step-index="2"]').click();
+          const pyrRestClock = clockEl?.innerText.trim();
+          const pyrRestLabel = bottomLabelEl?.innerText.trim();
+          document.querySelector('[data-action="jump-timer-step"][data-step-index="4"]').click();
+          const pyrTransClock = clockEl?.innerText.trim();
+          const pyrTransLabel = bottomLabelEl?.innerText.trim();
+          document.getElementById('closeTimerModalBtn').click();
+
           return {
             strengthTimerBarHidden,
             strengthRoundTimersCount,
@@ -701,7 +714,11 @@ async function runBrowserCDPTests(wsUrl) {
             customStep1Clock,
             customStep1IsOrange: customStep1Class.includes('timer-color-orange'),
             trioChipsCount,
-            trioResetTo40Green: trioStep1Clock === '00:40' && trioStep1Class.includes('timer-color-green')
+            trioResetTo40Green: trioStep1Clock === '00:40' && trioStep1Class.includes('timer-color-green'),
+            pyrRestClock,
+            pyrRestLabel,
+            pyrTransClock,
+            pyrTransLabel
           };
         });
         if (
@@ -738,7 +755,11 @@ async function runBrowserCDPTests(wsUrl) {
           timerCheck.customStep1Clock !== '00:50' ||
           !timerCheck.customStep1IsOrange ||
           timerCheck.trioChipsCount !== 19 ||
-          !timerCheck.trioResetTo40Green
+          !timerCheck.trioResetTo40Green ||
+          timerCheck.pyrRestClock !== '01:00' ||
+          timerCheck.pyrRestLabel !== 'Rest' ||
+          timerCheck.pyrTransClock !== '00:10' ||
+          timerCheck.pyrTransLabel !== 'Transition'
         ) {
           throw new Error('HIIT Timer & Customizer check failed: ' + JSON.stringify(timerCheck));
         }

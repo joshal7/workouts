@@ -924,15 +924,52 @@ test('All other Timed HIIT formats (30-20-10-10-20-30, 6 Excercise Pyramid, 5 Co
   const waveWorkDurations = seqWave.filter(s => s.type === 'work').slice(0, 6).map(s => s.duration);
   assert.deepEqual(waveWorkDurations, [30, 20, 10, 10, 20, 30]);
 
-  // 2. 6 Excercise Pyramid
+  // 2. 6 Excercise Pyramid (30s work, 10s "Transition" between exercises, 60s "Rest" at end of set)
   const wkPyr = generateWorkout(sheetData, { workoutType: '6 Excercise Pyramid' });
   const seqPyr = buildStockTimerSequence(wkPyr);
   assert.equal(seqPyr[0].duration, 10);
   assert.equal(seqPyr[0].color, 'yellow');
-  // Set 1 has 1 work step, Set 2 has 2, ..., Set 6 has 6, Set 7 has 5, ..., Set 11 has 1 -> total work steps = 1+2+3+4+5+6+5+4+3+2+1 = 36
+  // Set 1 has 1 work step, Set 2 has 2, ..., Set 6 has 6, Set 7 has 5, ..., Set 11 has 1 -> total work steps = 36
   const pyrWorkSteps = seqPyr.filter(s => s.type === 'work');
   assert.equal(pyrWorkSteps.length, 36);
   assert.ok(pyrWorkSteps.every(s => s.duration === 30 && s.color === 'green'));
+  // Transitions between exercises in each set: 0 + 1 + 2 + 3 + 4 + 5 + 4 + 3 + 2 + 1 + 0 = 25 transitions of 10s
+  const pyrTransitionSteps = seqPyr.filter(s => s.type === 'transition');
+  assert.equal(pyrTransitionSteps.length, 25);
+  assert.ok(
+    pyrTransitionSteps.every(
+      s => s.duration === 10 && getTimerBottomLabel(s) === 'Transition'
+    )
+  );
+  // End-of-set rests: 11 rests of 60s each
+  const pyrRestSteps = seqPyr.filter(s => s.type === 'rest');
+  assert.equal(pyrRestSteps.length, 11);
+  assert.ok(
+    pyrRestSteps.every(
+      s => s.duration === 60 && s.color === 'blue' && getTimerBottomLabel(s) === 'Rest'
+    )
+  );
+  // Check Set 1 and Set 2 exact step order:
+  // Step 0: Countdown (10s)
+  // Step 1: Set 1 Ex 1 (30s work)
+  // Step 2: Set 1 Rest (60s rest)
+  // Step 3: Set 2 Ex 1 (30s work)
+  // Step 4: Set 2 Transition (10s transition)
+  // Step 5: Set 2 Ex 2 (30s work)
+  // Step 6: Set 2 Rest (60s rest)
+  assert.equal(seqPyr[1].type, 'work');
+  assert.equal(seqPyr[1].duration, 30);
+  assert.equal(seqPyr[2].type, 'rest');
+  assert.equal(seqPyr[2].duration, 60);
+  assert.equal(seqPyr[3].type, 'work');
+  assert.equal(seqPyr[3].duration, 30);
+  assert.equal(seqPyr[4].type, 'transition');
+  assert.equal(seqPyr[4].duration, 10);
+  assert.equal(getTimerBottomLabel(seqPyr[4]), 'Transition');
+  assert.equal(seqPyr[5].type, 'work');
+  assert.equal(seqPyr[5].duration, 30);
+  assert.equal(seqPyr[6].type, 'rest');
+  assert.equal(seqPyr[6].duration, 60);
 
   // 3. 5 Constant 5 Change (40/20) per round = 10 pairs of 40s green / 20s blue
   const wk55 = generateWorkout(sheetData, { workoutType: '5 Constant 5 Change (40/20)' });

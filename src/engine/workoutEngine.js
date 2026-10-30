@@ -81,7 +81,7 @@ export function getConsolidatedWorkoutSubtitle(workoutState) {
     '8-excercises-40-20': '1 round · 8 exercises · 3 sets (40s work / 20s rest)',
     '30-20-10-10-20-30': '8 exercises · 6 sets each (30/20/10/10/20/30s work/rest)',
     '10-to-1-to-10': '5 exercises · 10 reps (per side) down to 1, back up to 10',
-    '6-excercise-pyramid': '6 exercises · 11 pyramid sets (30s work / 30s rest)',
+    '6-excercise-pyramid': '6 exercises · 11 pyramid sets (30s work / 10s transition / 60s rest)',
     '8x8-duos': '4 rounds · 2 exercises · 8-min AMRAP (8 reps each, no rest)',
     '5-constant-5-change-40-20': '3 rounds · 6 exercises · 10 sets (first 3 are round constants)'
   };

@@ -83,14 +83,14 @@
       "pacingTip": "Treat the middle sets (5 down to 1 and 1 up to 5) as active recovery with smooth transitions so you have energy for the sets of 8, 9, and 10 at the end."
     },
     "6-excercise-pyramid": {
-      "summary": "Add-on / drop-off timed pyramid across 6 exercises over 11 progressive rounds (30s per exercise + 30s rest).",
+      "summary": "Add-on / drop-off timed pyramid across 6 exercises over 11 progressive rounds (30s per exercise, 10s transition between exercises, and 60s rest at the end of each set).",
       "howItWorks": [
-        "Set 1: Do 30s of Exercise 1, then rest 30s. Set 2: Do 30s of Ex 1 + 30s of Ex 2 back-to-back, then rest 30s.",
-        "Keep adding one exercise each set until Set 6, where you perform all 6 exercises for 30s each (3 minutes continuous work), then rest 30s.",
-        "On Sets 7–11, drop Exercise 1, then Exercise 2, etc., until Set 11 finishes with just 30s of Exercise 6."
+        "Set 1: Do 30s of Exercise 1, then rest 60s. Set 2: Do 30s of Ex 1, take a 10s transition, do 30s of Ex 2, then rest 60s.",
+        "Keep adding one exercise each set (with a 10s transition between exercises) until Set 6, where you perform all 6 exercises for 30s each, then rest 60s.",
+        "On Sets 7–11, drop Exercise 1, then Exercise 2, etc., until Set 11 finishes with 30s of Exercise 6 followed by 60s rest."
       ],
-      "timerStructure": "6 exercises · 11 pyramid sets (1, 1-2, 1-2-3 ... up to 6, then dropping down to 1)",
-      "pacingTip": "You will perform every exercise 6 times over the pyramid. Keep transitions seamless since there is no rest between exercises inside a pyramid rung."
+      "timerStructure": "6 exercises · 11 pyramid sets (30s work / 10s transition between exercises / 60s rest at end of set)",
+      "pacingTip": "You will perform every exercise 6 times over the pyramid. Use the 10-second transition to get into position for the next exercise and the 60-second rest at the end of each pyramid set to recover."
     },
     "8x8-duos": {
       "summary": "4 AMRAP rounds of 2 exercises: alternate 8 reps of each exercise non-stop for 8 minutes per round.",

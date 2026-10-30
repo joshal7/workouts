@@ -169,6 +169,9 @@ export function getTimerBottomLabel(step) {
   if (step.type === 'countdown') {
     return step.customLabel || 'Count Down';
   }
+  if (step.type === 'transition') {
+    return step.customLabel || 'Transition';
+  }
   if (step.type === 'rest') {
     return step.customLabel || 'Rest';
   }
@@ -184,8 +187,10 @@ export function getDefaultExerciseTimerConfig(workout) {
     return {
       workDuration: 30,
       workColor: 'green',
-      restDuration: 30,
+      restDuration: 60,
       restColor: 'blue',
+      transitionDuration: 10,
+      transitionColor: 'yellow',
       extraIntervals: []
     };
   }
@@ -506,11 +511,11 @@ export function buildStockTimerSequence(
     });
   } else if (wkId === '6-excercise-pyramid') {
     // 6 exercises, 11 progressive/regressive pyramid sets:
-    // Set 1: Ex 1 (30s) + Rest (30s)
-    // Set 2: Ex 1 (30s), Ex 2 (30s) + Rest (30s)
-    // ... Set 6: Ex 1..6 (30s each) + Rest (30s)
-    // Set 7: Ex 2..6 (30s each) + Rest (30s)
-    // ... Set 11: Ex 6 (30s) + Rest (30s)
+    // Set 1: Ex 1 (30s) + Rest (60s)
+    // Set 2: Ex 1 (30s) + Transition (10s) + Ex 2 (30s) + Rest (60s)
+    // ... Set 6: Ex 1..6 (30s each with 10s Transition between exercises) + Rest (60s)
+    // Set 7: Ex 2..6 (30s each with 10s Transition between exercises) + Rest (60s)
+    // ... Set 11: Ex 6 (30s) + Rest (60s)
     const round = workoutState.rounds[0];
     const exList = round.slots.map(s => getActiveSlotExercise(s)).filter(Boolean);
     const n = exList.length; // 6
@@ -540,6 +545,25 @@ export function buildStockTimerSequence(
           color: cfg.workColor
         });
         appendExtraExerciseIntervals(steps, ex, cfg, setNum, pairCounter);
+
+        // 10-second Transition timer between exercises within a pyramid set
+        if (idxInRung < rungExercises.length - 1) {
+          const nextExInRung = rungExercises[idxInRung + 1];
+          steps.push({
+            id: `step-${steps.length + 1}`,
+            type: 'transition',
+            phaseLabel: `Pyramid Set ${setNum}/${rungs.length} · 10s Transition`,
+            exerciseId: nextExInRung?.id || ex.id,
+            exerciseName: 'Transition',
+            customLabel: 'Transition',
+            roundNumber: setNum,
+            setNumber: setNum,
+            totalSets: rungs.length,
+            pairIndex: pairCounter.count,
+            duration: 10,
+            color: 'yellow'
+          });
+        }
       });
       const lastEx = rungExercises[rungExercises.length - 1];
       const lastCfg = resolveExConfig(workout, lastEx?.id, exerciseConfigs);
