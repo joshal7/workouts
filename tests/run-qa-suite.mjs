@@ -79,12 +79,12 @@ console.log('================================================================\n'
 // ----------------------------------------------------------------------------
 console.log('1. Data Integrity & Biomechanical Muscle Audit');
 
-test('Contains all 68 exercises (rows 2..69) and all 11 workout types', () => {
-  assert.equal(sheetData.exercises.length, 68, 'Expected exactly 68 exercises');
+test('Contains all 90 high-signal exercises (rows 2..91) and all 11 workout types', () => {
+  assert.equal(sheetData.exercises.length, 90, 'Expected exactly 90 exercises');
   assert.equal(sheetData.workouts.length, 11, 'Expected exactly 11 workout types');
 
   const rows = sheetData.exercises.map(e => e.row);
-  for (let r = 2; r <= 69; r++) {
+  for (let r = 2; r <= 91; r++) {
     assert.ok(rows.includes(r), `Missing sheet row #${r}`);
   }
 });
@@ -148,11 +148,14 @@ test('Specialty exercises have accurate, movement-specific fact-checked instruct
   const v3Text = JSON.stringify(byId['3-way-v-ups'].enrichment).toLowerCase();
   assert.ok(v3Text.includes('left') && v3Text.includes('center') && v3Text.includes('right'));
 
-  const cpRollerText = JSON.stringify(byId['crunch-pike-on-roller'].enrichment);
-  assert.ok(cpRollerText.includes('Crunch') && cpRollerText.includes('Pike'));
+  const trxSquatText = JSON.stringify(byId['single-leg-trx-squats'].enrichment);
+  assert.ok(trxSquatText.includes('Forward') && trxSquatText.includes('Reverse') && trxSquatText.includes('8'));
+
+  const inclineBbText = JSON.stringify(byId['incline-barbell-bench-press'].enrichment);
+  assert.ok(inclineBbText.toLowerCase().includes('barbell') && inclineBbText.toLowerCase().includes('incline'));
 });
 
-test('All 68 SVG diagrams exist, contain valid SVG, highlight Pri/Sec muscles, and map back to descriptions', () => {
+test('All 90 SVG diagrams exist, contain valid SVG, highlight Pri/Sec muscles, and map back to descriptions', () => {
   for (const ex of sheetData.exercises) {
     const enrich = ex.enrichment;
     assert.ok(enrich, `Missing enrichment for ${ex.id}`);
@@ -203,13 +206,13 @@ test('Equipment = "Nothing" strictly returns only bodyweight-capable exercises (
   }
 });
 
-test('Equipment = "Any" makes all 68 exercises eligible', () => {
+test('Equipment = "Any" makes all 90 exercises eligible', () => {
   const pool = filterEligibleExercises(sheetData.exercises, {
     workoutCategory: 'Either',
     bodyCategory: 'All',
     equipment: 'Any'
   });
-  assert.equal(pool.length, 68);
+  assert.equal(pool.length, 90);
 });
 
 test('Selecting a manual Workout Type overrides Workout Category to match that workout (Apps Script parity)', () => {

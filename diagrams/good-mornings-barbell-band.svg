@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 248" width="680" height="248" role="img" aria-label="Barbell or Heavy Band Good Mornings multi-step exercise diagram">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#34d399" />
+    </marker>
+  </defs>
+
+  <!-- Minimalist Dark Canvas -->
+  <rect width="680" height="248" rx="16" fill="#090d16" stroke="#1e293b" stroke-width="1.5" />
+
+  <!-- Multi-Frame Motion Sequence Panels -->
+  <g transform="translate(12, 10)"><rect width="323" height="186" rx="12" fill="#0d1322" stroke="#1e293b" stroke-width="1.2" /><text x="12" y="21" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="700">1. Bar / Band Across Traps</text><line x1="14" y1="168" x2="309" y2="168" stroke="#334155" stroke-width="1.5" stroke-dasharray="4 4" /><g transform="translate(59, 0)"><path d="M 115.5 112.4 Q 118.5 90.5 118.5 68.5 A 10.5 10.5 0 0 1 97.5 67.5 Q 95.5 89.5 96.5 111.6 A 9.5 9.5 0 0 1 115.5 112.4 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><g opacity="0.55"><path d="M 113.0 112.3 Q 116.0 90.4 116.5 68.4 A 8.5 8.5 0 0 1 99.5 67.6 Q 98.0 89.6 99.0 111.7 A 7 7 0 0 1 113.0 112.3 Z" fill="#38bdf8" stroke="#7dd3fc" stroke-width="1.3" /></g><g opacity="0.55"><path d="M 112.5 112.3 Q 114.4 103.6 113.3 94.7 A 6.5 6.5 0 0 1 100.3 94.1 Q 98.4 102.8 99.5 111.7 A 6.5 6.5 0 0 1 112.5 112.3 Z" fill="#38bdf8" stroke="#7dd3fc" stroke-width="1.3" /></g><path d="M 97.5 112.0 Q 96.5 125.0 100.0 138.0 A 6 6 0 0 1 112.0 138.0 Q 115.5 125.0 114.5 112.0 A 8.5 8.5 0 0 1 97.5 112.0 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><g opacity="0.85"><path d="M 100.5 112.0 Q 99.0 125.0 101.5 138.0 A 4.5 4.5 0 0 1 110.5 138.0 Q 113.0 125.0 111.5 112.0 A 5.5 5.5 0 0 1 100.5 112.0 Z" fill="#f97316" stroke="#fb923c" stroke-width="1.3" /></g><circle cx="106.0" cy="112.0" r="8" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><circle cx="106.0" cy="112.0" r="9.5" fill="#38bdf8" opacity="0.58" stroke="#fed7aa" stroke-width="0.8" /><path d="M 100.5 138.0 Q 100.0 151.5 102.2 165.0 A 3.8 3.8 0 0 1 109.8 165.0 Q 112.0 151.5 111.5 138.0 A 5.5 5.5 0 0 1 100.5 138.0 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><ellipse cx="110.0" cy="165.0" rx="6.5" ry="3.5" fill="#cbd5e1" /><path d="M 104.7 63.0 Q 98.2 66.3 93.3 72.0 A 4.8 4.8 0 0 1 98.7 80.0 Q 105.8 77.7 111.3 73.0 A 6 6 0 0 1 104.7 63.0 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><path d="M 99.2 79.2 Q 103.4 75.4 106.3 70.3 A 3.2 3.2 0 0 1 101.7 65.7 Q 96.6 68.6 92.8 72.8 A 4.5 4.5 0 0 1 99.2 79.2 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><circle cx="108.0" cy="68.0" r="7" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><g transform="translate(108.0, 48.0) rotate(0)">
+    <ellipse cx="0" cy="0" rx="11" ry="12.5" fill="#475569" stroke="#cbd5e1" stroke-width="1.5" />
+    <path d="M -10 -4 Q 0 -7 10 -4" stroke="#38bdf8" stroke-width="2.5" fill="none" opacity="0.75" />
+  </g><g transform="translate(104.0, 68.0) rotate(0)">
+    <line x1="-22" y1="0" x2="22" y2="0" stroke="#cbd5e1" stroke-width="3.2" stroke-linecap="round" />
+    <rect x="-18" y="-11" width="5" height="22" rx="1.5" fill="#facc15" stroke="#ca8a04" stroke-width="1" />
+    <rect x="-12" y="-8.5" width="4" height="17" rx="1.2" fill="#eab308" stroke="#a16207" stroke-width="1" />
+    <rect x="13" y="-11" width="5" height="22" rx="1.5" fill="#facc15" stroke="#ca8a04" stroke-width="1" />
+    <rect x="8" y="-8.5" width="4" height="17" rx="1.2" fill="#eab308" stroke="#a16207" stroke-width="1" />
+  </g></g></g>
+<g transform="translate(345, 10)"><rect width="323" height="186" rx="12" fill="#0d1322" stroke="#1e293b" stroke-width="1.2" /><text x="12" y="21" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="700">2. Horizontal Hip Hinge</text><line x1="14" y1="168" x2="309" y2="168" stroke="#334155" stroke-width="1.5" stroke-dasharray="4 4" /><g transform="translate(59, 0)"><path d="M 87.8 118.7 Q 113.6 109.5 138.2 97.6 A 10.5 10.5 0 0 1 129.8 78.4 Q 104.4 88.5 80.2 101.3 A 9.5 9.5 0 0 1 87.8 118.7 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><g opacity="0.55"><path d="M 86.8 116.4 Q 112.6 107.2 137.4 95.8 A 8.5 8.5 0 0 1 130.6 80.2 Q 105.4 90.8 81.2 103.6 A 7 7 0 0 1 86.8 116.4 Z" fill="#38bdf8" stroke="#7dd3fc" stroke-width="1.3" /></g><g opacity="0.55"><path d="M 86.6 115.9 Q 97.2 112.9 106.6 107.1 A 6.5 6.5 0 0 1 101.4 95.3 Q 90.8 98.3 81.4 104.1 A 6.5 6.5 0 0 1 86.6 115.9 Z" fill="#38bdf8" stroke="#7dd3fc" stroke-width="1.3" /></g><path d="M 76.0 112.9 Q 80.1 127.2 88.3 140.0 A 6 6 0 0 1 99.7 136.0 Q 97.9 120.8 92.0 107.1 A 8.5 8.5 0 0 1 76.0 112.9 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><g opacity="0.85"><path d="M 78.8 111.8 Q 82.4 126.4 89.8 139.5 A 4.5 4.5 0 0 1 98.2 136.5 Q 95.6 121.6 89.2 108.2 A 5.5 5.5 0 0 1 78.8 111.8 Z" fill="#f97316" stroke="#fb923c" stroke-width="1.3" /></g><circle cx="84.0" cy="110.0" r="8" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><circle cx="84.0" cy="110.0" r="9.5" fill="#38bdf8" opacity="0.58" stroke="#fed7aa" stroke-width="0.8" /><path d="M 88.6 137.2 Q 86.1 150.6 86.2 164.4 A 3.8 3.8 0 0 1 93.8 165.6 Q 97.9 152.4 99.4 138.8 A 5.5 5.5 0 0 1 88.6 137.2 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><ellipse cx="94.0" cy="165.0" rx="6.5" ry="3.5" fill="#cbd5e1" /><path d="M 130.7 83.0 Q 124.2 86.3 119.3 92.0 A 4.8 4.8 0 0 1 124.7 100.0 Q 131.8 97.7 137.3 93.0 A 6 6 0 0 1 130.7 83.0 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><path d="M 125.2 99.2 Q 129.4 95.4 132.3 90.3 A 3.2 3.2 0 0 1 127.7 85.7 Q 122.6 88.6 118.8 92.8 A 4.5 4.5 0 0 1 125.2 99.2 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><circle cx="134.0" cy="88.0" r="7" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><g transform="translate(152.0, 78.0) rotate(-35)">
+    <ellipse cx="0" cy="0" rx="11" ry="12.5" fill="#475569" stroke="#cbd5e1" stroke-width="1.5" />
+    <path d="M -10 -4 Q 0 -7 10 -4" stroke="#38bdf8" stroke-width="2.5" fill="none" opacity="0.75" />
+  </g><g transform="translate(130.0, 88.0) rotate(0)">
+    <line x1="-22" y1="0" x2="22" y2="0" stroke="#cbd5e1" stroke-width="3.2" stroke-linecap="round" />
+    <rect x="-18" y="-11" width="5" height="22" rx="1.5" fill="#facc15" stroke="#ca8a04" stroke-width="1" />
+    <rect x="-12" y="-8.5" width="4" height="17" rx="1.2" fill="#eab308" stroke="#a16207" stroke-width="1" />
+    <rect x="13" y="-11" width="5" height="22" rx="1.5" fill="#facc15" stroke="#ca8a04" stroke-width="1" />
+    <rect x="8" y="-8.5" width="4" height="17" rx="1.2" fill="#eab308" stroke="#a16207" stroke-width="1" />
+  </g><path d="M 184 142 L 184 74" stroke="#34d399" stroke-width="2.5" stroke-linecap="round" marker-end="url(#arrow)" /></g></g>
+
+  <!-- Minimalist Footer Bar: Target Muscles and Equipment -->
+  <text x="16" y="220" fill="#cbd5e1" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11">
+    <tspan fill="#f97316" font-weight="700">● Hamstrings (PRI)</tspan>  <tspan fill="#38bdf8" font-weight="600">  ○ Back (SEC)</tspan>  <tspan fill="#38bdf8" font-weight="600">  ○ Abs (SEC)</tspan>  <tspan fill="#38bdf8" font-weight="600">  ○ Glutes (SEC)</tspan>
+  </text>
+  <text x="664" y="220" text-anchor="end" fill="#64748b" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10.5" font-weight="600">
+    LOADED HIP HINGE · Equip: Band or Weights · Cat: Either
+  </text>
+</svg>

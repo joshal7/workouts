@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 248" width="680" height="248" role="img" aria-label="Incline Barbell Bench Press multi-step exercise diagram">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#34d399" />
+    </marker>
+  </defs>
+
+  <!-- Minimalist Dark Canvas -->
+  <rect width="680" height="248" rx="16" fill="#090d16" stroke="#1e293b" stroke-width="1.5" />
+
+  <!-- Multi-Frame Motion Sequence Panels -->
+  <g transform="translate(12, 10)"><rect width="323" height="186" rx="12" fill="#0d1322" stroke="#1e293b" stroke-width="1.2" /><text x="12" y="21" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="700">1. Lower Bar to Upper Chest</text><line x1="14" y1="168" x2="309" y2="168" stroke="#334155" stroke-width="1.5" stroke-dasharray="4 4" /><g transform="translate(59, 0)"><rect x="44" y="138" width="64" height="8" rx="3" fill="#475569" stroke="#64748b" stroke-width="1" />
+          <path d="M 48 92 L 94 140 L 88 145 L 42 97 Z" fill="#475569" stroke="#64748b" stroke-width="1" />
+          <line x1="56" y1="106" x2="56" y2="168" stroke="#475569" stroke-width="4.5" />
+          <line x1="98" y1="146" x2="98" y2="168" stroke="#475569" stroke-width="4.5" /><path d="M 100.7 129.3 Q 88.1 113.9 73.4 100.6 A 10.5 10.5 0 0 1 58.6 115.4 Q 71.9 130.1 87.3 142.7 A 9.5 9.5 0 0 1 100.7 129.3 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><circle cx="73.8" cy="115.8" r="7.5" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><circle cx="73.8" cy="115.8" r="9" fill="#f97316" opacity="0.85" stroke="#fed7aa" stroke-width="0.8" /><path d="M 95.8 144.3 Q 115.0 141.3 133.2 133.9 A 6 6 0 0 1 130.8 122.1 Q 111.0 122.7 92.2 127.7 A 8.5 8.5 0 0 1 95.8 144.3 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><circle cx="94.0" cy="136.0" r="8" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><path d="M 126.8 129.7 Q 132.3 148.4 140.4 166.2 A 3.8 3.8 0 0 1 147.6 163.8 Q 143.7 144.6 137.2 126.3 A 5.5 5.5 0 0 1 126.8 129.7 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><ellipse cx="148.0" cy="165.0" rx="6.5" ry="3.5" fill="#cbd5e1" /><path d="M 60.0 108.0 Q 59.2 117.0 61.2 126.0 A 4.8 4.8 0 0 1 70.8 126.0 Q 72.8 117.0 72.0 108.0 A 6 6 0 0 1 60.0 108.0 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><g opacity="0.55"><path d="M 61.5 108.0 Q 60.0 117.0 62.0 126.0 A 4 4 0 0 1 70.0 126.0 Q 72.0 117.0 70.5 108.0 A 4.5 4.5 0 0 1 61.5 108.0 Z" fill="#38bdf8" stroke="#7dd3fc" stroke-width="1.3" /></g><path d="M 70.3 127.2 Q 74.6 112.2 77.1 96.8 A 3.2 3.2 0 0 1 70.9 95.2 Q 65.4 109.8 61.7 124.8 A 4.5 4.5 0 0 1 70.3 127.2 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><circle cx="66.0" cy="108.0" r="7" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><circle cx="66.0" cy="108.0" r="8.5" fill="#38bdf8" opacity="0.58" stroke="#fed7aa" stroke-width="0.8" /><g transform="translate(52.0, 92.0) rotate(-45)">
+    <ellipse cx="0" cy="0" rx="11" ry="12.5" fill="#475569" stroke="#cbd5e1" stroke-width="1.5" />
+    <path d="M -10 -4 Q 0 -7 10 -4" stroke="#38bdf8" stroke-width="2.5" fill="none" opacity="0.75" />
+  </g><g transform="translate(74.0, 92.0) rotate(0)">
+    <line x1="-22" y1="0" x2="22" y2="0" stroke="#cbd5e1" stroke-width="3.2" stroke-linecap="round" />
+    <rect x="-18" y="-11" width="5" height="22" rx="1.5" fill="#facc15" stroke="#ca8a04" stroke-width="1" />
+    <rect x="-12" y="-8.5" width="4" height="17" rx="1.2" fill="#eab308" stroke="#a16207" stroke-width="1" />
+    <rect x="13" y="-11" width="5" height="22" rx="1.5" fill="#facc15" stroke="#ca8a04" stroke-width="1" />
+    <rect x="8" y="-8.5" width="4" height="17" rx="1.2" fill="#eab308" stroke="#a16207" stroke-width="1" />
+  </g></g></g>
+<g transform="translate(345, 10)"><rect width="323" height="186" rx="12" fill="#0d1322" stroke="#1e293b" stroke-width="1.2" /><text x="12" y="21" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="700">2. Drive to Overhead Lockout</text><line x1="14" y1="168" x2="309" y2="168" stroke="#334155" stroke-width="1.5" stroke-dasharray="4 4" /><g transform="translate(59, 0)"><rect x="44" y="138" width="64" height="8" rx="3" fill="#475569" stroke="#64748b" stroke-width="1" />
+          <path d="M 48 92 L 94 140 L 88 145 L 42 97 Z" fill="#475569" stroke="#64748b" stroke-width="1" />
+          <line x1="56" y1="106" x2="56" y2="168" stroke="#475569" stroke-width="4.5" />
+          <line x1="98" y1="146" x2="98" y2="168" stroke="#475569" stroke-width="4.5" /><path d="M 100.7 129.3 Q 88.1 113.9 73.4 100.6 A 10.5 10.5 0 0 1 58.6 115.4 Q 71.9 130.1 87.3 142.7 A 9.5 9.5 0 0 1 100.7 129.3 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><circle cx="73.8" cy="115.8" r="7.5" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><circle cx="73.8" cy="115.8" r="9" fill="#f97316" opacity="0.85" stroke="#fed7aa" stroke-width="0.8" /><path d="M 95.8 144.3 Q 115.0 141.3 133.2 133.9 A 6 6 0 0 1 130.8 122.1 Q 111.0 122.7 92.2 127.7 A 8.5 8.5 0 0 1 95.8 144.3 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><circle cx="94.0" cy="136.0" r="8" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><path d="M 126.8 129.7 Q 132.3 148.4 140.4 166.2 A 3.8 3.8 0 0 1 147.6 163.8 Q 143.7 144.6 137.2 126.3 A 5.5 5.5 0 0 1 126.8 129.7 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><ellipse cx="148.0" cy="165.0" rx="6.5" ry="3.5" fill="#cbd5e1" /><path d="M 71.8 109.3 Q 75.6 96.5 76.7 83.1 A 4.8 4.8 0 0 1 67.3 80.9 Q 62.4 93.5 60.2 106.7 A 6 6 0 0 1 71.8 109.3 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><g opacity="0.55"><path d="M 70.4 109.0 Q 74.8 96.3 75.9 82.9 A 4 4 0 0 1 68.1 81.1 Q 63.2 93.7 61.6 107.0 A 4.5 4.5 0 0 1 70.4 109.0 Z" fill="#38bdf8" stroke="#7dd3fc" stroke-width="1.3" /></g><path d="M 76.4 82.7 Q 78.7 69.7 79.2 56.5 A 3.2 3.2 0 0 1 72.8 55.5 Q 69.3 68.3 67.6 81.3 A 4.5 4.5 0 0 1 76.4 82.7 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><circle cx="66.0" cy="108.0" r="7" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><circle cx="66.0" cy="108.0" r="8.5" fill="#38bdf8" opacity="0.58" stroke="#fed7aa" stroke-width="0.8" /><g transform="translate(52.0, 92.0) rotate(-45)">
+    <ellipse cx="0" cy="0" rx="11" ry="12.5" fill="#475569" stroke="#cbd5e1" stroke-width="1.5" />
+    <path d="M -10 -4 Q 0 -7 10 -4" stroke="#38bdf8" stroke-width="2.5" fill="none" opacity="0.75" />
+  </g><g transform="translate(76.0, 52.0) rotate(0)">
+    <line x1="-22" y1="0" x2="22" y2="0" stroke="#cbd5e1" stroke-width="3.2" stroke-linecap="round" />
+    <rect x="-18" y="-11" width="5" height="22" rx="1.5" fill="#facc15" stroke="#ca8a04" stroke-width="1" />
+    <rect x="-12" y="-8.5" width="4" height="17" rx="1.2" fill="#eab308" stroke="#a16207" stroke-width="1" />
+    <rect x="13" y="-11" width="5" height="22" rx="1.5" fill="#facc15" stroke="#ca8a04" stroke-width="1" />
+    <rect x="8" y="-8.5" width="4" height="17" rx="1.2" fill="#eab308" stroke="#a16207" stroke-width="1" />
+  </g><path d="M 42 94 Q 52 64 74 62" stroke="#34d399" stroke-width="2.5" fill="none" marker-end="url(#arrow)" /></g></g>
+
+  <!-- Minimalist Footer Bar: Target Muscles and Equipment -->
+  <text x="16" y="220" fill="#cbd5e1" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11">
+    <tspan fill="#f97316" font-weight="700">● Chest (PRI)</tspan>  <tspan fill="#38bdf8" font-weight="600">  ○ Triceps (SEC)</tspan>  <tspan fill="#38bdf8" font-weight="600">  ○ Shoulders (SEC)</tspan>
+  </text>
+  <text x="664" y="220" text-anchor="end" fill="#64748b" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10.5" font-weight="600">
+    30° INCLINE BARBELL · Equip: Weights · Cat: Strength
+  </text>
+</svg>

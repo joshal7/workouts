@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 248" width="680" height="248" role="img" aria-label="Pilates Single &amp; Double Leg Stretch multi-step exercise diagram">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#34d399" />
+    </marker>
+  </defs>
+
+  <!-- Minimalist Dark Canvas -->
+  <rect width="680" height="248" rx="16" fill="#090d16" stroke="#1e293b" stroke-width="1.5" />
+
+  <!-- Multi-Frame Motion Sequence Panels -->
+  <g transform="translate(12, 10)"><rect width="323" height="186" rx="12" fill="#0d1322" stroke="#1e293b" stroke-width="1.2" /><text x="12" y="21" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="700">1. Single-Leg Switch Pull</text><line x1="14" y1="168" x2="309" y2="168" stroke="#334155" stroke-width="1.5" stroke-dasharray="4 4" /><g transform="translate(59, 0)"><g opacity="0.65"><path d="M 117.2 164.8 Q 134.6 157.7 150.3 147.0 A 5.5 5.5 0 0 1 145.7 137.0 Q 127.4 142.3 110.8 151.2 A 7.5 7.5 0 0 1 117.2 164.8 Z" fill="#1e293b" stroke="#64748b" stroke-width="1.3" /><path d="M 149.9 146.6 Q 167.1 140.1 183.3 131.2 A 3.5 3.5 0 0 1 180.7 124.8 Q 162.9 129.9 146.1 137.4 A 5 5 0 0 1 149.9 146.6 Z" fill="#1e293b" stroke="#64748b" stroke-width="1.3" /></g><path d="M 116.6 148.9 Q 96.2 140.9 74.9 135.9 A 10.5 10.5 0 0 1 69.1 156.1 Q 89.8 163.1 111.4 167.1 A 9.5 9.5 0 0 1 116.6 148.9 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><g opacity="0.85"><path d="M 115.8 151.8 Q 107.8 147.9 99.0 147.0 A 6.5 6.5 0 0 1 95.4 159.4 Q 103.4 163.3 112.2 164.2 A 6.5 6.5 0 0 1 115.8 151.8 Z" fill="#f97316" stroke="#fb923c" stroke-width="1.3" /></g><path d="M 122.3 156.2 Q 119.3 137.9 111.9 120.7 A 6 6 0 0 1 100.1 123.3 Q 100.7 142.1 105.7 159.8 A 8.5 8.5 0 0 1 122.3 156.2 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><circle cx="114.0" cy="158.0" r="8" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><path d="M 103.7 127.0 Q 114.5 132.5 126.4 135.5 A 3.8 3.8 0 0 1 129.6 128.5 Q 119.5 121.5 108.3 117.0 A 5.5 5.5 0 0 1 103.7 127.0 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><ellipse cx="132.0" cy="132.0" rx="6.5" ry="3.5" fill="#cbd5e1" /><path d="M 75.2 151.1 Q 86.7 144.7 96.6 136.0 A 4.8 4.8 0 0 1 91.4 128.0 Q 79.3 133.3 68.8 140.9 A 6 6 0 0 1 75.2 151.1 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><path d="M 96.6 135.7 Q 103.8 130.9 109.9 124.6 A 3.2 3.2 0 0 1 106.1 119.4 Q 98.2 123.1 91.4 128.3 A 4.5 4.5 0 0 1 96.6 135.7 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><circle cx="72.0" cy="146.0" r="7" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><g transform="translate(58.0, 130.0) rotate(-55)">
+    <ellipse cx="0" cy="0" rx="11" ry="12.5" fill="#475569" stroke="#cbd5e1" stroke-width="1.5" />
+    <path d="M -10 -4 Q 0 -7 10 -4" stroke="#38bdf8" stroke-width="2.5" fill="none" opacity="0.75" />
+  </g></g></g>
+<g transform="translate(345, 10)"><rect width="323" height="186" rx="12" fill="#0d1322" stroke="#1e293b" stroke-width="1.2" /><text x="12" y="21" fill="#e2e8f0" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="700">2. Double-Leg Hollow Reach</text><line x1="14" y1="168" x2="309" y2="168" stroke="#334155" stroke-width="1.5" stroke-dasharray="4 4" /><g transform="translate(59, 0)"><path d="M 116.6 148.9 Q 96.2 140.9 74.9 135.9 A 10.5 10.5 0 0 1 69.1 156.1 Q 89.8 163.1 111.4 167.1 A 9.5 9.5 0 0 1 116.6 148.9 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><g opacity="0.85"><path d="M 115.8 151.8 Q 107.8 147.9 99.0 147.0 A 6.5 6.5 0 0 1 95.4 159.4 Q 103.4 163.3 112.2 164.2 A 6.5 6.5 0 0 1 115.8 151.8 Z" fill="#f97316" stroke="#fb923c" stroke-width="1.3" /></g><path d="M 119.4 164.6 Q 136.0 152.4 149.8 136.7 A 6 6 0 0 1 142.2 127.3 Q 124.0 137.6 108.6 151.4 A 8.5 8.5 0 0 1 119.4 164.6 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><circle cx="114.0" cy="158.0" r="8" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><path d="M 149.5 136.3 Q 165.8 123.7 180.4 108.9 A 3.8 3.8 0 0 1 175.6 103.1 Q 158.2 114.3 142.5 127.7 A 5.5 5.5 0 0 1 149.5 136.3 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><ellipse cx="182.0" cy="106.0" rx="6.5" ry="3.5" fill="#cbd5e1" /><path d="M 76.6 142.2 Q 67.2 129.6 55.7 118.9 A 4.8 4.8 0 0 1 48.3 125.1 Q 56.8 138.4 67.4 149.8 A 6 6 0 0 1 76.6 142.2 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><path d="M 54.4 118.2 Q 43.6 111.0 31.7 105.3 A 3.2 3.2 0 0 1 28.3 110.7 Q 38.4 119.0 49.6 125.8 A 4.5 4.5 0 0 1 54.4 118.2 Z" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><circle cx="72.0" cy="146.0" r="7" fill="#334155" stroke="#94a3b8" stroke-width="1.3" /><g transform="translate(58.0, 130.0) rotate(-55)">
+    <ellipse cx="0" cy="0" rx="11" ry="12.5" fill="#475569" stroke="#cbd5e1" stroke-width="1.5" />
+    <path d="M -10 -4 Q 0 -7 10 -4" stroke="#38bdf8" stroke-width="2.5" fill="none" opacity="0.75" />
+  </g><path d="M 72 38 L 138 38" stroke="#34d399" stroke-width="2.5" fill="none" marker-end="url(#arrow)" /></g></g>
+
+  <!-- Minimalist Footer Bar: Target Muscles and Equipment -->
+  <text x="16" y="220" fill="#cbd5e1" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11">
+    <tspan fill="#f97316" font-weight="700">● Abs (PRI)</tspan>
+  </text>
+  <text x="664" y="220" text-anchor="end" fill="#64748b" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10.5" font-weight="600">
+    PILATES AB SERIES · Equip: Nothing · Cat: Either
+  </text>
+</svg>

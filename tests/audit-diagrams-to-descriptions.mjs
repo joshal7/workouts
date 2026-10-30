@@ -11,7 +11,7 @@ const sheetData = JSON.parse(fs.readFileSync(path.join(rootDir, 'data', 'sheet-d
 const enrichments = JSON.parse(fs.readFileSync(path.join(rootDir, 'data', 'enrichments.json'), 'utf8'));
 
 console.log('================================================================');
-console.log('AUDITING ALL 68 MULTI-FRAME SCULPTED DIAGRAMS AGAINST DESCRIPTIONS');
+console.log(`AUDITING ALL ${sheetData.exercises.length} MULTI-FRAME SCULPTED DIAGRAMS AGAINST DESCRIPTIONS`);
 console.log('================================================================\n');
 
 let verifiedCount = 0;
@@ -96,4 +96,4 @@ for (const ex of sheetData.exercises) {
   verifiedCount++;
 }
 
-console.log(`✅ Verified ${verifiedCount}/68 multi-frame sculpted SVG diagrams map 100% to their motion phases, equipment, and audited muscles!`);
+console.log(`✅ Verified ${verifiedCount}/${sheetData.exercises.length} multi-frame sculpted SVG diagrams map 100% to their motion phases, equipment, and audited muscles!`);

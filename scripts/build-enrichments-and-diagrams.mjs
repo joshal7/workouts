@@ -95,14 +95,14 @@ const workoutTypeEnrichments = {
     pacingTip: 'Treat the middle sets (5 down to 1 and 1 up to 5) as active recovery with smooth transitions so you have energy for the sets of 8, 9, and 10 at the end.'
   },
   '6-excercise-pyramid': {
-    summary: 'Add-on / drop-off timed pyramid across 6 exercises over 11 progressive rounds (30s per exercise + 30s rest).',
+    summary: 'Add-on / drop-off timed pyramid across 6 exercises over 11 progressive rounds (30s per exercise, 10s transition between exercises, 60s rest at end of set).',
     howItWorks: [
-      'Set 1: Do 30s of Exercise 1, then rest 30s. Set 2: Do 30s of Ex 1 + 30s of Ex 2 back-to-back, then rest 30s.',
-      'Keep adding one exercise each set until Set 6, where you perform all 6 exercises for 30s each (3 minutes continuous work), then rest 30s.',
-      'On Sets 7–11, drop Exercise 1, then Exercise 2, etc., until Set 11 finishes with just 30s of Exercise 6.'
+      'Set 1: Do 30s of Exercise 1, then rest 60s. Set 2: Do 30s of Ex 1 → 10s Transition → 30s of Ex 2, then rest 60s.',
+      'Keep adding one exercise each set (with a 10s transition between exercises) until Set 6, where you perform all 6 exercises for 30s each, then rest 60s.',
+      'On Sets 7–11, drop Exercise 1, then Exercise 2, etc., until Set 11 finishes with 30s of Exercise 6 followed by a 60s rest.'
     ],
-    timerStructure: '6 exercises · 11 pyramid sets (1, 1-2, 1-2-3 ... up to 6, then dropping down to 1)',
-    pacingTip: 'You will perform every exercise 6 times over the pyramid. Keep transitions seamless since there is no rest between exercises inside a pyramid rung.'
+    timerStructure: '6 exercises · 11 pyramid sets (30s work / 10s transition between exercises / 60s rest per set)',
+    pacingTip: 'You will perform every exercise 6 times over the pyramid. Use the 10-second transition timer to move briskly to the next station and save your full breather for the 60-second rest at the end of each set.'
   },
   '8x8-duos': {
     summary: '4 AMRAP rounds of 2 exercises: alternate 8 reps of each exercise non-stop for 8 minutes per round.',
@@ -763,19 +763,19 @@ const exerciseSpecs = {
     ]
   },
   'side-plank-with-hip-dip': {
-    summary: 'Lateral core and oblique exercise lowering and lifting the hips from a forearm side plank.',
+    summary: 'Lateral core, oblique, and glute medius exercise lowering and lifting the hips from a forearm side plank (with optional top-leg abduction raise at the top).',
     steps: [
       'Lie on your side propped on one forearm with your elbow stacked directly beneath your shoulder and feet stacked.',
-      'Lift your hips into a straight side plank line, then slowly lower your bottom hip down until it lightly taps or hovers above the mat.',
-      'Contract your bottom oblique and glute medius to drive your hips back up slightly past neutral.'
+      'Lift your hips into a straight side plank line, then slowly lower your bottom hip down until it lightly hovers above the mat.',
+      'Contract your bottom oblique and glute medius to drive your hips back up—optionally lifting your top leg at the peak for added glute medius load.'
     ],
     formTip: 'Keep your chest and hips facing straight forward as if sliding between two panes of glass.',
     pose: 'side-plank',
     equip: 'bodyweight',
-    badge: 'LATERAL HIP DIP',
+    badge: 'HIP DIP / LEG LIFT',
     frames: [
       { label: '1. Controlled Hip Dip Down', phase: 'sideplank-dip' },
-      { label: '2. Oblique Drive to High Line', phase: 'sideplank-high', arrow: 'up' }
+      { label: '2. Oblique Drive & Optional Leg Lift', phase: 'sideplank-leglift', arrow: 'up' }
     ]
   },
   'side-plank-with-hip-dip-and-leg-lift': {
@@ -893,19 +893,19 @@ const exerciseSpecs = {
     ]
   },
   'lateral-band-walks': {
-    summary: 'Athletic side-to-side steps with a resistance band around the ankles or knees to target the glute medius and quads.',
+    summary: 'Athletic side-to-side lateral steps and forward/backward monster walks in a low quarter-squat with a hip or ankle resistance band.',
     steps: [
       'Place a loop band around your ankles or just above your knees and sink into an athletic quarter-squat with chest up.',
-      'Take a wide lateral step to the right while keeping your toes pointed straight ahead, then step your left foot in to hip-width.',
-      'Take several steps in one direction before reversing back to the left while maintaining low hip height.'
+      'Take wide lateral steps to the right while keeping toes pointed straight ahead, then reverse to the left without letting your feet touch.',
+      'Optionally alternate with 4–6 diagonal forward and backward "Monster Walk" steps while maintaining low hip height.'
     ],
     formTip: 'Never let your feet come all the way together—keep at least hip-width tension on the band at all times.',
     pose: 'standing-band-walk',
     equip: 'band-ankles',
-    badge: 'LATERAL STEP',
+    badge: 'LATERAL & MONSTER WALK',
     frames: [
       { label: '1. Athletic Quarter-Squat Base', phase: 'band-walk-narrow' },
-      { label: '2. Wide Lateral Step Out', phase: 'band-walk-wide', arrow: 'fwd-back' }
+      { label: '2. Wide Lateral / Monster Step', phase: 'band-walk-wide', arrow: 'fwd-back' }
     ]
   },
   'forward-backward-band-walks': {
@@ -957,18 +957,18 @@ const exerciseSpecs = {
     ]
   },
   'squats': {
-    summary: 'Foundational lower-body squat building strength in the quadriceps, glutes, and core.',
+    summary: 'Foundational lower-body squat (Olympic barbell back/front squat from rack, goblet squat, or bodyweight) building quad, glute, and core strength.',
     steps: [
-      'Stand with feet shoulder-width apart and toes turned out 10°–15° (bodyweight or holding weights/bands).',
+      'Unrack a barbell across your upper traps/front delts (or hold a 35–50 lb dumbbell goblet-style) with feet shoulder-width apart and toes turned out 10°–15°.',
       'Sit your hips back and down while tracking your knees outward in line with your toes until thighs are at least parallel to the floor.',
       'Drive through your mid-foot and heels to stand tall and squeeze your glutes at the top.'
     ],
-    formTip: 'Keep your chest proud and full foot anchored—never let your knees cave inward on the way up.',
+    formTip: 'Keep your chest proud and full foot anchored—never let your knees cave inward on the ascent.',
     pose: 'squat-standard',
     equip: 'any-squat',
-    badge: 'FULL DEPTH SQUAT',
+    badge: 'BARBELL / GOBLET SQUAT',
     frames: [
-      { label: '1. Tall Athletic Stance', phase: 'squat-top' },
+      { label: '1. Tall Athletic Stance', phase: 'goodmorning-top' },
       { label: '2. Parallel Depth & Drive', phase: 'squat-low', arrow: 'up' }
     ]
   },
@@ -989,18 +989,18 @@ const exerciseSpecs = {
     ]
   },
   '1-5-squats': {
-    summary: 'One-and-a-half rep squat: descend to the bottom, rise halfway up, drop back to the bottom, and stand all the way up.',
+    summary: 'One-and-a-half rep pulse & isometric hold squat: descend to the bottom, rise halfway up, pause/drop back to the bottom, and stand all the way up.',
     steps: [
-      'Lower into a full-depth squat until your thighs are parallel to the floor.',
-      'Press halfway up (about 45° knee angle), pause briefly, then lower all the way back down into the bottom of the squat.',
+      'Lower into a full-depth parallel squat (with barbell, goblet dumbbell, or bodyweight) and hold active bottom tension.',
+      'Press halfway up (about 45° knee angle), pause for 1 full second, then lower all the way back down into the bottom of the squat.',
       'Drive forcefully from the bottom all the way to standing—that entire sequence counts as 1 rep!'
     ],
-    formTip: 'Control the transition at the halfway point rather than bouncing out of the bottom.',
+    formTip: 'Control the isometric pause at the bottom and halfway point rather than bouncing out of the hole.',
     pose: 'squat-standard',
     equip: 'any-squat',
-    badge: 'BOTTOM → HALF → TOP',
+    badge: '1.5 PULSE & HOLD',
     frames: [
-      { label: '1. Full Bottom Squat', phase: 'squat-low' },
+      { label: '1. Full Bottom Squat Hold', phase: 'squat-low', note: 'Active Hold' },
       { label: '2. Rise Halfway & Drop Back', phase: 'squat-half', note: '1/2 Rep Pulse' },
       { label: '3. Full Stand Lockout', phase: 'squat-top', arrow: 'up' }
     ]
@@ -1230,6 +1230,455 @@ const exerciseSpecs = {
       { label: '1. Extended Supine Bridge', phase: 'trx-ham-ext' },
       { label: '2. Heel Curl & Hip Lift', phase: 'trx-ham-curl', arrow: 'tuck-in' }
     ]
+  },
+  'incline-barbell-bench-press': {
+    summary: 'Heavy upper-chest compound press using an Olympic barbell on a 30°–45° incline bench to build clavicular pectoral, anterior deltoid, and tricep mass.',
+    steps: [
+      'Set your adjustable bench to a 30°–45° incline inside the squat rack and grip the Olympic barbell slightly wider than shoulder-width.',
+      'Unrack the bar over your upper chest and lower it under control until it lightly touches your upper sternum just below the collarbones.',
+      'Drive your feet into the floor and press the barbell straight up and slightly back to full lockout.'
+    ],
+    formTip: 'Keep your elbows tucked at roughly a 45°–60° angle to your torso rather than flaring 90° out to protect your shoulders and maximize upper-pec drive.',
+    pose: 'incline-bench-press',
+    equip: 'barbell-bench',
+    badge: '30° INCLINE BARBELL',
+    frames: [
+      { label: '1. Lower Bar to Upper Chest', phase: 'incline-bb-low' },
+      { label: '2. Drive to Overhead Lockout', phase: 'incline-bb-top', arrow: 'skull-up' }
+    ]
+  },
+  'barbell-bench-press': {
+    summary: 'Primary horizontal barbell press from the squat rack & flat bench to overload the pectorals, triceps, and anterior deltoids beyond 50 lb dumbbell limits.',
+    steps: [
+      'Lie flat on the bench under your rack with eyes beneath the Olympic barbell, feet planted firmly, and shoulder blades pinched together.',
+      'Unrack the bar with straight arms, then lower it in a controlled arc to your mid-chest/sternum.',
+      'Press the bar forcefully back up over your shoulders while keeping your glutes and upper back anchored to the bench.'
+    ],
+    formTip: 'Maintain a slight natural arch in your mid-back with your shoulder blades retracted down into the bench pad throughout every rep.',
+    pose: 'supine-press',
+    equip: 'barbell-bench',
+    badge: 'FLAT BARBELL PRESS',
+    frames: [
+      { label: '1. Controlled Touch at Sternum', phase: 'flat-bb-low' },
+      { label: '2. Full Pectoral Lockout', phase: 'flat-bb-top', arrow: 'skull-up' }
+    ]
+  },
+  'landmine-single-arm-press': {
+    summary: 'Angled unilateral shoulder press using the landmine attachment to build deltoid, upper-chest, tricep, and anti-rotation core strength in a shoulder-friendly arc.',
+    steps: [
+      'Stand in a staggered split stance or half-kneeling position holding the loaded end of the landmine barbell at shoulder height in one hand.',
+      'Brace your abs and glutes, then press the barbell sleeve up and forward along its natural diagonal arc to full lockout.',
+      'Lean your torso slightly into the top of the press so your bicep finishes by your ear, then lower slowly back to your shoulder; switch arms after completing your reps.'
+    ],
+    formTip: 'Keep your ribcage stacked over your pelvis—do not let the asymmetric load twist your shoulders or arch your lower back.',
+    pose: 'landmine-press',
+    equip: 'landmine',
+    badge: 'ANGLED LANDMINE PRESS',
+    frames: [
+      { label: '1. Rack Landmine at Shoulder', phase: 'landmine-press-start' },
+      { label: '2. Diagonal Overhead Drive', phase: 'landmine-press-top', arrow: 'up' }
+    ]
+  },
+  'barbell-push-press': {
+    summary: 'Explosive overhead barbell press using a crisp quarter-squat leg drive to launch heavy barbell loads overhead for total-body power and shoulder strength.',
+    steps: [
+      'Unrack the Olympic barbell in a front-rack position resting across your front deltoids/clavicles with elbows slightly forward and feet hip-width apart.',
+      'Dip your knees 3–4 inches into a brisk, upright quarter-squat to load your quads and glutes.',
+      'Drive violently through the floor to extend your hips and knees, using that upward momentum to press the barbell straight overhead to lockout.'
+    ],
+    formTip: 'Keep your torso vertical during the dip—leaning forward pushes the bar out in front of you instead of straight overhead.',
+    pose: 'standing-press',
+    equip: 'barbell-overhead',
+    badge: 'DIP & DRIVE PRESS',
+    frames: [
+      { label: '1. Front-Rack Quarter Dip', phase: 'bb-pushpress-dip' },
+      { label: '2. Explosive Leg Drive & Lockout', phase: 'bb-pushpress-top', arrow: 'up' }
+    ]
+  },
+  'landmine-meadows-row': {
+    summary: 'Heavy single-arm landmine row (straddling the bar or perpendicular Meadows stance) for deep lat stretch and thick mid-back development.',
+    steps: [
+      'Stand staggered alongside or perpendicular to the loaded sleeve of the landmine barbell and hinge at the hips to a 45° flat-back angle.',
+      'Rest your non-working forearm on your front thigh and grip the barbell sleeve or collar with your working hand.',
+      'Drive your elbow back and high toward your hip crease, feeling a full lat and rhomboid contraction before lowering to a deep stretch.'
+    ],
+    formTip: 'Because the landmine pivots in an arc, pull your elbow slightly back toward your hip rather than straight vertical.',
+    pose: 'hinge-row',
+    equip: 'landmine',
+    badge: 'LANDMINE / MEADOWS ROW',
+    frames: [
+      { label: '1. Hinged Lat Stretch on Sleeve', phase: 'landmine-row-low' },
+      { label: '2. Drive Elbow Past Hip Crease', phase: 'landmine-row-high', arrow: 'row-up' }
+    ]
+  },
+  'barbell-pendlay-row': {
+    summary: 'Heavy bilateral bent-over or Pendlay barbell row building thickness across the lats, rhomboids, traps, spinal erectors, and biceps.',
+    steps: [
+      'Stand with feet hip-width apart over the Olympic barbell, hinge your hips back until your torso is 15°–45° above parallel, and grip the bar just outside your knees.',
+      'Brace your core and pull the barbell explosively into your lower ribcage / upper abdomen by driving your elbows back.',
+      'Squeeze your shoulder blades together at the top for a half-second, then lower the bar under control.'
+    ],
+    formTip: 'Keep your hip hinge angle locked throughout the set—do not stand upright to heave the bar with momentum.',
+    pose: 'hinge-row',
+    equip: 'barbell-hinge',
+    badge: 'HEAVY BARBELL ROW',
+    frames: [
+      { label: '1. Loaded Flat-Back Hinge', phase: 'bb-row-hang' },
+      { label: '2. Row Barbell to Lower Ribs', phase: 'bb-row-pull', arrow: 'row-up' }
+    ]
+  },
+  'chest-supported-dumbbell-row': {
+    summary: 'Strict bilateral dumbbell row lying prone on a 30°–45° incline bench to eliminate lower-back momentum and isolate the lats, rhomboids, and rear delts.',
+    steps: [
+      'Set your bench to a 30°–45° incline and lie chest-down with your feet planted on the floor and dumbbells hanging straight down.',
+      'Retract your shoulder blades and drive both elbows back past your torso while keeping your chest glued to the pad.',
+      'Pause for 1 full second at peak back contraction, then lower the dumbbells slowly to a full dead-hang stretch.'
+    ],
+    formTip: 'Let your shoulder blades protract slightly at the bottom to stretch the lats, then initiate every pull by pinching the blades together.',
+    pose: 'incline-bench-row',
+    equip: 'bench-weights',
+    badge: 'CHEST-SUPPORTED ROW',
+    frames: [
+      { label: '1. Prone Hang on Incline Bench', phase: 'chest-supp-row-low' },
+      { label: '2. Strict Scapular Row & Squeeze', phase: 'chest-supp-row-high', arrow: 'row-up' }
+    ]
+  },
+  'high-band-lat-pulldown': {
+    summary: 'Straight-arm lat pulldown (prayer pulldown) using a large rubber band anchored to the pull-up bar to isolate the latissimus dorsi and serratus.',
+    steps: [
+      'Loop a medium-to-heavy rubber band over your pull-up bar, step back holding the band with both hands, and hinge forward 30°–45° with a flat back.',
+      'Keeping your arms straight (with only a soft 10° elbow lock), sweep your hands down in a wide arc from overhead all the way to your outer thighs.',
+      'Squeeze your lats and abs hard at the bottom for 1 second, then resist the band slowly as your arms return overhead.'
+    ],
+    formTip: 'Imagine pushing your hands down through heavy water—keep your shoulders depressed away from your ears so your lats do 100% of the work.',
+    pose: 'standing-facepull',
+    equip: 'band-high',
+    badge: 'STRAIGHT-ARM PULLDOWN',
+    frames: [
+      { label: '1. Overhead Lat Stretch', phase: 'lat-pulldown-high' },
+      { label: '2. Straight-Arm Sweep to Thighs', phase: 'lat-pulldown-low', arrow: 'down' }
+    ]
+  },
+  'incline-dumbbell-curls': {
+    summary: 'Seated incline bench dumbbell curl placing the long head of the biceps under maximum loaded stretch behind the torso.',
+    steps: [
+      'Sit back against a 45°–60° incline bench holding dumbbells at arm’s length so your elbows hang slightly behind your torso.',
+      'Keeping your upper arms pinned perpendicular to the floor, curl the dumbbells up while supinating your wrists (palms up).',
+      'Squeeze your biceps at the top without letting your elbows drift forward, then lower slowly for 3 seconds to a full stretch.'
+    ],
+    formTip: 'Because the incline stretches the bicep tendon at the bottom, 20–35 lb dumbbells feel much heavier than standing curls—prioritize strict elbow position.',
+    pose: 'incline-bench-curl',
+    equip: 'bench-weights',
+    badge: 'LONG-HEAD STRETCH CURL',
+    frames: [
+      { label: '1. Deep Stretch Behind Torso', phase: 'incline-curl-low' },
+      { label: '2. Strict Supinated Curl', phase: 'incline-curl-high', arrow: 'curl' }
+    ]
+  },
+  'hammer-zottman-curls': {
+    summary: 'Dumbbell curl variation targeting the biceps, brachialis, and brachioradialis via neutral-grip hammer curls or eccentric-pronated Zottman curls.',
+    steps: [
+      'Stand tall holding dumbbells at your sides with a neutral "hammer" grip (palms facing each other) or supinated grip.',
+      'For Hammer Curls, curl straight up keeping thumbs pointed toward the ceiling; for Zottman Curls, curl up palms-up, then rotate palms-down at the top.',
+      'Lower the weights slowly over 2–3 seconds to full elbow extension while keeping your elbows glued to your ribs.'
+    ],
+    formTip: 'Rotating to an overhand grip on the way down (Zottman style) builds massive forearm and elbow tendon resilience.',
+    pose: 'standing-curl',
+    equip: 'dumbbells-band',
+    badge: 'HAMMER / ZOTTMAN CURL',
+    frames: [
+      { label: '1. Neutral / Extended Setup', phase: 'curl-down' },
+      { label: '2. Curl & Eccentric Control', phase: 'curl-up', arrow: 'curl' }
+    ]
+  },
+  'overhead-tricep-extension': {
+    summary: 'Seated or standing overhead dumbbell tricep extension stretching and overloading the long head of the triceps.',
+    steps: [
+      'Sit upright on a 90° bench (or flat bench) holding one heavy dumbbell vertically with both hands cupped under the top plate overhead.',
+      'Keep your elbows tucked in close to your ears and lower the dumbbell behind your head until your forearms reach a deep stretch below 90°.',
+      'Drive through your triceps to extend your arms straight back overhead without flaring your ribcage.'
+    ],
+    formTip: 'Overhead shoulder flexion stretches the long head of the triceps—the largest muscle belly of the upper arm.',
+    pose: 'seated-overhead-tricep',
+    equip: 'bench-weights',
+    badge: 'LONG-HEAD TRICEP EXT',
+    frames: [
+      { label: '1. Deep Stretch Behind Head', phase: 'oh-tricep-low' },
+      { label: '2. Vertical Overhead Lockout', phase: 'oh-tricep-high', arrow: 'up' }
+    ]
+  },
+  'high-band-tricep-pushdown': {
+    summary: 'High-rep resistance band tricep pushdown anchored from the pull-up bar for joint-friendly lateral/medial tricep burnout.',
+    steps: [
+      'Loop a rubber band over your pull-up bar and grip both sides at chest height with your elbows pinned tightly against your ribs.',
+      'Without moving your upper arms, press the band straight down until your elbows are 100% locked out by your thighs.',
+      'Pull the ends of the band slightly apart at the bottom for a 1-second peak tricep contraction, then return to 90° elbow flexion.'
+    ],
+    formTip: 'Keep your shoulders rolled back and down so your chest doesn’t hunch over the band.',
+    pose: 'standing-facepull',
+    equip: 'band-high',
+    badge: 'BAND PUSHDOWN LOCKOUT',
+    frames: [
+      { label: '1. Elbows Pinned at 90°', phase: 'band-pushdown-start' },
+      { label: '2. Full Downward Extension', phase: 'band-pushdown-ext', arrow: 'down' }
+    ]
+  },
+  'landmine-180-rotations': {
+    summary: 'Explosive standing rotational rainbow sweep with the landmine barbell targeting the obliques, transverse abdominis, shoulders, and hips.',
+    steps: [
+      'Stand facing the landmine pivot with feet shoulder-width apart, holding the end of the barbell sleeve with both hands extended in front of you.',
+      'Sweep the barbell up in a high rainbow arc across the center line and lower it under control to your left hip while pivoting slightly on your back foot.',
+      'Brace your obliques to reverse the arc back overhead and down to your right hip in a smooth 180° rotational rhythm.'
+    ],
+    formTip: 'Keep your arms relatively long so your core and obliques control the rotational torque rather than turning it into a bicep curl.',
+    pose: 'landmine-rotation',
+    equip: 'landmine',
+    badge: '180° RAINBOW ROTATION',
+    frames: [
+      { label: '1. Load at Left Hip', phase: 'landmine-180-left' },
+      { label: '2. High Overhead Arc', phase: 'landmine-180-top', arrow: 'up' },
+      { label: '3. Sweep to Right Hip', phase: 'landmine-180-right', arrow: 'down' }
+    ]
+  },
+  'hanging-leg-knee-raises': {
+    summary: 'Strict hanging knee or straight-leg raise from the pull-up bar to build lower rectus abdominis, oblique, hip flexor, and grip strength.',
+    steps: [
+      'Hang from your pull-up bar with an overhand shoulder-width grip, active shoulders (ears away from shoulders), and legs together.',
+      'Exhale and curl your pelvis upward (posterior pelvic tilt) to lift your knees—or straight legs—until your thighs pass parallel to the floor.',
+      'Pause briefly at the top without swinging, then lower your legs slowly over 2–3 seconds back to a dead hang.'
+    ],
+    formTip: 'Focus on curling your tailbone up toward the bar—if you only lift your knees to 90° with a flat pelvis, your hip flexors do all the work instead of your lower abs.',
+    pose: 'pullup-hang',
+    equip: 'pullup-bar',
+    badge: 'HANGING PELVIC CURL',
+    frames: [
+      { label: '1. Active Dead Hang Setup', phase: 'hanging-raise-low' },
+      { label: '2. Pelvic Curl & Leg Raise', phase: 'hanging-raise-top', arrow: 'legs-up' }
+    ]
+  },
+  'banded-pallof-press': {
+    summary: 'Anti-rotation isometric core press using a rubber band anchored to the squat rack upright tobulletproof the obliques and deep spinal stabilizers.',
+    steps: [
+      'Anchor a rubber band at chest height on your squat rack upright, stand sideways to the rack in an athletic stance, and hold the band at your sternum.',
+      'Step away until there is strong lateral tension trying to twist your torso toward the rack.',
+      'Press your hands straight out in front of your chest to full extension, hold for 2 seconds resisting all rotation, then return to your chest; switch sides halfway.'
+    ],
+    formTip: 'Widen your stance for easier balance or narrow your feet together to make your obliques and glutes work twice as hard.',
+    pose: 'standing-facepull',
+    equip: 'band-high',
+    badge: 'ANTI-ROTATION PRESS',
+    frames: [
+      { label: '1. Braced at Sternum', phase: 'pallof-in' },
+      { label: '2. Press Out & Resist Twist', phase: 'pallof-out', arrow: 'fwd-back' }
+    ]
+  },
+  'copenhagen-side-plank': {
+    summary: 'Side plank with the top foot/shin supported on a workout bench to intensely strengthen the inner-thigh adductors, obliques, and lateral hip stabilizers.',
+    steps: [
+      'Lie on your side perpendicular to your bench, prop yourself on your bottom forearm under your shoulder, and rest your top foot or shin on top of the bench.',
+      'Press your top leg down into the bench to lift your hips off the floor into a straight side plank line, hovering or lifting your bottom leg underneath.',
+      'Hold isometrically or perform controlled hip dips + adductor squeezes for half the interval before switching sides.'
+    ],
+    formTip: 'Rest your inner knee/shin on the bench for a shorter lever if resting only your foot/ankle on the bench feels too intense on the groin.',
+    pose: 'side-plank',
+    equip: 'bench-any',
+    badge: 'ADDUCTOR SIDE PLANK',
+    frames: [
+      { label: '1. Top Leg Anchored on Bench', phase: 'copenhagen-low' },
+      { label: '2. Adductor & Oblique Lift', phase: 'copenhagen-high', arrow: 'up' }
+    ]
+  },
+  'pilates-hundred': {
+    summary: 'Signature Pilates mat endurance exercise holding a hollow curl with legs at 45° while pumping straight arms vigorously in 5-count breath cycles.',
+    steps: [
+      'Lie on your yoga mat, curl your head and shoulder blades up into a tight Pilates C-curve, and extend your legs out to a 45° angle (or tabletop).',
+      'Reach your arms long beside your hips 2 inches off the mat and pump them vigorously up and down 6–8 inches.',
+      'Inhale for 5 rapid arm pumps and exhale for 5 rapid arm pumps while keeping your lower back imprinted into the mat.'
+    ],
+    formTip: 'Look toward your navel and anchor your lower ribs down—if your neck fatigues, support your head with one hand while pumping the other.',
+    pose: 'supine-v-up',
+    equip: 'bodyweight',
+    badge: '5 INHALE · 5 EXHALE',
+    frames: [
+      { label: '1. 45° Hollow Curl & Inhale 5x', phase: 'pilates-hundred-1' },
+      { label: '2. Vigorous Arm Pump & Exhale 5x', phase: 'pilates-hundred-2', arrow: 'crunch' }
+    ]
+  },
+  'pilates-single-double-leg-stretch': {
+    summary: 'Dynamic Pilates abdominal flow alternating single-leg knee pulls with full double-leg hollow extensions.',
+    steps: [
+      'Curl your head and shoulders off the yoga mat into an abdominal C-curve with knees drawn into tabletop.',
+      'Single-Leg Phase: Pull your right knee into your chest while extending your left leg long at 45°, switch legs for 2–4 reps.',
+      'Double-Leg Phase: Inhale to reach both arms overhead and both legs out to 45° simultaneously, then exhale to sweep your arms around and hug both knees in.'
+    ],
+    formTip: 'Keep your shoulder blades lifted at the exact same height even when your arms and legs reach away from your center.',
+    pose: 'supine-bicycle',
+    equip: 'bodyweight',
+    badge: 'PILATES AB SERIES',
+    frames: [
+      { label: '1. Single-Leg Switch Pull', phase: 'pilates-stretch-single' },
+      { label: '2. Double-Leg Hollow Reach', phase: 'pilates-stretch-double', arrow: 'fwd-back' }
+    ]
+  },
+  'pilates-roll-up-teaser': {
+    summary: 'Articulated Pilates spinal roll-up transitioning smoothly into a balanced V-sit Teaser hold to develop deep core control and hamstring flexibility.',
+    steps: [
+      'Lie flat on your yoga mat with arms extended overhead and legs pressed tightly together.',
+      'Inhale to float your arms toward the ceiling, then exhale to peel your spine off the mat one vertebra at a time into a balanced V-sit Teaser with legs lifted at 45°.',
+      'Hold the Teaser balance for 1–2 seconds with arms parallel to your shins, then roll down slowly bone-by-bone to the mat.'
+    ],
+    formTip: 'Avoid jerking with momentum through the sticking point—exhale deeply and hollow your navel back into your spine.',
+    pose: 'supine-v-up',
+    equip: 'bodyweight',
+    badge: 'ROLL-UP TO TEASER',
+    frames: [
+      { label: '1. Supine Overhead Reach', phase: 'vup-flat' },
+      { label: '2. Articulated Teaser V-Sit Balance', phase: 'vup-peak', arrow: 'v-fold' }
+    ]
+  },
+  'dead-bug-weighted-banded': {
+    summary: 'Contralateral anti-extension core exercise lying supine while extending opposite arm and leg under dumbbell or band tension.',
+    steps: [
+      'Lie on your back with knees in 90° tabletop, lower back pressed flat into the mat, and hands holding dumbbells (or a band anchored behind you) straight above your chest.',
+      'Slowly lower your right arm overhead and extend your left leg out to a 2-inch hover simultaneously without letting your lower back arch.',
+      'Exhale to return both limbs to the center tabletop position, then repeat with your left arm and right leg.'
+    ],
+    formTip: 'Imagine crushing a grape under your lower back—if your lumbar spine lifts off the mat, shorten the leg extension slightly.',
+    pose: 'supine-leg-lift',
+    equip: 'dumbbells-band',
+    badge: 'CONTRALATERAL CORE',
+    frames: [
+      { label: '1. Supine Tabletop & Press', phase: 'deadbug-tabletop' },
+      { label: '2. Opposite Arm & Leg Hover', phase: 'deadbug-ext', arrow: 'fwd-back' }
+    ]
+  },
+  'single-leg-trx-squats': {
+    summary: 'Unilateral single-leg TRX squat complex alternating 1 forward pistol squat (free leg in front) and 1 reverse shrimp squat (free leg behind) for 8 reps on one leg, then 8 on the other, holding lightly onto the TRX straps for balance.',
+    steps: [
+      'Stand facing the TRX anchor holding the handles lightly with fingertips at waist height—use the straps strictly for balance rather than pulling yourself up.',
+      'On your right standing leg, extend your left leg straight forward and descend into a deep Forward Single-Leg Squat, driving through your right heel to stand; immediately sweep your left leg back behind you and lower into a Reverse Single-Leg Squat.',
+      'Continue alternating Forward then Reverse squats until you complete 8 total reps on the right leg, then switch to complete 8 alternating Forward + Reverse reps on the left leg.'
+    ],
+    formTip: 'Keep your grip feather-light on the TRX handles so your standing quad, glute, and hip stabilizers carry 95%+ of your bodyweight across both forward and reverse planes.',
+    pose: 'trx-squat',
+    equip: 'trx-pull',
+    badge: '8 R + 8 L (FWD ↔ REV)',
+    frames: [
+      { label: '1. Forward Single-Leg Squat', phase: 'trx-pistol-fwd', note: 'Alt Fwd' },
+      { label: '2. Reverse Single-Leg Squat', phase: 'trx-pistol-rev', arrow: 'up', note: '8R then 8L' }
+    ]
+  },
+  'barbell-romanian-deadlift': {
+    summary: 'Heavy posterior-chain hip hinge with an Olympic barbell to overload the hamstrings, glutes, and spinal erectors through a deep eccentric stretch.',
+    steps: [
+      'Stand tall holding a loaded Olympic barbell against your upper thighs with a shoulder-width overhand grip and a soft 15° knee bend.',
+      'Push your hips straight back toward the wall behind you while keeping the barbell shaving close down your thighs and shins with a flat back.',
+      'Pause at mid-shin when you feel a maximal hamstring stretch, then drive your hips forward and squeeze your glutes to stand tall.'
+    ],
+    formTip: 'Keep your lats engaged as if squeezing oranges in your armpits so the barbell never drifts forward away from your shins.',
+    pose: 'hip-hinge-rdl',
+    equip: 'barbell-hinge',
+    badge: 'HEAVY BARBELL RDL',
+    frames: [
+      { label: '1. Tall Lockout at Thighs', phase: 'bb-rdl-top' },
+      { label: '2. Deep Hip Hinge to Mid-Shin', phase: 'bb-rdl-hinge', arrow: 'up' }
+    ]
+  },
+  'barbell-deadlift': {
+    summary: 'Foundational full-body strength lift pulling a loaded Olympic barbell from the floor (conventional or sumo stance) to build total posterior-chain power.',
+    steps: [
+      'Stand with your mid-foot directly beneath the Olympic barbell (hip-width for Conventional or wide turnout for Sumo) and grip the bar outside or inside your knees.',
+      'Drop your hips until your shins touch the bar, lift your chest to flatten your back, and pull the slack out of the bar.',
+      'Push the floor away with your legs while driving your hips forward to stand tall to full lockout, then return the bar to the floor under control.'
+    ],
+    formTip: 'Think of the first half of the deadlift as a leg press through the floor, and the second half as a hip thrust once the bar passes your knees.',
+    pose: 'hip-hinge-rdl',
+    equip: 'barbell-hinge',
+    badge: 'CONVENTIONAL / SUMO PULL',
+    frames: [
+      { label: '1. Braced Setup from Floor', phase: 'bb-deadlift-bottom' },
+      { label: '2. Full Hip & Knee Lockout', phase: 'bb-rdl-top', arrow: 'up' }
+    ]
+  },
+  'good-mornings-barbell-band': {
+    summary: 'Loaded hip hinge with an Olympic barbell across the upper back (or a thick rubber band looped under the feet and over the neck) targeting the hamstrings, glutes, and erectors.',
+    steps: [
+      'Place a barbell across your upper traps (or stand on a heavy loop band with the top looped behind your neck/shoulders) with feet shoulder-width apart.',
+      'Unlock your knees slightly and hinge your hips straight back until your torso is 15°–30° above parallel to the floor.',
+      'Feel the stretch in your hamstrings, then drive your hips forward powerfully to return to standing.'
+    ],
+    formTip: 'Brace your core 360° before every hinge so your lumbar spine remains rigid from start to finish.',
+    pose: 'hip-hinge-rdl',
+    equip: 'barbell-hinge',
+    badge: 'LOADED HIP HINGE',
+    frames: [
+      { label: '1. Bar / Band Across Traps', phase: 'goodmorning-top' },
+      { label: '2. Horizontal Hip Hinge', phase: 'goodmorning-hinge', arrow: 'up' }
+    ]
+  },
+  'nordic-bench-hamstring-bridge': {
+    summary: 'Long-lever feet-elevated hamstring bridge with heels dug into a workout bench to isolate the distal hamstrings and glutes.',
+    steps: [
+      'Lie on your back on the yoga mat and place both heels on top of your workout bench with your knees bent at roughly a 110°–120° long-lever angle.',
+      'Dig your heels straight down into the bench pad to lift your hips into a bridge without letting your lower back hyperextend.',
+      'Hold the intense hamstring contraction at the top for 1 full second (or perform single-leg eccentric lowers), then lower with control.'
+    ],
+    formTip: 'Keeping your knees slightly more extended (120° rather than 90°) shifts the load directly from the glutes onto the hamstrings.',
+    pose: 'supine-bridge',
+    equip: 'bench-any',
+    badge: 'FEET-ELEVATED HAMSTRING',
+    frames: [
+      { label: '1. Heels Anchored on Bench', phase: 'bench-ham-low' },
+      { label: '2. Dig Heels & Bridge Hips', phase: 'bench-ham-high', arrow: 'up' }
+    ]
+  },
+  'barbell-hip-thrust': {
+    summary: 'Heavy bilateral glute builder with upper back supported on a bench and a loaded Olympic barbell across the hips (plus optional hip band above knees).',
+    steps: [
+      'Sit on the floor with your upper back/shoulder blades resting against the edge of your workout bench and roll a loaded barbell over your hip crease.',
+      'Plant your feet shoulder-width apart so your shins are vertical at the top, tuck your chin, and drive through your heels to lift the bar to full hip extension.',
+      'Squeeze your glutes hard at the flat tabletop lockout for 1–2 seconds, then lower your hips under control.'
+    ],
+    formTip: 'Wear a hip band just above your knees while thrusting the barbell to simultaneously fire the upper/outer glute medius and glute maximus.',
+    pose: 'bench-glute-lift',
+    equip: 'barbell-bench',
+    badge: 'BARBELL HIP THRUST',
+    frames: [
+      { label: '1. Loaded Barbell in Hip Crease', phase: 'bb-hipthrust-low' },
+      { label: '2. Full Tabletop Glute Lockout', phase: 'bb-hipthrust-high', arrow: 'up' }
+    ]
+  },
+  'landmine-hack-goblet-squat': {
+    summary: 'Front-loaded squat holding the angled landmine barbell sleeve at the chest, allowing an upright torso that deeply targets the quads, glutes, and core.',
+    steps: [
+      'Stand facing the landmine holding the end of the loaded barbell sleeve cupped against your upper sternum with both hands and elbows tucked.',
+      'Lean slightly into the angled path of the bar as you sit your hips straight down into a deep full-range squat.',
+      'Drive through your mid-foot and heels to press back up along the bar’s arc to standing.'
+    ],
+    formTip: 'Because the landmine counterbalance lets you sit back without falling over, you can achieve deeper knee flexion and quad recruitment with zero lower-back strain.',
+    pose: 'squat-standard',
+    equip: 'landmine',
+    badge: 'LANDMINE FRONT SQUAT',
+    frames: [
+      { label: '1. Cup Landmine at Sternum', phase: 'landmine-squat-top' },
+      { label: '2. Deep Upright Quad Squat', phase: 'landmine-squat-low', arrow: 'up' }
+    ]
+  },
+  'landmine-lateral-cossack-lunge': {
+    summary: 'Frontal-plane lateral lunge (Cossack squat) loaded with the landmine or dumbbell to build outer glute, quad, and inner-thigh mobility and strength.',
+    steps: [
+      'Stand with a wide stance holding the landmine barbell sleeve (or a dumbbell) at chest or hip height.',
+      'Shift your weight laterally to the right, sitting your right hip back and down into a deep single-leg squat while keeping your left leg completely straight.',
+      'Drive forcefully through your right heel to return to the center, then repeat on the left side (or complete all reps on one side before switching).'
+    ],
+    formTip: 'Keep the heel of your working leg glued flat on the floor while letting the toes of your straight trail leg rotate upward if you sink into a deep Cossack squat.',
+    pose: 'squat-wide',
+    equip: 'landmine',
+    badge: 'LATERAL / COSSACK LUNGE',
+    frames: [
+      { label: '1. Wide Frontal-Plane Stance', phase: 'sumo-top' },
+      { label: '2. Deep Lateral Hip Sit', phase: 'cossack-lunge-low', arrow: 'up' }
+    ]
   }
 };
 
@@ -1301,6 +1750,32 @@ function drawSlamBall(x, y, r = 11) {
   return `<g transform="translate(${x.toFixed(1)}, ${y.toFixed(1)})">
     <circle cx="0" cy="0" r="${r}" fill="#eab308" stroke="#fef08a" stroke-width="1.4" />
     <path d="M -${r - 3} -3 Q 0 -7 ${r - 3} -3" stroke="#713f12" stroke-width="1.5" fill="none" />
+  </g>`;
+}
+
+function drawBarbell(x, y, angle = 0) {
+  return `<g transform="translate(${x.toFixed(1)}, ${y.toFixed(1)}) rotate(${angle})">
+    <line x1="-22" y1="0" x2="22" y2="0" stroke="#cbd5e1" stroke-width="3.2" stroke-linecap="round" />
+    <rect x="-18" y="-11" width="5" height="22" rx="1.5" fill="#facc15" stroke="#ca8a04" stroke-width="1" />
+    <rect x="-12" y="-8.5" width="4" height="17" rx="1.2" fill="#eab308" stroke="#a16207" stroke-width="1" />
+    <rect x="13" y="-11" width="5" height="22" rx="1.5" fill="#facc15" stroke="#ca8a04" stroke-width="1" />
+    <rect x="8" y="-8.5" width="4" height="17" rx="1.2" fill="#eab308" stroke="#a16207" stroke-width="1" />
+  </g>`;
+}
+
+function drawLandmine(px, py, tx, ty) {
+  const dx = tx - px;
+  const dy = ty - py;
+  const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+  const plateX = tx - Math.cos((angleDeg * Math.PI) / 180) * 8;
+  const plateY = ty - Math.sin((angleDeg * Math.PI) / 180) * 8;
+  return `<g>
+    <rect x="${(px - 8).toFixed(1)}" y="${(py - 4).toFixed(1)}" width="16" height="6" rx="2" fill="#475569" stroke="#94a3b8" stroke-width="1" />
+    <line x1="${px.toFixed(1)}" y1="${py.toFixed(1)}" x2="${tx.toFixed(1)}" y2="${ty.toFixed(1)}" stroke="#cbd5e1" stroke-width="3.2" stroke-linecap="round" />
+    <g transform="translate(${plateX.toFixed(1)}, ${plateY.toFixed(1)}) rotate(${angleDeg.toFixed(1)})">
+      <rect x="-3" y="-10" width="6" height="20" rx="1.5" fill="#facc15" stroke="#ca8a04" stroke-width="1" />
+      <rect x="-8" y="-7.5" width="4" height="15" rx="1.2" fill="#eab308" stroke="#a16207" stroke-width="1" />
+    </g>
   </g>`;
 }
 
@@ -2605,6 +3080,556 @@ function getPhasePose(phase) {
       ankle: [152, 138],
       elbow: [84, 160],
       wrist: [106, 162]
+    },
+    'trx-pistol-fwd': {
+      trxAnchor: [28, 22],
+      head: [118, 68, -8],
+      shoulder: [112, 86],
+      hip: [98, 128],
+      knee: [130, 134],
+      ankle: [122, 165],
+      knee2: [76, 134],
+      ankle2: [44, 140],
+      elbow: [88, 98],
+      wrist: [64, 86]
+    },
+    'trx-pistol-rev': {
+      trxAnchor: [28, 22],
+      head: [118, 68, -8],
+      shoulder: [112, 86],
+      hip: [98, 128],
+      knee: [130, 134],
+      ankle: [122, 165],
+      knee2: [136, 152],
+      ankle2: [158, 160],
+      elbow: [88, 98],
+      wrist: [64, 86]
+    },
+    'incline-bb-low': {
+      inclineBench: true,
+      head: [52, 92, -45],
+      shoulder: [66, 108],
+      hip: [94, 136],
+      knee: [132, 128],
+      ankle: [144, 165],
+      elbow: [66, 126],
+      wrist: [74, 96],
+      barbell: [74, 92]
+    },
+    'incline-bb-top': {
+      inclineBench: true,
+      head: [52, 92, -45],
+      shoulder: [66, 108],
+      hip: [94, 136],
+      knee: [132, 128],
+      ankle: [144, 165],
+      elbow: [72, 82],
+      wrist: [76, 56],
+      barbell: [76, 52]
+    },
+    'flat-bb-low': {
+      bench: [38, 138, 110],
+      head: [48, 124, -90],
+      shoulder: [74, 126],
+      hip: [126, 128],
+      knee: [156, 122],
+      ankle: [166, 165],
+      elbow: [72, 142],
+      wrist: [76, 108],
+      barbell: [76, 104]
+    },
+    'flat-bb-top': {
+      bench: [38, 138, 110],
+      head: [48, 124, -90],
+      shoulder: [74, 126],
+      hip: [126, 128],
+      knee: [156, 122],
+      ankle: [166, 165],
+      elbow: [76, 94],
+      wrist: [76, 66],
+      barbell: [76, 62]
+    },
+    'landmine-press-start': {
+      landmine: [28, 165, 96, 68],
+      head: [122, 48, 0],
+      shoulder: [120, 68],
+      hip: [118, 112],
+      knee: [120, 138],
+      ankle: [118, 165],
+      elbow: [104, 90],
+      wrist: [96, 68]
+    },
+    'landmine-press-top': {
+      landmine: [28, 165, 86, 30],
+      head: [122, 48, 0],
+      shoulder: [120, 68],
+      hip: [118, 112],
+      knee: [120, 138],
+      ankle: [118, 165],
+      elbow: [102, 48],
+      wrist: [86, 30]
+    },
+    'bb-pushpress-dip': {
+      head: [108, 56, 0],
+      shoulder: [106, 76],
+      hip: [96, 118],
+      knee: [114, 140],
+      ankle: [104, 165],
+      elbow: [112, 94],
+      wrist: [112, 72],
+      barbell: [112, 68]
+    },
+    'bb-pushpress-top': {
+      head: [105, 48, 0],
+      shoulder: [105, 68],
+      hip: [105, 112],
+      knee: [105, 138],
+      ankle: [105, 165],
+      elbow: [105, 44],
+      wrist: [105, 22],
+      barbell: [105, 18]
+    },
+    'landmine-row-low': {
+      landmine: [26, 165, 122, 138],
+      head: [146, 72, -35],
+      shoulder: [128, 84],
+      hip: [82, 112],
+      knee: [94, 138],
+      ankle: [86, 165],
+      elbow: [124, 112],
+      wrist: [122, 138]
+    },
+    'landmine-row-high': {
+      landmine: [26, 165, 112, 102],
+      head: [146, 72, -35],
+      shoulder: [128, 84],
+      hip: [82, 112],
+      knee: [94, 138],
+      ankle: [86, 165],
+      elbow: [98, 76],
+      wrist: [112, 102]
+    },
+    'bb-row-hang': {
+      head: [146, 72, -35],
+      shoulder: [128, 84],
+      hip: [82, 112],
+      knee: [94, 138],
+      ankle: [86, 165],
+      elbow: [128, 114],
+      wrist: [130, 140],
+      barbell: [130, 144]
+    },
+    'bb-row-pull': {
+      head: [146, 72, -35],
+      shoulder: [128, 84],
+      hip: [82, 112],
+      knee: [94, 138],
+      ankle: [86, 165],
+      elbow: [96, 78],
+      wrist: [112, 104],
+      barbell: [112, 108]
+    },
+    'chest-supp-row-low': {
+      inclineBench: true,
+      head: [42, 86, 45],
+      shoulder: [56, 102],
+      hip: [88, 134],
+      knee: [116, 152],
+      ankle: [138, 165],
+      elbow: [58, 128],
+      wrist: [60, 152],
+      dumbbell: [60, 156]
+    },
+    'chest-supp-row-high': {
+      inclineBench: true,
+      head: [42, 86, 45],
+      shoulder: [56, 102],
+      hip: [88, 134],
+      knee: [116, 152],
+      ankle: [138, 165],
+      elbow: [78, 92],
+      wrist: [66, 118],
+      dumbbell: [66, 122]
+    },
+    'lat-pulldown-high': {
+      bandAnchor: [36, 26],
+      head: [128, 56, -15],
+      shoulder: [118, 74],
+      hip: [94, 114],
+      knee: [102, 140],
+      ankle: [96, 165],
+      elbow: [92, 58],
+      wrist: [68, 46]
+    },
+    'lat-pulldown-low': {
+      bandAnchor: [36, 26],
+      head: [128, 56, -15],
+      shoulder: [118, 74],
+      hip: [94, 114],
+      knee: [102, 140],
+      ankle: [96, 165],
+      elbow: [104, 96],
+      wrist: [96, 118]
+    },
+    'incline-curl-low': {
+      inclineBench: true,
+      head: [52, 92, -45],
+      shoulder: [66, 108],
+      hip: [94, 136],
+      knee: [132, 128],
+      ankle: [144, 165],
+      elbow: [62, 132],
+      wrist: [58, 154],
+      dumbbell: [58, 158]
+    },
+    'incline-curl-high': {
+      inclineBench: true,
+      head: [52, 92, -45],
+      shoulder: [66, 108],
+      hip: [94, 136],
+      knee: [132, 128],
+      ankle: [144, 165],
+      elbow: [66, 132],
+      wrist: [86, 108],
+      dumbbell: [88, 104]
+    },
+    'oh-tricep-low': {
+      bench: [76, 138, 54],
+      head: [102, 62, 0],
+      shoulder: [102, 82],
+      hip: [102, 132],
+      knee: [134, 134],
+      ankle: [138, 165],
+      elbow: [100, 52],
+      wrist: [84, 74],
+      dumbbell: [80, 78]
+    },
+    'oh-tricep-high': {
+      bench: [76, 138, 54],
+      head: [102, 62, 0],
+      shoulder: [102, 82],
+      hip: [102, 132],
+      knee: [134, 134],
+      ankle: [138, 165],
+      elbow: [102, 52],
+      wrist: [102, 26],
+      dumbbell: [102, 22]
+    },
+    'band-pushdown-start': {
+      bandAnchor: [72, 24],
+      head: [112, 48, 0],
+      shoulder: [110, 68],
+      hip: [106, 112],
+      knee: [108, 138],
+      ankle: [106, 165],
+      elbow: [106, 92],
+      wrist: [86, 74]
+    },
+    'band-pushdown-ext': {
+      bandAnchor: [72, 24],
+      head: [112, 48, 0],
+      shoulder: [110, 68],
+      hip: [106, 112],
+      knee: [108, 138],
+      ankle: [106, 165],
+      elbow: [106, 92],
+      wrist: [102, 118]
+    },
+    'landmine-180-left': {
+      landmine: [26, 165, 76, 86],
+      head: [118, 48, 0],
+      shoulder: [118, 68],
+      hip: [118, 112],
+      knee: [106, 138],
+      ankle: [102, 165],
+      knee2: [130, 138],
+      ankle2: [134, 165],
+      elbow: [96, 84],
+      wrist: [76, 86]
+    },
+    'landmine-180-top': {
+      landmine: [26, 165, 98, 44],
+      head: [118, 48, 0],
+      shoulder: [118, 68],
+      hip: [118, 112],
+      knee: [106, 138],
+      ankle: [102, 165],
+      knee2: [130, 138],
+      ankle2: [134, 165],
+      elbow: [108, 56],
+      wrist: [98, 44]
+    },
+    'landmine-180-right': {
+      landmine: [26, 165, 138, 88],
+      head: [118, 48, 0],
+      shoulder: [118, 68],
+      hip: [118, 112],
+      knee: [106, 138],
+      ankle: [102, 165],
+      knee2: [130, 138],
+      ankle2: [134, 165],
+      elbow: [130, 82],
+      wrist: [138, 88]
+    },
+    'hanging-raise-low': {
+      pullupBar: true,
+      head: [105, 58, 0],
+      shoulder: [105, 76],
+      hip: [105, 118],
+      knee: [105, 144],
+      ankle: [105, 166],
+      elbow: [90, 52],
+      wrist: [86, 28],
+      elbow2: [120, 52],
+      wrist2: [124, 28]
+    },
+    'hanging-raise-top': {
+      pullupBar: true,
+      head: [105, 58, 0],
+      shoulder: [105, 76],
+      hip: [108, 114],
+      knee: [138, 108],
+      ankle: [166, 106],
+      elbow: [90, 52],
+      wrist: [86, 28],
+      elbow2: [120, 52],
+      wrist2: [124, 28]
+    },
+    'pallof-in': {
+      bandAnchor: [24, 86],
+      head: [116, 48, 0],
+      shoulder: [116, 68],
+      hip: [114, 112],
+      knee: [104, 138],
+      ankle: [100, 165],
+      knee2: [126, 138],
+      ankle2: [130, 165],
+      elbow: [106, 90],
+      wrist: [114, 86]
+    },
+    'pallof-out': {
+      bandAnchor: [24, 86],
+      head: [116, 48, 0],
+      shoulder: [116, 68],
+      hip: [114, 112],
+      knee: [104, 138],
+      ankle: [100, 165],
+      knee2: [126, 138],
+      ankle2: [130, 165],
+      elbow: [136, 86],
+      wrist: [158, 86]
+    },
+    'copenhagen-low': {
+      bench: [18, 128, 42],
+      head: [158, 104, -12],
+      shoulder: [140, 114],
+      hip: [92, 146],
+      knee: [58, 132],
+      ankle: [34, 128],
+      knee2: [64, 156],
+      ankle2: [40, 162],
+      elbow: [140, 165],
+      wrist: [162, 165]
+    },
+    'copenhagen-high': {
+      bench: [18, 128, 42],
+      head: [158, 92, -18],
+      shoulder: [140, 104],
+      hip: [92, 118],
+      knee: [58, 124],
+      ankle: [34, 128],
+      knee2: [60, 134],
+      ankle2: [36, 138],
+      elbow: [140, 165],
+      wrist: [162, 165],
+      elbow2: [140, 76],
+      wrist2: [140, 52]
+    },
+    'pilates-hundred-1': {
+      head: [58, 132, -55],
+      shoulder: [72, 148],
+      hip: [114, 158],
+      knee: [144, 126],
+      ankle: [176, 98],
+      elbow: [96, 146],
+      wrist: [124, 142]
+    },
+    'pilates-hundred-2': {
+      head: [58, 132, -55],
+      shoulder: [72, 148],
+      hip: [114, 158],
+      knee: [144, 126],
+      ankle: [176, 98],
+      elbow: [96, 154],
+      wrist: [124, 156]
+    },
+    'pilates-stretch-single': {
+      head: [58, 130, -55],
+      shoulder: [72, 146],
+      hip: [114, 158],
+      knee: [106, 122],
+      ankle: [128, 132],
+      knee2: [148, 142],
+      ankle2: [182, 128],
+      elbow: [94, 132],
+      wrist: [108, 122]
+    },
+    'pilates-stretch-double': {
+      head: [58, 130, -55],
+      shoulder: [72, 146],
+      hip: [114, 158],
+      knee: [146, 132],
+      ankle: [178, 106],
+      elbow: [52, 122],
+      wrist: [30, 108]
+    },
+    'deadbug-tabletop': {
+      head: [46, 152, -90],
+      shoulder: [66, 156],
+      hip: [114, 158],
+      knee: [114, 122],
+      ankle: [146, 122],
+      elbow: [66, 126],
+      wrist: [66, 98],
+      dumbbell: [66, 94]
+    },
+    'deadbug-ext': {
+      head: [46, 152, -90],
+      shoulder: [66, 156],
+      hip: [114, 158],
+      knee: [114, 122],
+      ankle: [146, 122],
+      knee2: [150, 148],
+      ankle2: [184, 144],
+      elbow: [66, 126],
+      wrist: [66, 98],
+      elbow2: [44, 146],
+      wrist2: [22, 142],
+      dumbbell: [22, 138]
+    },
+    'bb-rdl-top': {
+      head: [108, 48, 0],
+      shoulder: [108, 68],
+      hip: [106, 112],
+      knee: [106, 138],
+      ankle: [106, 165],
+      elbow: [110, 92],
+      wrist: [114, 114],
+      barbell: [114, 118]
+    },
+    'bb-rdl-hinge': {
+      head: [152, 78, -35],
+      shoulder: [134, 88],
+      hip: [84, 110],
+      knee: [94, 138],
+      ankle: [90, 165],
+      elbow: [132, 114],
+      wrist: [130, 138],
+      barbell: [130, 142]
+    },
+    'bb-deadlift-bottom': {
+      head: [144, 76, -30],
+      shoulder: [128, 90],
+      hip: [78, 122],
+      knee: [112, 136],
+      ankle: [102, 165],
+      elbow: [124, 118],
+      wrist: [120, 146],
+      barbell: [120, 150]
+    },
+    'goodmorning-top': {
+      head: [108, 48, 0],
+      shoulder: [108, 68],
+      hip: [106, 112],
+      knee: [106, 138],
+      ankle: [106, 165],
+      elbow: [96, 76],
+      wrist: [104, 68],
+      barbell: [104, 68]
+    },
+    'goodmorning-hinge': {
+      head: [152, 78, -35],
+      shoulder: [134, 88],
+      hip: [84, 110],
+      knee: [94, 138],
+      ankle: [90, 165],
+      elbow: [122, 96],
+      wrist: [130, 88],
+      barbell: [130, 88]
+    },
+    'bench-ham-low': {
+      bench: [138, 134, 46],
+      head: [38, 152, -90],
+      shoulder: [58, 156],
+      hip: [102, 156],
+      knee: [128, 122],
+      ankle: [154, 134],
+      elbow: [80, 160],
+      wrist: [100, 162]
+    },
+    'bench-ham-high': {
+      bench: [138, 134, 46],
+      head: [38, 152, -90],
+      shoulder: [58, 156],
+      hip: [102, 126],
+      knee: [130, 112],
+      ankle: [154, 134],
+      elbow: [80, 160],
+      wrist: [100, 162]
+    },
+    'bb-hipthrust-low': {
+      bench: [26, 120, 44],
+      head: [48, 96, -20],
+      shoulder: [62, 112],
+      hip: [106, 144],
+      knee: [144, 118],
+      ankle: [152, 165],
+      elbow: [84, 124],
+      wrist: [104, 136],
+      barbell: [106, 134]
+    },
+    'bb-hipthrust-high': {
+      bench: [26, 120, 44],
+      head: [48, 102, -80],
+      shoulder: [64, 112],
+      hip: [110, 114],
+      knee: [148, 116],
+      ankle: [152, 165],
+      elbow: [86, 112],
+      wrist: [108, 108],
+      barbell: [110, 104]
+    },
+    'landmine-squat-top': {
+      landmine: [26, 165, 96, 74],
+      head: [118, 48, 0],
+      shoulder: [116, 68],
+      hip: [114, 112],
+      knee: [116, 138],
+      ankle: [114, 165],
+      elbow: [102, 88],
+      wrist: [96, 74]
+    },
+    'landmine-squat-low': {
+      landmine: [26, 165, 94, 96],
+      head: [122, 68, -10],
+      shoulder: [116, 86],
+      hip: [88, 128],
+      knee: [122, 132],
+      ankle: [114, 165],
+      elbow: [102, 108],
+      wrist: [94, 96]
+    },
+    'cossack-lunge-low': {
+      landmine: [26, 165, 98, 96],
+      head: [105, 66, 0],
+      shoulder: [105, 86],
+      hip: [94, 128],
+      knee: [74, 134],
+      ankle: [72, 165],
+      knee2: [130, 146],
+      ankle2: [162, 165],
+      elbow: [102, 106],
+      wrist: [98, 96]
     }
   };
   return P[phase] || P['squat-top'];
@@ -2698,6 +3723,13 @@ function renderSingleFramePanel(frame, ex, panelX, panelWidth) {
           <line x1="${bx + 12}" y1="${by + 9}" x2="${bx + 12}" y2="168" stroke="#475569" stroke-width="4.5" />
           <line x1="${bx + bw - 12}" y1="${by + 9}" x2="${bx + bw - 12}" y2="168" stroke="#475569" stroke-width="4.5" />`;
   }
+  if (p.inclineBench) {
+    // Render adjustable bench with inclined backrest + seat + legs using fill="#475569"
+    g += `<rect x="44" y="138" width="64" height="8" rx="3" fill="#475569" stroke="#64748b" stroke-width="1" />
+          <path d="M 48 92 L 94 140 L 88 145 L 42 97 Z" fill="#475569" stroke="#64748b" stroke-width="1" />
+          <line x1="56" y1="106" x2="56" y2="168" stroke="#475569" stroke-width="4.5" />
+          <line x1="98" y1="146" x2="98" y2="168" stroke="#475569" stroke-width="4.5" />`;
+  }
   if (p.chair) {
     const [cx, cy] = p.chair;
     g += `<path d="M ${cx} 168 L ${cx} ${cy - 34} M ${cx} ${cy} L ${cx + 42} ${cy} L ${cx + 42} 168" stroke="#475569" stroke-width="5" stroke-linecap="round" fill="none" />`;
@@ -2778,9 +3810,11 @@ function renderSingleFramePanel(frame, ex, panelX, panelWidth) {
   // Head
   g += drawHead(p.head[0], p.head[1], p.head[2] || 0);
 
-  // Foreground Props (Dumbbells, Slam Ball, Ab Roller, Resistance Bands)
+  // Foreground Props (Dumbbells, Barbell, Landmine, Slam Ball, Ab Roller, Resistance Bands)
   if (p.dumbbell) g += drawDumbbell(p.dumbbell[0], p.dumbbell[1]);
   if (p.dumbbell2) g += drawDumbbell(p.dumbbell2[0], p.dumbbell2[1]);
+  if (p.barbell) g += drawBarbell(p.barbell[0], p.barbell[1], p.barbell[2] || 0);
+  if (p.landmine) g += drawLandmine(p.landmine[0], p.landmine[1], p.landmine[2], p.landmine[3]);
   if (p.slamBall) g += drawSlamBall(p.slamBall[0], p.slamBall[1]);
   if (p.roller) {
     g += `<circle cx="${p.roller[0]}" cy="${p.roller[1]}" r="9" fill="#1e293b" stroke="#facc15" stroke-width="3" />`;

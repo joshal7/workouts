@@ -939,7 +939,7 @@ async function runBrowserCDPTests(wsUrl) {
           glutesBtn?.click();
           const glutesCards = Array.from(document.querySelectorAll('article.qa-card'));
           const allGlutesValid =
-            glutesCards.length > 0 && glutesCards.length < 68 && glutesCards.every(c => c.innerText.includes('Glutes'));
+            glutesCards.length > 0 && glutesCards.length < 90 && glutesCards.every(c => c.innerText.includes('Glutes'));
 
           // Reset to All
           document.querySelector('.qa-filter-bar [data-filter="all"]')?.click();
@@ -954,7 +954,7 @@ async function runBrowserCDPTests(wsUrl) {
           };
         });
         if (
-          galleryCheck.totalCards !== 68 ||
+          galleryCheck.totalCards !== 90 ||
           galleryCheck.brokenCount > 0 ||
           galleryCheck.auditBoxes > 0 ||
           !galleryCheck.allGlutesValid
@@ -962,7 +962,7 @@ async function runBrowserCDPTests(wsUrl) {
           throw new Error('QA Gallery check failed: ' + JSON.stringify(galleryCheck));
         }
         console.log(
-          `  ✅ PASS: All 68/68 exercise SVG diagrams rendered cleanly (680x248) and QA Gallery muscle filter verified (${galleryCheck.glutesCardCount} Glutes exercises)`
+          `  ✅ PASS: All 90/90 exercise SVG diagrams rendered cleanly (680x248) and QA Gallery muscle filter verified (${galleryCheck.glutesCardCount} Glutes exercises)`
         );
 
         ws.close();

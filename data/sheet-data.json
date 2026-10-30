@@ -82,7 +82,7 @@
       "rounds": 1,
       "exercisesPerRound": 6,
       "setsPerRound": 11,
-      "comments": "30 seconds of one exercise. 30 sec rest. Then 30 seconds of 2 exercise, rest, then 3 etc. When you get to 6 repetitions, drop one exercise until you get down to 1 exercise at the last round"
+      "comments": "30 seconds of one exercise. 10 sec transition between exercises. 60 sec rest at the end of each set. Add one exercise per set up to 6, then drop one exercise until 1 at the last round"
     },
     {
       "id": "8x8-duos",
@@ -108,10 +108,24 @@
       "id": "push-ups",
       "row": 2,
       "name": "Push-ups",
-      "muscles": { "Chest": "Pri", "Biceps": "", "Triceps": "Sec", "Shoulders": "Sec", "Back": "", "Abs": "Sec", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "Pri",
+        "Biceps": "",
+        "Triceps": "Sec",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "Sec", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "Sec",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Triceps (Sec), Shoulders (Sec), and Abs/Core (Sec) for plank stabilization and elbow extension."
     },
@@ -119,10 +133,24 @@
       "id": "3-stop-pushups",
       "row": 3,
       "name": "3 Stop Pushups",
-      "muscles": { "Chest": "Pri", "Biceps": "", "Triceps": "Sec", "Shoulders": "Sec", "Back": "", "Abs": "Sec", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "Pri",
+        "Biceps": "",
+        "Triceps": "Sec",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "Sec", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "Sec",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Triceps (Sec), Shoulders (Sec), and Abs/Core (Sec) for isometric pause holds."
     },
@@ -130,10 +158,24 @@
       "id": "pushups-with-shoulder-tap",
       "row": 4,
       "name": "Pushups with shoulder tap",
-      "muscles": { "Chest": "Pri", "Biceps": "", "Triceps": "Sec", "Shoulders": "Sec", "Back": "", "Abs": "Sec", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "Pri",
+        "Biceps": "",
+        "Triceps": "Sec",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "Sec", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "Sec",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Triceps (Sec) and Shoulders (Sec) for single-arm support phase."
     },
@@ -141,10 +183,24 @@
       "id": "chest-flys",
       "row": 5,
       "name": "Chest Flys",
-      "muscles": { "Chest": "Pri", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "", "Abs": "", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "Pri",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Shoulders (Sec) for anterior deltoid synergism."
     },
@@ -152,10 +208,24 @@
       "id": "chest-press-6-6-6",
       "row": 6,
       "name": "Chest Press 6-6-6",
-      "muscles": { "Chest": "Pri", "Biceps": "", "Triceps": "Sec", "Shoulders": "Sec", "Back": "", "Abs": "", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "Pri",
+        "Biceps": "",
+        "Triceps": "Sec",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Triceps (Sec) and Shoulders (Sec) for pressing lockout and isometric holds."
     },
@@ -163,10 +233,24 @@
       "id": "trx-chest-press",
       "row": 7,
       "name": "TRX Chest Press",
-      "muscles": { "Chest": "Pri", "Biceps": "", "Triceps": "Sec", "Shoulders": "Sec", "Back": "", "Abs": "Sec", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "Pri",
+        "Biceps": "",
+        "Triceps": "Sec",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "Sec", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "Sec",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Triceps (Sec), Shoulders (Sec), and Abs/Core (Sec) for unstable suspension plank."
     },
@@ -174,10 +258,24 @@
       "id": "up-up-down-ups",
       "row": 8,
       "name": "Up Up down ups (Opt lateral taps)",
-      "muscles": { "Chest": "Pri", "Biceps": "", "Triceps": "Sec", "Shoulders": "Sec", "Back": "", "Abs": "Sec", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "Pri",
+        "Biceps": "",
+        "Triceps": "Sec",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "Sec", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "Sec",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Triceps (Sec) as pressing from forearm to high plank heavily loads elbow extension."
     },
@@ -185,10 +283,24 @@
       "id": "curls",
       "row": 9,
       "name": "Curls (Weights, TRX, or Bands)",
-      "muscles": { "Chest": "", "Biceps": "Pri", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "Pri",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Band or Weights",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
       "auditUpdated": false,
       "auditNote": ""
     },
@@ -196,10 +308,24 @@
       "id": "skull-crushers",
       "row": 10,
       "name": "Skull Crushers",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "Pri", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "Pri",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
       "auditUpdated": false,
       "auditNote": ""
     },
@@ -207,10 +333,24 @@
       "id": "tricep-kick-backs",
       "row": 11,
       "name": "Tricep kick backs",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "Pri", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "Pri",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
       "auditUpdated": false,
       "auditNote": ""
     },
@@ -218,10 +358,24 @@
       "id": "trx-triceps",
       "row": 12,
       "name": "TRX Triceps",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "Pri", "Shoulders": "", "Back": "", "Abs": "Sec", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "Pri",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "Sec", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "Sec",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Abs/Core (Sec) for rigid body alignment during suspension extension."
     },
@@ -229,10 +383,24 @@
       "id": "chair-dips",
       "row": 13,
       "name": "Chair Dips",
-      "muscles": { "Chest": "Sec", "Biceps": "", "Triceps": "Pri", "Shoulders": "Sec", "Back": "", "Abs": "", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "Sec",
+        "Biceps": "",
+        "Triceps": "Pri",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Chest (Sec) for lower pectoral assistance at bottom of dip."
     },
@@ -240,10 +408,24 @@
       "id": "shoulder-press",
       "row": 14,
       "name": "Shoulder Press",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "Sec", "Shoulders": "Pri", "Back": "", "Abs": "", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "Sec",
+        "Shoulders": "Pri",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Band or Weights",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Triceps (Sec) for overhead pressing lockout."
     },
@@ -251,10 +433,24 @@
       "id": "arnold-press",
       "row": 15,
       "name": "Arnold Press",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "Sec", "Shoulders": "Pri", "Back": "", "Abs": "", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "Sec",
+        "Shoulders": "Pri",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Strength",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Triceps (Sec) for overhead pressing lockout."
     },
@@ -262,10 +458,24 @@
       "id": "lateral-shoulder-raises",
       "row": 16,
       "name": "Lateral Shoulder Raises",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Pri", "Back": "", "Abs": "", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Pri",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Band or Weights",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
       "auditUpdated": false,
       "auditNote": ""
     },
@@ -273,10 +483,24 @@
       "id": "cheerleaders",
       "row": 17,
       "name": "Cheerleaders",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Pri", "Back": "Sec", "Abs": "", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Pri",
+        "Back": "Sec",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Back (Sec) for upper trapezius and scapular stabilization during dynamic raises."
     },
@@ -284,10 +508,24 @@
       "id": "swings",
       "row": 18,
       "name": "Swings",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "Pri", "Abs": "Sec", "Glutes": "Sec", "Quads": "", "Hamstrings": "Sec" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "Pri",
+        "Abs": "Sec",
+        "Glutes": "Sec",
+        "Quads": "",
+        "Hamstrings": "Sec"
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "Sec", "Legs": "Sec" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "Sec",
+        "Legs": "Sec"
+      },
       "auditUpdated": true,
       "auditNote": "Added Glutes (Sec), Shoulders (Sec), and Abs/Core (Sec) for posterior-chain hip-hinge mechanics."
     },
@@ -295,10 +533,24 @@
       "id": "trx-i-y-ts",
       "row": 19,
       "name": "TRX I-Y-Ts",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "Pri", "Abs": "Sec", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "Pri",
+        "Abs": "Sec",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "Sec", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "Sec",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Shoulders (Sec) and Abs (Sec) as I-Y-Ts directly recruit rear/lateral/anterior deltoids."
     },
@@ -306,10 +558,24 @@
       "id": "trx-wood-choppers",
       "row": 20,
       "name": "TRX Wood Choppers",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "Pri", "Abs": "Sec", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "Pri",
+        "Abs": "Sec",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "Sec", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "Sec",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Abs/Core (Sec) and Shoulders (Sec) for rotational oblique and torso drive."
     },
@@ -317,10 +583,24 @@
       "id": "rows",
       "row": 21,
       "name": "Rows",
-      "muscles": { "Chest": "", "Biceps": "Sec", "Triceps": "", "Shoulders": "Sec", "Back": "Pri", "Abs": "", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "Sec",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "Pri",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Band or Weights",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Biceps (Sec) and Shoulders/Rear Delts (Sec) for horizontal pulling."
     },
@@ -328,10 +608,24 @@
       "id": "pull-ups",
       "row": 22,
       "name": "Pull-ups",
-      "muscles": { "Chest": "", "Biceps": "Sec", "Triceps": "", "Shoulders": "Sec", "Back": "Pri", "Abs": "Sec", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "Sec",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "Pri",
+        "Abs": "Sec",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "Sec", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "Sec",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Biceps (Sec), Shoulders (Sec), and Abs/Core (Sec) for vertical pulling."
     },
@@ -339,10 +633,24 @@
       "id": "chin-ups",
       "row": 23,
       "name": "Chin-ups",
-      "muscles": { "Chest": "", "Biceps": "Sec", "Triceps": "", "Shoulders": "Sec", "Back": "Pri", "Abs": "Sec", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "Sec",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "Pri",
+        "Abs": "Sec",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "Sec", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "Sec",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Shoulders (Sec) and Abs/Core (Sec) alongside Biceps (Sec) and Back (Pri)."
     },
@@ -350,10 +658,24 @@
       "id": "face-pulls",
       "row": 24,
       "name": "Face-Pulls",
-      "muscles": { "Chest": "", "Biceps": "Sec", "Triceps": "", "Shoulders": "Sec", "Back": "Pri", "Abs": "", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "Sec",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "Pri",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Bands",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Shoulders (Sec) and Biceps (Sec) for posterior deltoid and external rotator recruitment."
     },
@@ -361,10 +683,24 @@
       "id": "reverse-flys",
       "row": 25,
       "name": "Reverse Flys",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "Pri", "Abs": "", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "Pri",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
       "auditUpdated": false,
       "auditNote": ""
     },
@@ -372,10 +708,24 @@
       "id": "serratus-pushups",
       "row": 26,
       "name": "Serratus Pushups",
-      "muscles": { "Chest": "Sec", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "Pri", "Abs": "Sec", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "Sec",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "Pri",
+        "Abs": "Sec",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "Sec", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "Sec",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Abs/Core (Sec) for plank stabilization during scapular protraction/retraction."
     },
@@ -383,10 +733,24 @@
       "id": "slam-ball-slams",
       "row": 27,
       "name": "Slam Ball Slams",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "Sec", "Shoulders": "Sec", "Back": "Pri", "Abs": "Sec", "Glutes": "Sec", "Quads": "Sec", "Hamstrings": "Sec" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "Sec",
+        "Shoulders": "Sec",
+        "Back": "Pri",
+        "Abs": "Sec",
+        "Glutes": "Sec",
+        "Quads": "Sec",
+        "Hamstrings": "Sec"
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Pri", "Core": "Sec", "Legs": "Sec" },
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "Sec",
+        "Legs": "Sec"
+      },
       "auditUpdated": true,
       "auditNote": "Populated Core (Sec), Legs (Sec), and Shoulders/Triceps/Glutes (Sec) for full-body overhead slam."
     },
@@ -394,10 +758,24 @@
       "id": "ab-wheel-roller",
       "row": 28,
       "name": "Ab Wheel / Roller",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "Sec", "Abs": "Pri", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "Sec",
+        "Abs": "Pri",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Sec", "Core": "Pri", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Sec",
+        "Core": "Pri",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Shoulders (Sec), Back/Lats (Sec), and Upper Body (Sec) for rollout extension support."
     },
@@ -405,452 +783,1576 @@
       "id": "trx-crunches",
       "row": 29,
       "name": "TRX Crunches (Pike Optional)",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "", "Abs": "Pri", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "Pri",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Sec", "Core": "Pri", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Sec",
+        "Core": "Pri",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Shoulders/Upper Body (Sec) for plank support while piking/crunching."
     },
     {
-      "id": "crunch-pike-on-roller",
-      "row": 30,
-      "name": "Crunch + Pike on roller",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "", "Abs": "Pri", "Glutes": "", "Quads": "", "Hamstrings": "" },
-      "workoutCategory": "Either",
-      "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Sec", "Core": "Pri", "Legs": "" },
-      "auditUpdated": true,
-      "auditNote": "Added Shoulders/Upper Body (Sec) for plank support during roller knee tuck and pike."
-    },
-    {
       "id": "leg-lifts",
-      "row": 31,
+      "row": 30,
       "name": "Leg Lifts",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "Pri", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "Pri",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "", "Core": "Pri", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Pri",
+        "Legs": ""
+      },
       "auditUpdated": false,
       "auditNote": ""
     },
     {
       "id": "3-way-v-ups",
-      "row": 32,
+      "row": 31,
       "name": "3 way V ups",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "Pri", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "Pri",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "", "Core": "Pri", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Pri",
+        "Legs": ""
+      },
       "auditUpdated": false,
       "auditNote": ""
     },
     {
       "id": "v-ups-with-the-ball",
-      "row": 33,
+      "row": 32,
       "name": "V ups with the Ball",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "", "Abs": "Pri", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "Pri",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Sec", "Core": "Pri", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Sec",
+        "Core": "Pri",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Shoulders (Sec) for weighted overhead ball transfer."
     },
     {
       "id": "crunches",
-      "row": 34,
+      "row": 33,
       "name": "Crunches",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "Pri", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "Pri",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "", "Core": "Pri", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Pri",
+        "Legs": ""
+      },
       "auditUpdated": false,
       "auditNote": ""
     },
     {
       "id": "bicycle-crunches",
-      "row": 35,
+      "row": 34,
       "name": "Bicycle crunches",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "Pri", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "Pri",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "", "Core": "Pri", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Pri",
+        "Legs": ""
+      },
       "auditUpdated": false,
       "auditNote": ""
     },
     {
       "id": "mountain-climbers",
-      "row": 36,
+      "row": 35,
       "name": "Mountain Climbers",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "", "Abs": "Pri", "Glutes": "", "Quads": "Sec", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "Pri",
+        "Glutes": "",
+        "Quads": "Sec",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "Sec", "Core": "Pri", "Legs": "Sec" },
+      "bodyCategories": {
+        "Upper Body": "Sec",
+        "Core": "Pri",
+        "Legs": "Sec"
+      },
       "auditUpdated": false,
       "auditNote": ""
     },
     {
       "id": "plank",
-      "row": 37,
+      "row": 36,
       "name": "Plank",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "", "Abs": "Pri", "Glutes": "Sec", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "Pri",
+        "Glutes": "Sec",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "Sec", "Core": "Pri", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "Sec",
+        "Core": "Pri",
+        "Legs": ""
+      },
       "auditUpdated": true,
       "auditNote": "Added Shoulders (Sec) and Glutes (Sec) for isometric full-body tension."
     },
     {
       "id": "plank-jacks",
-      "row": 38,
+      "row": 37,
       "name": "Plank Jacks",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "", "Abs": "Pri", "Glutes": "Sec", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "Pri",
+        "Glutes": "Sec",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "Sec", "Core": "Pri", "Legs": "Sec" },
+      "bodyCategories": {
+        "Upper Body": "Sec",
+        "Core": "Pri",
+        "Legs": "Sec"
+      },
       "auditUpdated": true,
       "auditNote": "Added Shoulders (Sec) and Glutes/Legs (Sec) for dynamic hip abduction in plank."
     },
     {
       "id": "round-the-worlds-plank-raises",
-      "row": 39,
+      "row": 38,
       "name": "Round the worlds plank raises",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "Sec", "Abs": "Pri", "Glutes": "Sec", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "Sec",
+        "Abs": "Pri",
+        "Glutes": "Sec",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "Sec", "Core": "Pri", "Legs": "Sec" },
+      "bodyCategories": {
+        "Upper Body": "Sec",
+        "Core": "Pri",
+        "Legs": "Sec"
+      },
       "auditUpdated": true,
       "auditNote": "Added Shoulders, Back, and Glutes (Sec) for single-limb raises in plank."
     },
     {
       "id": "opposite-arm-and-leg-lifts",
-      "row": 40,
+      "row": 39,
       "name": "Opposite arm & leg lifts",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "Sec", "Abs": "Pri", "Glutes": "Sec", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "Sec",
+        "Abs": "Pri",
+        "Glutes": "Sec",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "Sec", "Core": "Pri", "Legs": "Sec" },
+      "bodyCategories": {
+        "Upper Body": "Sec",
+        "Core": "Pri",
+        "Legs": "Sec"
+      },
       "auditUpdated": true,
       "auditNote": "Added Back (Sec), Glutes (Sec), and Shoulders (Sec) for contralateral posterior chain extension."
     },
     {
       "id": "side-plank-with-hip-dip",
-      "row": 41,
-      "name": "Side plank with hip dip",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "", "Abs": "Pri", "Glutes": "Sec", "Quads": "", "Hamstrings": "" },
+      "row": 40,
+      "name": "Side Plank (Hip Dip or Leg Lift)",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "Pri",
+        "Glutes": "Sec",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "Sec", "Core": "Pri", "Legs": "Sec" },
+      "bodyCategories": {
+        "Upper Body": "Sec",
+        "Core": "Pri",
+        "Legs": "Sec"
+      },
       "auditUpdated": true,
-      "auditNote": "Added Shoulders/Upper Body (Sec) for bottom-arm lateral support."
-    },
-    {
-      "id": "side-plank-with-hip-dip-and-leg-lift",
-      "row": 42,
-      "name": "Side plank with hip dip and leg lift",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "", "Abs": "Pri", "Glutes": "Sec", "Quads": "", "Hamstrings": "" },
-      "workoutCategory": "Either",
-      "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "Sec", "Core": "Pri", "Legs": "Sec" },
-      "auditUpdated": true,
-      "auditNote": "Added Shoulders/Upper Body (Sec) for bottom-arm lateral support."
+      "auditNote": "Consolidated hip dip and optional top-leg abduction raise into a single high-signal side plank movement."
     },
     {
       "id": "side-plank-with-reach-under",
-      "row": 43,
+      "row": 41,
       "name": "Side plank with reach under",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "", "Abs": "Pri", "Glutes": "Sec", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "Pri",
+        "Glutes": "Sec",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "Sec", "Core": "Pri", "Legs": "Sec" },
+      "bodyCategories": {
+        "Upper Body": "Sec",
+        "Core": "Pri",
+        "Legs": "Sec"
+      },
       "auditUpdated": true,
       "auditNote": "Added Glutes (Sec) and Shoulders (Sec) to match side plank mechanics."
     },
     {
       "id": "russian-twists-with-slam-ball",
-      "row": 44,
+      "row": 42,
       "name": "Russian twists with slam ball",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "Pri", "Glutes": "", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "Pri",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "", "Core": "Pri", "Legs": "" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Pri",
+        "Legs": ""
+      },
       "auditUpdated": false,
       "auditNote": ""
     },
     {
       "id": "single-leg-leg-lifts-on-bench-with-weight",
-      "row": 45,
+      "row": 43,
       "name": "Single leg leg-lifts on bench with weight",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "Sec", "Glutes": "Pri", "Quads": "", "Hamstrings": "Sec" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "Pri",
+        "Quads": "",
+        "Hamstrings": "Sec"
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "", "Core": "Sec", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Sec",
+        "Legs": "Pri"
+      },
       "auditUpdated": true,
       "auditNote": "Added Hamstrings (Sec) and Abs/Core (Sec) for hip extension and pelvic stability."
     },
     {
       "id": "single-leg-band-glute-bridge",
-      "row": 46,
+      "row": 44,
       "name": "Single leg band glute bridge",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "Sec", "Glutes": "Pri", "Quads": "", "Hamstrings": "Sec" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "Pri",
+        "Quads": "",
+        "Hamstrings": "Sec"
+      },
       "workoutCategory": "Either",
       "equipment": "Bands",
-      "bodyCategories": { "Upper Body": "", "Core": "Sec", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Sec",
+        "Legs": "Pri"
+      },
       "auditUpdated": true,
       "auditNote": "Added Hamstrings (Sec) and Abs/Core (Sec) for unilateral hip bridge."
     },
     {
       "id": "alternating-glute-bridge-and-butterflies-with-band",
-      "row": 47,
+      "row": 45,
       "name": "Alternating glute bridge and butterflies with band",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "Pri", "Quads": "", "Hamstrings": "Sec" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "Pri",
+        "Quads": "",
+        "Hamstrings": "Sec"
+      },
       "workoutCategory": "Either",
       "equipment": "Bands",
-      "bodyCategories": { "Upper Body": "", "Core": "", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "",
+        "Legs": "Pri"
+      },
       "auditUpdated": true,
       "auditNote": "Added Hamstrings (Sec) for glute bridge hip extension phase."
     },
     {
-      "id": "butterflies-with-band",
-      "row": 48,
-      "name": "Butterflies with band",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "Pri", "Quads": "", "Hamstrings": "" },
-      "workoutCategory": "Either",
-      "equipment": "Bands",
-      "bodyCategories": { "Upper Body": "", "Core": "", "Legs": "Pri" },
-      "auditUpdated": false,
-      "auditNote": ""
-    },
-    {
       "id": "lateral-band-walks",
-      "row": 49,
-      "name": "Lateral band walks",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "Pri", "Quads": "Sec", "Hamstrings": "" },
+      "row": 46,
+      "name": "Band Walks (Lateral & Monster)",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "Pri",
+        "Quads": "Sec",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Either",
       "equipment": "Bands",
-      "bodyCategories": { "Upper Body": "", "Core": "", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "",
+        "Legs": "Pri"
+      },
       "auditUpdated": true,
-      "auditNote": "Added Quads (Sec) for athletic quarter-squat stance during walks."
-    },
-    {
-      "id": "forward-backward-band-walks",
-      "row": 50,
-      "name": "Forward / Backward band walks",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "Pri", "Quads": "Sec", "Hamstrings": "" },
-      "workoutCategory": "Either",
-      "equipment": "Bands",
-      "bodyCategories": { "Upper Body": "", "Core": "", "Legs": "Pri" },
-      "auditUpdated": true,
-      "auditNote": "Added Quads (Sec) for monster-walk quarter-squat stance."
+      "auditNote": "Consolidated lateral band walks and forward/backward monster walks."
     },
     {
       "id": "band-leg-kick-backs-and-diagonals",
-      "row": 51,
+      "row": 47,
       "name": "Band leg kick backs and diagonals",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "Pri", "Quads": "", "Hamstrings": "Sec" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "Pri",
+        "Quads": "",
+        "Hamstrings": "Sec"
+      },
       "workoutCategory": "Either",
       "equipment": "Bands",
-      "bodyCategories": { "Upper Body": "", "Core": "", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "",
+        "Legs": "Pri"
+      },
       "auditUpdated": true,
       "auditNote": "Added Hamstrings (Sec) for standing hip extension."
     },
     {
       "id": "frog-pumps",
-      "row": 52,
+      "row": 48,
       "name": "Frog Pumps",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "Pri", "Quads": "", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "Pri",
+        "Quads": "",
+        "Hamstrings": ""
+      },
       "workoutCategory": "HIIT",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "", "Core": "", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "",
+        "Legs": "Pri"
+      },
       "auditUpdated": false,
       "auditNote": ""
     },
     {
       "id": "squats",
-      "row": 53,
-      "name": "Squats",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "Sec", "Quads": "Pri", "Hamstrings": "" },
+      "row": 49,
+      "name": "Barbell or Goblet Squats",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "Sec",
+        "Quads": "Pri",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Strength",
       "equipment": "Any",
-      "bodyCategories": { "Upper Body": "", "Core": "", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "",
+        "Legs": "Pri"
+      },
       "auditUpdated": false,
       "auditNote": ""
     },
     {
       "id": "sumo-squats",
-      "row": 54,
+      "row": 50,
       "name": "Sumo-Squats",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "Sec", "Quads": "Pri", "Hamstrings": "Sec" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "Sec",
+        "Quads": "Pri",
+        "Hamstrings": "Sec"
+      },
       "workoutCategory": "Strength",
       "equipment": "Any",
-      "bodyCategories": { "Upper Body": "", "Core": "", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "",
+        "Legs": "Pri"
+      },
       "auditUpdated": true,
       "auditNote": "Added Hamstrings (Sec) alongside Glutes (Sec) and Quads (Pri) for wide-stance squat."
     },
     {
       "id": "1-5-squats",
-      "row": 55,
-      "name": "1.5 Squats",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "Sec", "Quads": "Pri", "Hamstrings": "" },
+      "row": 51,
+      "name": "1.5 Pulse & Hold Squats",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "Sec",
+        "Quads": "Pri",
+        "Hamstrings": ""
+      },
       "workoutCategory": "Strength",
       "equipment": "Any",
-      "bodyCategories": { "Upper Body": "", "Core": "", "Legs": "Pri" },
-      "auditUpdated": false,
-      "auditNote": ""
-    },
-    {
-      "id": "squat-and-hold",
-      "row": 56,
-      "name": "Squat & Hold",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "Sec", "Quads": "Pri", "Hamstrings": "Sec" },
-      "workoutCategory": "Strength",
-      "equipment": "Any",
-      "bodyCategories": { "Upper Body": "", "Core": "", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "",
+        "Legs": "Pri"
+      },
       "auditUpdated": false,
       "auditNote": ""
     },
     {
       "id": "wide-then-narrow-squats",
-      "row": 57,
+      "row": 52,
       "name": "Wide then Narrow Squats",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "Sec", "Quads": "Pri", "Hamstrings": "Sec" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "Sec",
+        "Quads": "Pri",
+        "Hamstrings": "Sec"
+      },
       "workoutCategory": "HIIT",
       "equipment": "Any",
-      "bodyCategories": { "Upper Body": "", "Core": "", "Legs": "Pri" },
-      "auditUpdated": false,
-      "auditNote": ""
-    },
-    {
-      "id": "jump-out-squats",
-      "row": 58,
-      "name": "Jump out Squats",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "Sec", "Quads": "Pri", "Hamstrings": "" },
-      "workoutCategory": "HIIT",
-      "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "", "Core": "", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "",
+        "Legs": "Pri"
+      },
       "auditUpdated": false,
       "auditNote": ""
     },
     {
       "id": "squat-jumps",
-      "row": 59,
+      "row": 53,
       "name": "Squat Jumps",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "Sec", "Quads": "Pri", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "Sec",
+        "Quads": "Pri",
+        "Hamstrings": ""
+      },
       "workoutCategory": "HIIT",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "", "Core": "", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "",
+        "Legs": "Pri"
+      },
       "auditUpdated": false,
       "auditNote": ""
     },
     {
       "id": "step-ups",
-      "row": 60,
+      "row": 54,
       "name": "Step-ups",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "Sec", "Quads": "Pri", "Hamstrings": "Sec" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "Sec",
+        "Quads": "Pri",
+        "Hamstrings": "Sec"
+      },
       "workoutCategory": "Either",
       "equipment": "Any",
-      "bodyCategories": { "Upper Body": "", "Core": "", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "",
+        "Legs": "Pri"
+      },
       "auditUpdated": false,
       "auditNote": ""
     },
     {
       "id": "lunges-split-squats",
-      "row": 61,
+      "row": 55,
       "name": "Lunges (Split-squats)",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "Sec", "Quads": "Pri", "Hamstrings": "Sec" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "Sec",
+        "Quads": "Pri",
+        "Hamstrings": "Sec"
+      },
       "workoutCategory": "Either",
       "equipment": "Band or Weights",
-      "bodyCategories": { "Upper Body": "", "Core": "", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "",
+        "Legs": "Pri"
+      },
       "auditUpdated": true,
       "auditNote": "Added Glutes (Sec) which was blank in the original sheet (matching Squats)."
     },
     {
       "id": "lunge-jumps",
-      "row": 62,
+      "row": 56,
       "name": "Lunge Jumps",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "Sec", "Quads": "Pri", "Hamstrings": "Sec" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "Sec",
+        "Quads": "Pri",
+        "Hamstrings": "Sec"
+      },
       "workoutCategory": "HIIT",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "", "Core": "", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "",
+        "Legs": "Pri"
+      },
       "auditUpdated": true,
       "auditNote": "Added Glutes (Sec) for plyometric split-squat propulsion."
     },
     {
       "id": "lunges-with-one-dumbbell-up",
-      "row": 63,
+      "row": 57,
       "name": "Lunges with one dumbbell up",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "Sec", "Abs": "Sec", "Glutes": "Sec", "Quads": "Pri", "Hamstrings": "Sec" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "Sec",
+        "Abs": "Sec",
+        "Glutes": "Sec",
+        "Quads": "Pri",
+        "Hamstrings": "Sec"
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "Sec", "Core": "Sec", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "Sec",
+        "Core": "Sec",
+        "Legs": "Pri"
+      },
       "auditUpdated": true,
       "auditNote": "Added Glutes (Sec), Shoulders (Sec), and Abs/Core (Sec) for overhead unilateral stabilization."
     },
     {
       "id": "lunge-with-one-foot-on-bench",
-      "row": 64,
+      "row": 58,
       "name": "Lunge with one foot on bench",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "", "Glutes": "Sec", "Quads": "Pri", "Hamstrings": "Sec" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "Sec",
+        "Quads": "Pri",
+        "Hamstrings": "Sec"
+      },
       "workoutCategory": "Either",
       "equipment": "Band or Weights",
-      "bodyCategories": { "Upper Body": "", "Core": "", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "",
+        "Legs": "Pri"
+      },
       "auditUpdated": true,
       "auditNote": "Added Glutes (Sec) for Bulgarian split-squat hip extension."
     },
     {
       "id": "lunge-twists-with-slam-ball",
-      "row": 65,
+      "row": 59,
       "name": "Lunge twists with slam ball",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "Sec", "Glutes": "Sec", "Quads": "Pri", "Hamstrings": "Sec" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "Sec",
+        "Quads": "Pri",
+        "Hamstrings": "Sec"
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "", "Core": "Sec", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Sec",
+        "Legs": "Pri"
+      },
       "auditUpdated": true,
       "auditNote": "Added Glutes (Sec) and Abs/Core (Sec) for rotational torso twist."
     },
     {
       "id": "bear-crawls",
-      "row": 66,
+      "row": 60,
       "name": "Bear crawls",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "Sec", "Back": "", "Abs": "Sec", "Glutes": "", "Quads": "Pri", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "",
+        "Quads": "Pri",
+        "Hamstrings": ""
+      },
       "workoutCategory": "HIIT",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "Sec", "Core": "Sec", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "Sec",
+        "Core": "Sec",
+        "Legs": "Pri"
+      },
       "auditUpdated": false,
       "auditNote": ""
     },
     {
       "id": "burpees",
-      "row": 67,
+      "row": 61,
       "name": "Burpees",
-      "muscles": { "Chest": "Sec", "Biceps": "", "Triceps": "Sec", "Shoulders": "Sec", "Back": "", "Abs": "Sec", "Glutes": "Sec", "Quads": "Pri", "Hamstrings": "" },
+      "muscles": {
+        "Chest": "Sec",
+        "Biceps": "",
+        "Triceps": "Sec",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "Sec",
+        "Quads": "Pri",
+        "Hamstrings": ""
+      },
       "workoutCategory": "HIIT",
       "equipment": "Nothing",
-      "bodyCategories": { "Upper Body": "Sec", "Core": "Sec", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "Sec",
+        "Core": "Sec",
+        "Legs": "Pri"
+      },
       "auditUpdated": true,
       "auditNote": "Added Triceps (Sec) and Glutes (Sec) for push-up and vertical jump phases."
     },
     {
       "id": "single-leg-deadlift",
-      "row": 68,
+      "row": 62,
       "name": "Single Leg Deadlift",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "Sec", "Abs": "Sec", "Glutes": "Sec", "Quads": "", "Hamstrings": "Pri" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "Sec",
+        "Abs": "Sec",
+        "Glutes": "Sec",
+        "Quads": "",
+        "Hamstrings": "Pri"
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "", "Core": "Sec", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Sec",
+        "Legs": "Pri"
+      },
       "auditUpdated": true,
       "auditNote": "Added Back (Sec) and Abs/Core (Sec) for unilateral hip hinge."
     },
     {
       "id": "trx-hamstring-curls",
-      "row": 69,
+      "row": 63,
       "name": "TRX Hamstring Curls",
-      "muscles": { "Chest": "", "Biceps": "", "Triceps": "", "Shoulders": "", "Back": "", "Abs": "Sec", "Glutes": "Sec", "Quads": "", "Hamstrings": "Pri" },
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "Sec",
+        "Quads": "",
+        "Hamstrings": "Pri"
+      },
       "workoutCategory": "Either",
       "equipment": "Weights",
-      "bodyCategories": { "Upper Body": "", "Core": "Sec", "Legs": "Pri" },
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Sec",
+        "Legs": "Pri"
+      },
       "auditUpdated": true,
       "auditNote": "Added Abs/Core (Sec) for supine plank bridge stabilization."
+    },
+    {
+      "id": "incline-barbell-bench-press",
+      "row": 64,
+      "name": "Incline Barbell Bench Press",
+      "muscles": {
+        "Chest": "Pri",
+        "Biceps": "",
+        "Triceps": "Sec",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
+      "workoutCategory": "Strength",
+      "equipment": "Weights",
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
+      "auditUpdated": true,
+      "auditNote": "Added Olympic barbell incline bench press to build upper chest beyond 50 lb dumbbell limits."
+    },
+    {
+      "id": "barbell-bench-press",
+      "row": 65,
+      "name": "Flat Barbell Bench Press",
+      "muscles": {
+        "Chest": "Pri",
+        "Biceps": "",
+        "Triceps": "Sec",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
+      "workoutCategory": "Strength",
+      "equipment": "Weights",
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
+      "auditUpdated": true,
+      "auditNote": "Added heavy flat barbell bench press for primary horizontal pressing strength."
+    },
+    {
+      "id": "landmine-single-arm-press",
+      "row": 66,
+      "name": "Landmine Single-Arm Shoulder Press",
+      "muscles": {
+        "Chest": "Sec",
+        "Biceps": "",
+        "Triceps": "Sec",
+        "Shoulders": "Pri",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
+      "workoutCategory": "Either",
+      "equipment": "Weights",
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "Sec",
+        "Legs": ""
+      },
+      "auditUpdated": true,
+      "auditNote": "Added unilateral angled landmine shoulder press for shoulder-friendly pressing and anti-rotation core work."
+    },
+    {
+      "id": "barbell-push-press",
+      "row": 67,
+      "name": "Barbell Overhead Push Press",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "Sec",
+        "Shoulders": "Pri",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "Sec",
+        "Quads": "Sec",
+        "Hamstrings": ""
+      },
+      "workoutCategory": "Either",
+      "equipment": "Weights",
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "Sec",
+        "Legs": "Sec"
+      },
+      "auditUpdated": true,
+      "auditNote": "Added explosive barbell overhead push press using leg drive."
+    },
+    {
+      "id": "landmine-meadows-row",
+      "row": 68,
+      "name": "Landmine Single-Arm / Meadows Row",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "Sec",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "Pri",
+        "Abs": "Sec",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
+      "workoutCategory": "Strength",
+      "equipment": "Weights",
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "Sec",
+        "Legs": ""
+      },
+      "auditUpdated": true,
+      "auditNote": "Added heavy single-arm landmine / Meadows row to overload lats beyond 50 lb dumbbells."
+    },
+    {
+      "id": "barbell-pendlay-row",
+      "row": 69,
+      "name": "Barbell Bent-Over / Pendlay Row",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "Sec",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "Pri",
+        "Abs": "Sec",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": "Sec"
+      },
+      "workoutCategory": "Strength",
+      "equipment": "Weights",
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "Sec",
+        "Legs": "Sec"
+      },
+      "auditUpdated": true,
+      "auditNote": "Added heavy bilateral barbell row."
+    },
+    {
+      "id": "chest-supported-dumbbell-row",
+      "row": 70,
+      "name": "Chest-Supported Incline Bench DB Row",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "Sec",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "Pri",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
+      "workoutCategory": "Either",
+      "equipment": "Weights",
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
+      "auditUpdated": true,
+      "auditNote": "Added strict incline bench chest-supported row to isolate mid-back without lower-back fatigue."
+    },
+    {
+      "id": "high-band-lat-pulldown",
+      "row": 71,
+      "name": "Band Straight-Arm Lat Pulldowns",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "Pri",
+        "Abs": "Sec",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
+      "workoutCategory": "Either",
+      "equipment": "Bands",
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "Sec",
+        "Legs": ""
+      },
+      "auditUpdated": true,
+      "auditNote": "Added high-band straight-arm lat pulldown anchored to pull-up bar."
+    },
+    {
+      "id": "incline-dumbbell-curls",
+      "row": 72,
+      "name": "Incline Bench Dumbbell Curls",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "Pri",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
+      "workoutCategory": "Either",
+      "equipment": "Weights",
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
+      "auditUpdated": true,
+      "auditNote": "Added incline bench dumbbell curl for loaded long-head bicep stretch."
+    },
+    {
+      "id": "hammer-zottman-curls",
+      "row": 73,
+      "name": "Hammer & Zottman Dumbbell Curls",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "Pri",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
+      "workoutCategory": "Either",
+      "equipment": "Weights",
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
+      "auditUpdated": true,
+      "auditNote": "Added Hammer & Zottman curls for brachialis, biceps, and forearm development."
+    },
+    {
+      "id": "overhead-tricep-extension",
+      "row": 74,
+      "name": "Seated Overhead DB Tricep Extension",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "Pri",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
+      "workoutCategory": "Either",
+      "equipment": "Weights",
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
+      "auditUpdated": true,
+      "auditNote": "Added seated overhead dumbbell tricep extension on 90-degree bench."
+    },
+    {
+      "id": "high-band-tricep-pushdown",
+      "row": 75,
+      "name": "High-Band Tricep Pushdowns",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "Pri",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
+      "workoutCategory": "Either",
+      "equipment": "Bands",
+      "bodyCategories": {
+        "Upper Body": "Pri",
+        "Core": "",
+        "Legs": ""
+      },
+      "auditUpdated": true,
+      "auditNote": "Added high-band tricep pushdowns from pull-up bar."
+    },
+    {
+      "id": "landmine-180-rotations",
+      "row": 76,
+      "name": "Landmine 180s (Rotational Rainbows)",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "Pri",
+        "Glutes": "Sec",
+        "Quads": "",
+        "Hamstrings": ""
+      },
+      "workoutCategory": "Either",
+      "equipment": "Weights",
+      "bodyCategories": {
+        "Upper Body": "Sec",
+        "Core": "Pri",
+        "Legs": ""
+      },
+      "auditUpdated": true,
+      "auditNote": "Added Landmine 180 rotational rainbows for heavy oblique and anti-rotation core power."
+    },
+    {
+      "id": "hanging-leg-knee-raises",
+      "row": 77,
+      "name": "Hanging Leg / Knee Raises (Pull-Up Bar)",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "Sec",
+        "Abs": "Pri",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
+      "workoutCategory": "Either",
+      "equipment": "Nothing",
+      "bodyCategories": {
+        "Upper Body": "Sec",
+        "Core": "Pri",
+        "Legs": ""
+      },
+      "auditUpdated": true,
+      "auditNote": "Added hanging leg/knee raises from pull-up bar."
+    },
+    {
+      "id": "banded-pallof-press",
+      "row": 78,
+      "name": "Banded Pallof Anti-Rotation Press",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "Pri",
+        "Glutes": "Sec",
+        "Quads": "",
+        "Hamstrings": ""
+      },
+      "workoutCategory": "Either",
+      "equipment": "Bands",
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Pri",
+        "Legs": ""
+      },
+      "auditUpdated": true,
+      "auditNote": "Added banded Pallof anti-rotation core press."
+    },
+    {
+      "id": "copenhagen-side-plank",
+      "row": 79,
+      "name": "Copenhagen Adductor Side Plank on Bench",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "Pri",
+        "Glutes": "Sec",
+        "Quads": "Sec",
+        "Hamstrings": ""
+      },
+      "workoutCategory": "Either",
+      "equipment": "Nothing",
+      "bodyCategories": {
+        "Upper Body": "Sec",
+        "Core": "Pri",
+        "Legs": "Sec"
+      },
+      "auditUpdated": true,
+      "auditNote": "Added Copenhagen adductor side plank using the workout bench."
+    },
+    {
+      "id": "pilates-hundred",
+      "row": 80,
+      "name": "Pilates Hundred",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "Pri",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
+      "workoutCategory": "HIIT",
+      "equipment": "Nothing",
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Pri",
+        "Legs": ""
+      },
+      "auditUpdated": true,
+      "auditNote": "Added classic Pilates Hundred mat core endurance exercise."
+    },
+    {
+      "id": "pilates-single-double-leg-stretch",
+      "row": 81,
+      "name": "Pilates Single & Double Leg Stretch",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "Pri",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
+      "workoutCategory": "Either",
+      "equipment": "Nothing",
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Pri",
+        "Legs": ""
+      },
+      "auditUpdated": true,
+      "auditNote": "Added Pilates Single & Double Leg Stretch abdominal flow."
+    },
+    {
+      "id": "pilates-roll-up-teaser",
+      "row": 82,
+      "name": "Pilates Roll-Up to Teaser V-Sit",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "Pri",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": "Sec"
+      },
+      "workoutCategory": "Either",
+      "equipment": "Nothing",
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Pri",
+        "Legs": "Sec"
+      },
+      "auditUpdated": true,
+      "auditNote": "Added articulated Pilates Roll-Up to Teaser V-Sit."
+    },
+    {
+      "id": "dead-bug-weighted-banded",
+      "row": 83,
+      "name": "Weighted or Banded Dead Bug",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "Sec",
+        "Back": "",
+        "Abs": "Pri",
+        "Glutes": "",
+        "Quads": "",
+        "Hamstrings": ""
+      },
+      "workoutCategory": "Either",
+      "equipment": "Band or Weights",
+      "bodyCategories": {
+        "Upper Body": "Sec",
+        "Core": "Pri",
+        "Legs": ""
+      },
+      "auditUpdated": true,
+      "auditNote": "Added contralateral weighted/banded Dead Bug."
+    },
+    {
+      "id": "single-leg-trx-squats",
+      "row": 84,
+      "name": "Single Leg TRX Squats (8 Fwd + 8 Rev)",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "Sec",
+        "Quads": "Pri",
+        "Hamstrings": "Sec"
+      },
+      "workoutCategory": "Either",
+      "equipment": "Weights",
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Sec",
+        "Legs": "Pri"
+      },
+      "auditUpdated": true,
+      "auditNote": "Added user-requested Single Leg TRX Squats alternating forward then reverse squat, 8 on one leg, 8 on the other, holding lightly onto TRX straps for balance."
+    },
+    {
+      "id": "barbell-romanian-deadlift",
+      "row": 85,
+      "name": "Barbell Romanian Deadlift (RDL)",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "Sec",
+        "Abs": "Sec",
+        "Glutes": "Sec",
+        "Quads": "",
+        "Hamstrings": "Pri"
+      },
+      "workoutCategory": "Strength",
+      "equipment": "Weights",
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Sec",
+        "Legs": "Pri"
+      },
+      "auditUpdated": true,
+      "auditNote": "Added heavy Olympic barbell Romanian Deadlift for hamstring and posterior chain hypertrophy."
+    },
+    {
+      "id": "barbell-deadlift",
+      "row": 86,
+      "name": "Barbell Deadlift (Conventional or Sumo)",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "Sec",
+        "Abs": "Sec",
+        "Glutes": "Sec",
+        "Quads": "Sec",
+        "Hamstrings": "Pri"
+      },
+      "workoutCategory": "Strength",
+      "equipment": "Weights",
+      "bodyCategories": {
+        "Upper Body": "Sec",
+        "Core": "Sec",
+        "Legs": "Pri"
+      },
+      "auditUpdated": true,
+      "auditNote": "Added foundational barbell deadlift."
+    },
+    {
+      "id": "good-mornings-barbell-band",
+      "row": 87,
+      "name": "Barbell or Heavy Band Good Mornings",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "Sec",
+        "Abs": "Sec",
+        "Glutes": "Sec",
+        "Quads": "",
+        "Hamstrings": "Pri"
+      },
+      "workoutCategory": "Either",
+      "equipment": "Band or Weights",
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Sec",
+        "Legs": "Pri"
+      },
+      "auditUpdated": true,
+      "auditNote": "Added barbell or heavy band good mornings for hamstrings, glutes, and erectors."
+    },
+    {
+      "id": "nordic-bench-hamstring-bridge",
+      "row": 88,
+      "name": "Feet-Elevated Bench Hamstring Bridge",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "Sec",
+        "Quads": "",
+        "Hamstrings": "Pri"
+      },
+      "workoutCategory": "Either",
+      "equipment": "Any",
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Sec",
+        "Legs": "Pri"
+      },
+      "auditUpdated": true,
+      "auditNote": "Added long-lever feet-elevated hamstring bridge on workout bench."
+    },
+    {
+      "id": "barbell-hip-thrust",
+      "row": 89,
+      "name": "Barbell Hip Thrust on Bench",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "Pri",
+        "Quads": "",
+        "Hamstrings": "Sec"
+      },
+      "workoutCategory": "Strength",
+      "equipment": "Weights",
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Sec",
+        "Legs": "Pri"
+      },
+      "auditUpdated": true,
+      "auditNote": "Added heavy barbell hip thrust on bench for maximal glute overload."
+    },
+    {
+      "id": "landmine-hack-goblet-squat",
+      "row": 90,
+      "name": "Landmine Hack / Front Squat",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "Sec",
+        "Quads": "Pri",
+        "Hamstrings": ""
+      },
+      "workoutCategory": "Either",
+      "equipment": "Weights",
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Sec",
+        "Legs": "Pri"
+      },
+      "auditUpdated": true,
+      "auditNote": "Added landmine front-loaded hack/goblet squat."
+    },
+    {
+      "id": "landmine-lateral-cossack-lunge",
+      "row": 91,
+      "name": "Landmine Lateral Lunge (Cossack Squat)",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "Pri",
+        "Quads": "Sec",
+        "Hamstrings": "Sec"
+      },
+      "workoutCategory": "Either",
+      "equipment": "Weights",
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Sec",
+        "Legs": "Pri"
+      },
+      "auditUpdated": true,
+      "auditNote": "Added frontal-plane landmine lateral lunge / Cossack squat."
     }
   ]
 }

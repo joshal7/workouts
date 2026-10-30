@@ -83,14 +83,14 @@
       "pacingTip": "Treat the middle sets (5 down to 1 and 1 up to 5) as active recovery with smooth transitions so you have energy for the sets of 8, 9, and 10 at the end."
     },
     "6-excercise-pyramid": {
-      "summary": "Add-on / drop-off timed pyramid across 6 exercises over 11 progressive rounds (30s per exercise, 10s transition between exercises, and 60s rest at the end of each set).",
+      "summary": "Add-on / drop-off timed pyramid across 6 exercises over 11 progressive rounds (30s per exercise, 10s transition between exercises, 60s rest at end of set).",
       "howItWorks": [
-        "Set 1: Do 30s of Exercise 1, then rest 60s. Set 2: Do 30s of Ex 1, take a 10s transition, do 30s of Ex 2, then rest 60s.",
+        "Set 1: Do 30s of Exercise 1, then rest 60s. Set 2: Do 30s of Ex 1 → 10s Transition → 30s of Ex 2, then rest 60s.",
         "Keep adding one exercise each set (with a 10s transition between exercises) until Set 6, where you perform all 6 exercises for 30s each, then rest 60s.",
-        "On Sets 7–11, drop Exercise 1, then Exercise 2, etc., until Set 11 finishes with 30s of Exercise 6 followed by 60s rest."
+        "On Sets 7–11, drop Exercise 1, then Exercise 2, etc., until Set 11 finishes with 30s of Exercise 6 followed by a 60s rest."
       ],
-      "timerStructure": "6 exercises · 11 pyramid sets (30s work / 10s transition between exercises / 60s rest at end of set)",
-      "pacingTip": "You will perform every exercise 6 times over the pyramid. Use the 10-second transition to get into position for the next exercise and the 60-second rest at the end of each pyramid set to recover."
+      "timerStructure": "6 exercises · 11 pyramid sets (30s work / 10s transition between exercises / 60s rest per set)",
+      "pacingTip": "You will perform every exercise 6 times over the pyramid. Use the 10-second transition timer to move briskly to the next station and save your full breather for the 60-second rest at the end of each set."
     },
     "8x8-duos": {
       "summary": "4 AMRAP rounds of 2 exercises: alternate 8 reps of each exercise non-stop for 8 minutes per round.",
@@ -506,20 +506,6 @@
       "frameCount": 2,
       "diagram": "diagrams/trx-crunches.svg"
     },
-    "crunch-pike-on-roller": {
-      "summary": "Combo core movement with shins/feet on a foam roller alternating a knee-tuck crunch with a straight-leg hip pike.",
-      "steps": [
-        "Start in a high plank with your shins or insteps resting on a foam roller and hands stacked under shoulders.",
-        "Rep 1 (Crunch): Pull the roller forward by bending your knees into your chest, then extend back to plank.",
-        "Rep 2 (Pike): Keep your legs completely straight and contract your abs to lift your hips high into an inverted V as the roller rolls toward your hands."
-      ],
-      "formTip": "Alternate 1 Crunch + 1 Pike cleanly, pushing the floor away through your shoulders the entire time.",
-      "pose": "trx-feet-plank",
-      "equipVisual": "foam-roller-feet",
-      "badge": "1 CRUNCH + 1 PIKE",
-      "frameCount": 3,
-      "diagram": "diagrams/crunch-pike-on-roller.svg"
-    },
     "leg-lifts": {
       "summary": "Supine straight-leg raise targeting the lower rectus abdominis and hip flexors.",
       "steps": [
@@ -661,32 +647,18 @@
       "diagram": "diagrams/opposite-arm-and-leg-lifts.svg"
     },
     "side-plank-with-hip-dip": {
-      "summary": "Lateral core and oblique exercise lowering and lifting the hips from a forearm side plank.",
+      "summary": "Lateral core, oblique, and glute medius exercise lowering and lifting the hips from a forearm side plank (with optional top-leg abduction raise at the top).",
       "steps": [
         "Lie on your side propped on one forearm with your elbow stacked directly beneath your shoulder and feet stacked.",
-        "Lift your hips into a straight side plank line, then slowly lower your bottom hip down until it lightly taps or hovers above the mat.",
-        "Contract your bottom oblique and glute medius to drive your hips back up slightly past neutral."
+        "Lift your hips into a straight side plank line, then slowly lower your bottom hip down until it lightly hovers above the mat.",
+        "Contract your bottom oblique and glute medius to drive your hips back up—optionally lifting your top leg at the peak for added glute medius load."
       ],
       "formTip": "Keep your chest and hips facing straight forward as if sliding between two panes of glass.",
       "pose": "side-plank",
       "equipVisual": "bodyweight",
-      "badge": "LATERAL HIP DIP",
+      "badge": "HIP DIP / LEG LIFT",
       "frameCount": 2,
       "diagram": "diagrams/side-plank-with-hip-dip.svg"
-    },
-    "side-plank-with-hip-dip-and-leg-lift": {
-      "summary": "Advanced side plank combining a lateral oblique hip dip with a top-leg abduction raise to fire the glute medius.",
-      "steps": [
-        "Hold a strong forearm side plank with elbow under shoulder and body aligned.",
-        "Perform one controlled hip dip down toward the floor and drive your hips back up to the top plank.",
-        "At the top, hold your hips high and lift your top leg straight up toward the ceiling before lowering it and repeating."
-      ],
-      "formTip": "Point the toes of your top foot slightly downward during the leg lift to maximize glute medius recruitment.",
-      "pose": "side-plank-leg-lift",
-      "equipVisual": "bodyweight",
-      "badge": "HIP DIP + LEG LIFT",
-      "frameCount": 3,
-      "diagram": "diagrams/side-plank-with-hip-dip-and-leg-lift.svg"
     },
     "side-plank-with-reach-under": {
       "summary": "Rotational side plank threading the top arm underneath the ribcage and extending back up to target the obliques.",
@@ -758,47 +730,19 @@
       "frameCount": 3,
       "diagram": "diagrams/alternating-glute-bridge-and-butterflies-with-band.svg"
     },
-    "butterflies-with-band": {
-      "summary": "Seated, bridge-held, or supine banded hip abduction pulses targeting the glute medius and outer hip.",
-      "steps": [
-        "Place a resistance band just above your knees while lying in a bridge position or seated with feet together.",
-        "Drive both knees wide apart against the resistance of the band by contracting your outer glutes.",
-        "Pause at peak width for a count, then return halfway in to keep constant tension on the band."
-      ],
-      "formTip": "Keep the outer edges of your feet anchored and never let the band snap your knees inward.",
-      "pose": "supine-bridge",
-      "equipVisual": "band-knees",
-      "badge": "BAND ABDUCTION",
-      "frameCount": 2,
-      "diagram": "diagrams/butterflies-with-band.svg"
-    },
     "lateral-band-walks": {
-      "summary": "Athletic side-to-side steps with a resistance band around the ankles or knees to target the glute medius and quads.",
+      "summary": "Athletic side-to-side lateral steps and forward/backward monster walks in a low quarter-squat with a hip or ankle resistance band.",
       "steps": [
         "Place a loop band around your ankles or just above your knees and sink into an athletic quarter-squat with chest up.",
-        "Take a wide lateral step to the right while keeping your toes pointed straight ahead, then step your left foot in to hip-width.",
-        "Take several steps in one direction before reversing back to the left while maintaining low hip height."
+        "Take wide lateral steps to the right while keeping toes pointed straight ahead, then reverse to the left without letting your feet touch.",
+        "Optionally alternate with 4–6 diagonal forward and backward \"Monster Walk\" steps while maintaining low hip height."
       ],
       "formTip": "Never let your feet come all the way together—keep at least hip-width tension on the band at all times.",
       "pose": "standing-band-walk",
       "equipVisual": "band-ankles",
-      "badge": "LATERAL STEP",
+      "badge": "LATERAL & MONSTER WALK",
       "frameCount": 2,
       "diagram": "diagrams/lateral-band-walks.svg"
-    },
-    "forward-backward-band-walks": {
-      "summary": "Monster walks stepping forward and backward in a low quarter-squat with a resistance band.",
-      "steps": [
-        "Loop a resistance band around your ankles or knees and drop into an athletic quarter-squat with feet shoulder-width apart.",
-        "Step forward and slightly outward keeping constant outward pressure against the band for 4–6 steps.",
-        "Stay low and reverse the monster walk backward for 4–6 steps without bobbing your head up and down."
-      ],
-      "formTip": "Imagine walking underneath a low ceiling so your quads and glutes stay under continuous tension.",
-      "pose": "standing-band-walk",
-      "equipVisual": "band-ankles",
-      "badge": "FWD / BACK WALK",
-      "frameCount": 2,
-      "diagram": "diagrams/forward-backward-band-walks.svg"
     },
     "band-leg-kick-backs-and-diagonals": {
       "summary": "Standing banded hip extension alternating straight-back kickbacks with 45° diagonal glute kickbacks.",
@@ -829,16 +773,16 @@
       "diagram": "diagrams/frog-pumps.svg"
     },
     "squats": {
-      "summary": "Foundational lower-body squat building strength in the quadriceps, glutes, and core.",
+      "summary": "Foundational lower-body squat (Olympic barbell back/front squat from rack, goblet squat, or bodyweight) building quad, glute, and core strength.",
       "steps": [
-        "Stand with feet shoulder-width apart and toes turned out 10°–15° (bodyweight or holding weights/bands).",
+        "Unrack a barbell across your upper traps/front delts (or hold a 35–50 lb dumbbell goblet-style) with feet shoulder-width apart and toes turned out 10°–15°.",
         "Sit your hips back and down while tracking your knees outward in line with your toes until thighs are at least parallel to the floor.",
         "Drive through your mid-foot and heels to stand tall and squeeze your glutes at the top."
       ],
-      "formTip": "Keep your chest proud and full foot anchored—never let your knees cave inward on the way up.",
+      "formTip": "Keep your chest proud and full foot anchored—never let your knees cave inward on the ascent.",
       "pose": "squat-standard",
       "equipVisual": "any-squat",
-      "badge": "FULL DEPTH SQUAT",
+      "badge": "BARBELL / GOBLET SQUAT",
       "frameCount": 2,
       "diagram": "diagrams/squats.svg"
     },
@@ -857,32 +801,18 @@
       "diagram": "diagrams/sumo-squats.svg"
     },
     "1-5-squats": {
-      "summary": "One-and-a-half rep squat: descend to the bottom, rise halfway up, drop back to the bottom, and stand all the way up.",
+      "summary": "One-and-a-half rep pulse & isometric hold squat: descend to the bottom, rise halfway up, pause/drop back to the bottom, and stand all the way up.",
       "steps": [
-        "Lower into a full-depth squat until your thighs are parallel to the floor.",
-        "Press halfway up (about 45° knee angle), pause briefly, then lower all the way back down into the bottom of the squat.",
+        "Lower into a full-depth parallel squat (with barbell, goblet dumbbell, or bodyweight) and hold active bottom tension.",
+        "Press halfway up (about 45° knee angle), pause for 1 full second, then lower all the way back down into the bottom of the squat.",
         "Drive forcefully from the bottom all the way to standing—that entire sequence counts as 1 rep!"
       ],
-      "formTip": "Control the transition at the halfway point rather than bouncing out of the bottom.",
+      "formTip": "Control the isometric pause at the bottom and halfway point rather than bouncing out of the hole.",
       "pose": "squat-standard",
       "equipVisual": "any-squat",
-      "badge": "BOTTOM → HALF → TOP",
+      "badge": "1.5 PULSE & HOLD",
       "frameCount": 3,
       "diagram": "diagrams/1-5-squats.svg"
-    },
-    "squat-and-hold": {
-      "summary": "Isometric bottom-hold squat building intense quad and glute muscular endurance.",
-      "steps": [
-        "Set your feet shoulder-width apart and lower into a parallel squat with chest proud and core braced.",
-        "Hold the bottom parallel position (or pause for 3–5 seconds at the bottom of each rep) while keeping active tension in your quads and glutes.",
-        "Drive up through your heels when prompted or at the end of each isometric hold."
-      ],
-      "formTip": "Stay active at parallel—do not sink passively onto your calf/knee joints.",
-      "pose": "squat-standard",
-      "equipVisual": "any-squat",
-      "badge": "ISOMETRIC HOLD",
-      "frameCount": 2,
-      "diagram": "diagrams/squat-and-hold.svg"
     },
     "wide-then-narrow-squats": {
       "summary": "Dynamic squat variation alternating between a wide sumo stance and a narrow shoulder-width stance.",
@@ -897,20 +827,6 @@
       "badge": "WIDE ↔ NARROW",
       "frameCount": 3,
       "diagram": "diagrams/wide-then-narrow-squats.svg"
-    },
-    "jump-out-squats": {
-      "summary": "Explosive in-and-out squat jacks hopping feet from narrow to wide directly into a low squat.",
-      "steps": [
-        "Start standing tall with feet together.",
-        "Hop both feet out wide while dropping immediately into a deep squat (optionally touching the floor between your feet with one hand).",
-        "Explode upward out of the squat to hop your feet back together at the top, then immediately drop into the next rep."
-      ],
-      "formTip": "Absorb the landing by bending your hips and knees immediately as your feet touch down wide.",
-      "pose": "squat-jump",
-      "equipVisual": "bodyweight",
-      "badge": "IN & OUT SQUAT JACK",
-      "frameCount": 2,
-      "diagram": "diagrams/jump-out-squats.svg"
     },
     "squat-jumps": {
       "summary": "Plyometric vertical jump squat developing lower-body explosive power and conditioning.",
@@ -1065,6 +981,398 @@
       "badge": "TRX HEEL CURL",
       "frameCount": 2,
       "diagram": "diagrams/trx-hamstring-curls.svg"
+    },
+    "incline-barbell-bench-press": {
+      "summary": "Heavy upper-chest compound press using an Olympic barbell on a 30°–45° incline bench to build clavicular pectoral, anterior deltoid, and tricep mass.",
+      "steps": [
+        "Set your adjustable bench to a 30°–45° incline inside the squat rack and grip the Olympic barbell slightly wider than shoulder-width.",
+        "Unrack the bar over your upper chest and lower it under control until it lightly touches your upper sternum just below the collarbones.",
+        "Drive your feet into the floor and press the barbell straight up and slightly back to full lockout."
+      ],
+      "formTip": "Keep your elbows tucked at roughly a 45°–60° angle to your torso rather than flaring 90° out to protect your shoulders and maximize upper-pec drive.",
+      "pose": "incline-bench-press",
+      "equipVisual": "barbell-bench",
+      "badge": "30° INCLINE BARBELL",
+      "frameCount": 2,
+      "diagram": "diagrams/incline-barbell-bench-press.svg"
+    },
+    "barbell-bench-press": {
+      "summary": "Primary horizontal barbell press from the squat rack & flat bench to overload the pectorals, triceps, and anterior deltoids beyond 50 lb dumbbell limits.",
+      "steps": [
+        "Lie flat on the bench under your rack with eyes beneath the Olympic barbell, feet planted firmly, and shoulder blades pinched together.",
+        "Unrack the bar with straight arms, then lower it in a controlled arc to your mid-chest/sternum.",
+        "Press the bar forcefully back up over your shoulders while keeping your glutes and upper back anchored to the bench."
+      ],
+      "formTip": "Maintain a slight natural arch in your mid-back with your shoulder blades retracted down into the bench pad throughout every rep.",
+      "pose": "supine-press",
+      "equipVisual": "barbell-bench",
+      "badge": "FLAT BARBELL PRESS",
+      "frameCount": 2,
+      "diagram": "diagrams/barbell-bench-press.svg"
+    },
+    "landmine-single-arm-press": {
+      "summary": "Angled unilateral shoulder press using the landmine attachment to build deltoid, upper-chest, tricep, and anti-rotation core strength in a shoulder-friendly arc.",
+      "steps": [
+        "Stand in a staggered split stance or half-kneeling position holding the loaded end of the landmine barbell at shoulder height in one hand.",
+        "Brace your abs and glutes, then press the barbell sleeve up and forward along its natural diagonal arc to full lockout.",
+        "Lean your torso slightly into the top of the press so your bicep finishes by your ear, then lower slowly back to your shoulder; switch arms after completing your reps."
+      ],
+      "formTip": "Keep your ribcage stacked over your pelvis—do not let the asymmetric load twist your shoulders or arch your lower back.",
+      "pose": "landmine-press",
+      "equipVisual": "landmine",
+      "badge": "ANGLED LANDMINE PRESS",
+      "frameCount": 2,
+      "diagram": "diagrams/landmine-single-arm-press.svg"
+    },
+    "barbell-push-press": {
+      "summary": "Explosive overhead barbell press using a crisp quarter-squat leg drive to launch heavy barbell loads overhead for total-body power and shoulder strength.",
+      "steps": [
+        "Unrack the Olympic barbell in a front-rack position resting across your front deltoids/clavicles with elbows slightly forward and feet hip-width apart.",
+        "Dip your knees 3–4 inches into a brisk, upright quarter-squat to load your quads and glutes.",
+        "Drive violently through the floor to extend your hips and knees, using that upward momentum to press the barbell straight overhead to lockout."
+      ],
+      "formTip": "Keep your torso vertical during the dip—leaning forward pushes the bar out in front of you instead of straight overhead.",
+      "pose": "standing-press",
+      "equipVisual": "barbell-overhead",
+      "badge": "DIP & DRIVE PRESS",
+      "frameCount": 2,
+      "diagram": "diagrams/barbell-push-press.svg"
+    },
+    "landmine-meadows-row": {
+      "summary": "Heavy single-arm landmine row (straddling the bar or perpendicular Meadows stance) for deep lat stretch and thick mid-back development.",
+      "steps": [
+        "Stand staggered alongside or perpendicular to the loaded sleeve of the landmine barbell and hinge at the hips to a 45° flat-back angle.",
+        "Rest your non-working forearm on your front thigh and grip the barbell sleeve or collar with your working hand.",
+        "Drive your elbow back and high toward your hip crease, feeling a full lat and rhomboid contraction before lowering to a deep stretch."
+      ],
+      "formTip": "Because the landmine pivots in an arc, pull your elbow slightly back toward your hip rather than straight vertical.",
+      "pose": "hinge-row",
+      "equipVisual": "landmine",
+      "badge": "LANDMINE / MEADOWS ROW",
+      "frameCount": 2,
+      "diagram": "diagrams/landmine-meadows-row.svg"
+    },
+    "barbell-pendlay-row": {
+      "summary": "Heavy bilateral bent-over or Pendlay barbell row building thickness across the lats, rhomboids, traps, spinal erectors, and biceps.",
+      "steps": [
+        "Stand with feet hip-width apart over the Olympic barbell, hinge your hips back until your torso is 15°–45° above parallel, and grip the bar just outside your knees.",
+        "Brace your core and pull the barbell explosively into your lower ribcage / upper abdomen by driving your elbows back.",
+        "Squeeze your shoulder blades together at the top for a half-second, then lower the bar under control."
+      ],
+      "formTip": "Keep your hip hinge angle locked throughout the set—do not stand upright to heave the bar with momentum.",
+      "pose": "hinge-row",
+      "equipVisual": "barbell-hinge",
+      "badge": "HEAVY BARBELL ROW",
+      "frameCount": 2,
+      "diagram": "diagrams/barbell-pendlay-row.svg"
+    },
+    "chest-supported-dumbbell-row": {
+      "summary": "Strict bilateral dumbbell row lying prone on a 30°–45° incline bench to eliminate lower-back momentum and isolate the lats, rhomboids, and rear delts.",
+      "steps": [
+        "Set your bench to a 30°–45° incline and lie chest-down with your feet planted on the floor and dumbbells hanging straight down.",
+        "Retract your shoulder blades and drive both elbows back past your torso while keeping your chest glued to the pad.",
+        "Pause for 1 full second at peak back contraction, then lower the dumbbells slowly to a full dead-hang stretch."
+      ],
+      "formTip": "Let your shoulder blades protract slightly at the bottom to stretch the lats, then initiate every pull by pinching the blades together.",
+      "pose": "incline-bench-row",
+      "equipVisual": "bench-weights",
+      "badge": "CHEST-SUPPORTED ROW",
+      "frameCount": 2,
+      "diagram": "diagrams/chest-supported-dumbbell-row.svg"
+    },
+    "high-band-lat-pulldown": {
+      "summary": "Straight-arm lat pulldown (prayer pulldown) using a large rubber band anchored to the pull-up bar to isolate the latissimus dorsi and serratus.",
+      "steps": [
+        "Loop a medium-to-heavy rubber band over your pull-up bar, step back holding the band with both hands, and hinge forward 30°–45° with a flat back.",
+        "Keeping your arms straight (with only a soft 10° elbow lock), sweep your hands down in a wide arc from overhead all the way to your outer thighs.",
+        "Squeeze your lats and abs hard at the bottom for 1 second, then resist the band slowly as your arms return overhead."
+      ],
+      "formTip": "Imagine pushing your hands down through heavy water—keep your shoulders depressed away from your ears so your lats do 100% of the work.",
+      "pose": "standing-facepull",
+      "equipVisual": "band-high",
+      "badge": "STRAIGHT-ARM PULLDOWN",
+      "frameCount": 2,
+      "diagram": "diagrams/high-band-lat-pulldown.svg"
+    },
+    "incline-dumbbell-curls": {
+      "summary": "Seated incline bench dumbbell curl placing the long head of the biceps under maximum loaded stretch behind the torso.",
+      "steps": [
+        "Sit back against a 45°–60° incline bench holding dumbbells at arm’s length so your elbows hang slightly behind your torso.",
+        "Keeping your upper arms pinned perpendicular to the floor, curl the dumbbells up while supinating your wrists (palms up).",
+        "Squeeze your biceps at the top without letting your elbows drift forward, then lower slowly for 3 seconds to a full stretch."
+      ],
+      "formTip": "Because the incline stretches the bicep tendon at the bottom, 20–35 lb dumbbells feel much heavier than standing curls—prioritize strict elbow position.",
+      "pose": "incline-bench-curl",
+      "equipVisual": "bench-weights",
+      "badge": "LONG-HEAD STRETCH CURL",
+      "frameCount": 2,
+      "diagram": "diagrams/incline-dumbbell-curls.svg"
+    },
+    "hammer-zottman-curls": {
+      "summary": "Dumbbell curl variation targeting the biceps, brachialis, and brachioradialis via neutral-grip hammer curls or eccentric-pronated Zottman curls.",
+      "steps": [
+        "Stand tall holding dumbbells at your sides with a neutral \"hammer\" grip (palms facing each other) or supinated grip.",
+        "For Hammer Curls, curl straight up keeping thumbs pointed toward the ceiling; for Zottman Curls, curl up palms-up, then rotate palms-down at the top.",
+        "Lower the weights slowly over 2–3 seconds to full elbow extension while keeping your elbows glued to your ribs."
+      ],
+      "formTip": "Rotating to an overhand grip on the way down (Zottman style) builds massive forearm and elbow tendon resilience.",
+      "pose": "standing-curl",
+      "equipVisual": "dumbbells-band",
+      "badge": "HAMMER / ZOTTMAN CURL",
+      "frameCount": 2,
+      "diagram": "diagrams/hammer-zottman-curls.svg"
+    },
+    "overhead-tricep-extension": {
+      "summary": "Seated or standing overhead dumbbell tricep extension stretching and overloading the long head of the triceps.",
+      "steps": [
+        "Sit upright on a 90° bench (or flat bench) holding one heavy dumbbell vertically with both hands cupped under the top plate overhead.",
+        "Keep your elbows tucked in close to your ears and lower the dumbbell behind your head until your forearms reach a deep stretch below 90°.",
+        "Drive through your triceps to extend your arms straight back overhead without flaring your ribcage."
+      ],
+      "formTip": "Overhead shoulder flexion stretches the long head of the triceps—the largest muscle belly of the upper arm.",
+      "pose": "seated-overhead-tricep",
+      "equipVisual": "bench-weights",
+      "badge": "LONG-HEAD TRICEP EXT",
+      "frameCount": 2,
+      "diagram": "diagrams/overhead-tricep-extension.svg"
+    },
+    "high-band-tricep-pushdown": {
+      "summary": "High-rep resistance band tricep pushdown anchored from the pull-up bar for joint-friendly lateral/medial tricep burnout.",
+      "steps": [
+        "Loop a rubber band over your pull-up bar and grip both sides at chest height with your elbows pinned tightly against your ribs.",
+        "Without moving your upper arms, press the band straight down until your elbows are 100% locked out by your thighs.",
+        "Pull the ends of the band slightly apart at the bottom for a 1-second peak tricep contraction, then return to 90° elbow flexion."
+      ],
+      "formTip": "Keep your shoulders rolled back and down so your chest doesn’t hunch over the band.",
+      "pose": "standing-facepull",
+      "equipVisual": "band-high",
+      "badge": "BAND PUSHDOWN LOCKOUT",
+      "frameCount": 2,
+      "diagram": "diagrams/high-band-tricep-pushdown.svg"
+    },
+    "landmine-180-rotations": {
+      "summary": "Explosive standing rotational rainbow sweep with the landmine barbell targeting the obliques, transverse abdominis, shoulders, and hips.",
+      "steps": [
+        "Stand facing the landmine pivot with feet shoulder-width apart, holding the end of the barbell sleeve with both hands extended in front of you.",
+        "Sweep the barbell up in a high rainbow arc across the center line and lower it under control to your left hip while pivoting slightly on your back foot.",
+        "Brace your obliques to reverse the arc back overhead and down to your right hip in a smooth 180° rotational rhythm."
+      ],
+      "formTip": "Keep your arms relatively long so your core and obliques control the rotational torque rather than turning it into a bicep curl.",
+      "pose": "landmine-rotation",
+      "equipVisual": "landmine",
+      "badge": "180° RAINBOW ROTATION",
+      "frameCount": 3,
+      "diagram": "diagrams/landmine-180-rotations.svg"
+    },
+    "hanging-leg-knee-raises": {
+      "summary": "Strict hanging knee or straight-leg raise from the pull-up bar to build lower rectus abdominis, oblique, hip flexor, and grip strength.",
+      "steps": [
+        "Hang from your pull-up bar with an overhand shoulder-width grip, active shoulders (ears away from shoulders), and legs together.",
+        "Exhale and curl your pelvis upward (posterior pelvic tilt) to lift your knees—or straight legs—until your thighs pass parallel to the floor.",
+        "Pause briefly at the top without swinging, then lower your legs slowly over 2–3 seconds back to a dead hang."
+      ],
+      "formTip": "Focus on curling your tailbone up toward the bar—if you only lift your knees to 90° with a flat pelvis, your hip flexors do all the work instead of your lower abs.",
+      "pose": "pullup-hang",
+      "equipVisual": "pullup-bar",
+      "badge": "HANGING PELVIC CURL",
+      "frameCount": 2,
+      "diagram": "diagrams/hanging-leg-knee-raises.svg"
+    },
+    "banded-pallof-press": {
+      "summary": "Anti-rotation isometric core press using a rubber band anchored to the squat rack upright tobulletproof the obliques and deep spinal stabilizers.",
+      "steps": [
+        "Anchor a rubber band at chest height on your squat rack upright, stand sideways to the rack in an athletic stance, and hold the band at your sternum.",
+        "Step away until there is strong lateral tension trying to twist your torso toward the rack.",
+        "Press your hands straight out in front of your chest to full extension, hold for 2 seconds resisting all rotation, then return to your chest; switch sides halfway."
+      ],
+      "formTip": "Widen your stance for easier balance or narrow your feet together to make your obliques and glutes work twice as hard.",
+      "pose": "standing-facepull",
+      "equipVisual": "band-high",
+      "badge": "ANTI-ROTATION PRESS",
+      "frameCount": 2,
+      "diagram": "diagrams/banded-pallof-press.svg"
+    },
+    "copenhagen-side-plank": {
+      "summary": "Side plank with the top foot/shin supported on a workout bench to intensely strengthen the inner-thigh adductors, obliques, and lateral hip stabilizers.",
+      "steps": [
+        "Lie on your side perpendicular to your bench, prop yourself on your bottom forearm under your shoulder, and rest your top foot or shin on top of the bench.",
+        "Press your top leg down into the bench to lift your hips off the floor into a straight side plank line, hovering or lifting your bottom leg underneath.",
+        "Hold isometrically or perform controlled hip dips + adductor squeezes for half the interval before switching sides."
+      ],
+      "formTip": "Rest your inner knee/shin on the bench for a shorter lever if resting only your foot/ankle on the bench feels too intense on the groin.",
+      "pose": "side-plank",
+      "equipVisual": "bench-any",
+      "badge": "ADDUCTOR SIDE PLANK",
+      "frameCount": 2,
+      "diagram": "diagrams/copenhagen-side-plank.svg"
+    },
+    "pilates-hundred": {
+      "summary": "Signature Pilates mat endurance exercise holding a hollow curl with legs at 45° while pumping straight arms vigorously in 5-count breath cycles.",
+      "steps": [
+        "Lie on your yoga mat, curl your head and shoulder blades up into a tight Pilates C-curve, and extend your legs out to a 45° angle (or tabletop).",
+        "Reach your arms long beside your hips 2 inches off the mat and pump them vigorously up and down 6–8 inches.",
+        "Inhale for 5 rapid arm pumps and exhale for 5 rapid arm pumps while keeping your lower back imprinted into the mat."
+      ],
+      "formTip": "Look toward your navel and anchor your lower ribs down—if your neck fatigues, support your head with one hand while pumping the other.",
+      "pose": "supine-v-up",
+      "equipVisual": "bodyweight",
+      "badge": "5 INHALE · 5 EXHALE",
+      "frameCount": 2,
+      "diagram": "diagrams/pilates-hundred.svg"
+    },
+    "pilates-single-double-leg-stretch": {
+      "summary": "Dynamic Pilates abdominal flow alternating single-leg knee pulls with full double-leg hollow extensions.",
+      "steps": [
+        "Curl your head and shoulders off the yoga mat into an abdominal C-curve with knees drawn into tabletop.",
+        "Single-Leg Phase: Pull your right knee into your chest while extending your left leg long at 45°, switch legs for 2–4 reps.",
+        "Double-Leg Phase: Inhale to reach both arms overhead and both legs out to 45° simultaneously, then exhale to sweep your arms around and hug both knees in."
+      ],
+      "formTip": "Keep your shoulder blades lifted at the exact same height even when your arms and legs reach away from your center.",
+      "pose": "supine-bicycle",
+      "equipVisual": "bodyweight",
+      "badge": "PILATES AB SERIES",
+      "frameCount": 2,
+      "diagram": "diagrams/pilates-single-double-leg-stretch.svg"
+    },
+    "pilates-roll-up-teaser": {
+      "summary": "Articulated Pilates spinal roll-up transitioning smoothly into a balanced V-sit Teaser hold to develop deep core control and hamstring flexibility.",
+      "steps": [
+        "Lie flat on your yoga mat with arms extended overhead and legs pressed tightly together.",
+        "Inhale to float your arms toward the ceiling, then exhale to peel your spine off the mat one vertebra at a time into a balanced V-sit Teaser with legs lifted at 45°.",
+        "Hold the Teaser balance for 1–2 seconds with arms parallel to your shins, then roll down slowly bone-by-bone to the mat."
+      ],
+      "formTip": "Avoid jerking with momentum through the sticking point—exhale deeply and hollow your navel back into your spine.",
+      "pose": "supine-v-up",
+      "equipVisual": "bodyweight",
+      "badge": "ROLL-UP TO TEASER",
+      "frameCount": 2,
+      "diagram": "diagrams/pilates-roll-up-teaser.svg"
+    },
+    "dead-bug-weighted-banded": {
+      "summary": "Contralateral anti-extension core exercise lying supine while extending opposite arm and leg under dumbbell or band tension.",
+      "steps": [
+        "Lie on your back with knees in 90° tabletop, lower back pressed flat into the mat, and hands holding dumbbells (or a band anchored behind you) straight above your chest.",
+        "Slowly lower your right arm overhead and extend your left leg out to a 2-inch hover simultaneously without letting your lower back arch.",
+        "Exhale to return both limbs to the center tabletop position, then repeat with your left arm and right leg."
+      ],
+      "formTip": "Imagine crushing a grape under your lower back—if your lumbar spine lifts off the mat, shorten the leg extension slightly.",
+      "pose": "supine-leg-lift",
+      "equipVisual": "dumbbells-band",
+      "badge": "CONTRALATERAL CORE",
+      "frameCount": 2,
+      "diagram": "diagrams/dead-bug-weighted-banded.svg"
+    },
+    "single-leg-trx-squats": {
+      "summary": "Unilateral single-leg TRX squat complex alternating 1 forward pistol squat (free leg in front) and 1 reverse shrimp squat (free leg behind) for 8 reps on one leg, then 8 on the other, holding lightly onto the TRX straps for balance.",
+      "steps": [
+        "Stand facing the TRX anchor holding the handles lightly with fingertips at waist height—use the straps strictly for balance rather than pulling yourself up.",
+        "On your right standing leg, extend your left leg straight forward and descend into a deep Forward Single-Leg Squat, driving through your right heel to stand; immediately sweep your left leg back behind you and lower into a Reverse Single-Leg Squat.",
+        "Continue alternating Forward then Reverse squats until you complete 8 total reps on the right leg, then switch to complete 8 alternating Forward + Reverse reps on the left leg."
+      ],
+      "formTip": "Keep your grip feather-light on the TRX handles so your standing quad, glute, and hip stabilizers carry 95%+ of your bodyweight across both forward and reverse planes.",
+      "pose": "trx-squat",
+      "equipVisual": "trx-pull",
+      "badge": "8 R + 8 L (FWD ↔ REV)",
+      "frameCount": 2,
+      "diagram": "diagrams/single-leg-trx-squats.svg"
+    },
+    "barbell-romanian-deadlift": {
+      "summary": "Heavy posterior-chain hip hinge with an Olympic barbell to overload the hamstrings, glutes, and spinal erectors through a deep eccentric stretch.",
+      "steps": [
+        "Stand tall holding a loaded Olympic barbell against your upper thighs with a shoulder-width overhand grip and a soft 15° knee bend.",
+        "Push your hips straight back toward the wall behind you while keeping the barbell shaving close down your thighs and shins with a flat back.",
+        "Pause at mid-shin when you feel a maximal hamstring stretch, then drive your hips forward and squeeze your glutes to stand tall."
+      ],
+      "formTip": "Keep your lats engaged as if squeezing oranges in your armpits so the barbell never drifts forward away from your shins.",
+      "pose": "hip-hinge-rdl",
+      "equipVisual": "barbell-hinge",
+      "badge": "HEAVY BARBELL RDL",
+      "frameCount": 2,
+      "diagram": "diagrams/barbell-romanian-deadlift.svg"
+    },
+    "barbell-deadlift": {
+      "summary": "Foundational full-body strength lift pulling a loaded Olympic barbell from the floor (conventional or sumo stance) to build total posterior-chain power.",
+      "steps": [
+        "Stand with your mid-foot directly beneath the Olympic barbell (hip-width for Conventional or wide turnout for Sumo) and grip the bar outside or inside your knees.",
+        "Drop your hips until your shins touch the bar, lift your chest to flatten your back, and pull the slack out of the bar.",
+        "Push the floor away with your legs while driving your hips forward to stand tall to full lockout, then return the bar to the floor under control."
+      ],
+      "formTip": "Think of the first half of the deadlift as a leg press through the floor, and the second half as a hip thrust once the bar passes your knees.",
+      "pose": "hip-hinge-rdl",
+      "equipVisual": "barbell-hinge",
+      "badge": "CONVENTIONAL / SUMO PULL",
+      "frameCount": 2,
+      "diagram": "diagrams/barbell-deadlift.svg"
+    },
+    "good-mornings-barbell-band": {
+      "summary": "Loaded hip hinge with an Olympic barbell across the upper back (or a thick rubber band looped under the feet and over the neck) targeting the hamstrings, glutes, and erectors.",
+      "steps": [
+        "Place a barbell across your upper traps (or stand on a heavy loop band with the top looped behind your neck/shoulders) with feet shoulder-width apart.",
+        "Unlock your knees slightly and hinge your hips straight back until your torso is 15°–30° above parallel to the floor.",
+        "Feel the stretch in your hamstrings, then drive your hips forward powerfully to return to standing."
+      ],
+      "formTip": "Brace your core 360° before every hinge so your lumbar spine remains rigid from start to finish.",
+      "pose": "hip-hinge-rdl",
+      "equipVisual": "barbell-hinge",
+      "badge": "LOADED HIP HINGE",
+      "frameCount": 2,
+      "diagram": "diagrams/good-mornings-barbell-band.svg"
+    },
+    "nordic-bench-hamstring-bridge": {
+      "summary": "Long-lever feet-elevated hamstring bridge with heels dug into a workout bench to isolate the distal hamstrings and glutes.",
+      "steps": [
+        "Lie on your back on the yoga mat and place both heels on top of your workout bench with your knees bent at roughly a 110°–120° long-lever angle.",
+        "Dig your heels straight down into the bench pad to lift your hips into a bridge without letting your lower back hyperextend.",
+        "Hold the intense hamstring contraction at the top for 1 full second (or perform single-leg eccentric lowers), then lower with control."
+      ],
+      "formTip": "Keeping your knees slightly more extended (120° rather than 90°) shifts the load directly from the glutes onto the hamstrings.",
+      "pose": "supine-bridge",
+      "equipVisual": "bench-any",
+      "badge": "FEET-ELEVATED HAMSTRING",
+      "frameCount": 2,
+      "diagram": "diagrams/nordic-bench-hamstring-bridge.svg"
+    },
+    "barbell-hip-thrust": {
+      "summary": "Heavy bilateral glute builder with upper back supported on a bench and a loaded Olympic barbell across the hips (plus optional hip band above knees).",
+      "steps": [
+        "Sit on the floor with your upper back/shoulder blades resting against the edge of your workout bench and roll a loaded barbell over your hip crease.",
+        "Plant your feet shoulder-width apart so your shins are vertical at the top, tuck your chin, and drive through your heels to lift the bar to full hip extension.",
+        "Squeeze your glutes hard at the flat tabletop lockout for 1–2 seconds, then lower your hips under control."
+      ],
+      "formTip": "Wear a hip band just above your knees while thrusting the barbell to simultaneously fire the upper/outer glute medius and glute maximus.",
+      "pose": "bench-glute-lift",
+      "equipVisual": "barbell-bench",
+      "badge": "BARBELL HIP THRUST",
+      "frameCount": 2,
+      "diagram": "diagrams/barbell-hip-thrust.svg"
+    },
+    "landmine-hack-goblet-squat": {
+      "summary": "Front-loaded squat holding the angled landmine barbell sleeve at the chest, allowing an upright torso that deeply targets the quads, glutes, and core.",
+      "steps": [
+        "Stand facing the landmine holding the end of the loaded barbell sleeve cupped against your upper sternum with both hands and elbows tucked.",
+        "Lean slightly into the angled path of the bar as you sit your hips straight down into a deep full-range squat.",
+        "Drive through your mid-foot and heels to press back up along the bar’s arc to standing."
+      ],
+      "formTip": "Because the landmine counterbalance lets you sit back without falling over, you can achieve deeper knee flexion and quad recruitment with zero lower-back strain.",
+      "pose": "squat-standard",
+      "equipVisual": "landmine",
+      "badge": "LANDMINE FRONT SQUAT",
+      "frameCount": 2,
+      "diagram": "diagrams/landmine-hack-goblet-squat.svg"
+    },
+    "landmine-lateral-cossack-lunge": {
+      "summary": "Frontal-plane lateral lunge (Cossack squat) loaded with the landmine or dumbbell to build outer glute, quad, and inner-thigh mobility and strength.",
+      "steps": [
+        "Stand with a wide stance holding the landmine barbell sleeve (or a dumbbell) at chest or hip height.",
+        "Shift your weight laterally to the right, sitting your right hip back and down into a deep single-leg squat while keeping your left leg completely straight.",
+        "Drive forcefully through your right heel to return to the center, then repeat on the left side (or complete all reps on one side before switching)."
+      ],
+      "formTip": "Keep the heel of your working leg glued flat on the floor while letting the toes of your straight trail leg rotate upward if you sink into a deep Cossack squat.",
+      "pose": "squat-wide",
+      "equipVisual": "landmine",
+      "badge": "LATERAL / COSSACK LUNGE",
+      "frameCount": 2,
+      "diagram": "diagrams/landmine-lateral-cossack-lunge.svg"
     }
   }
 }
