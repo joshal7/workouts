@@ -84,8 +84,7 @@ export const TIMED_HIIT_WORKOUT_IDS = new Set([
   '30-20-10-10-20-30',
   '6-excercise-pyramid',
   '5-constant-5-change-40-20',
-  '8x8-duos',
-  '10-to-1-to-10'
+  '8x8-duos'
 ]);
 
 export const CUSTOM_TIMER_PRESETS = [
@@ -142,11 +141,11 @@ export const CUSTOM_TIMER_PRESETS = [
 ];
 
 /**
- * Check whether a workout is a timed HIIT workout.
+ * Check whether a workout is a timed HIIT workout (excludes untimed Strength workouts and rep-only ladders).
  */
 export function isTimedHiitWorkout(workout) {
   if (!workout) return false;
-  return TIMED_HIIT_WORKOUT_IDS.has(workout.id) || workout.workoutCategory === 'HIIT';
+  return TIMED_HIIT_WORKOUT_IDS.has(workout.id);
 }
 
 /**

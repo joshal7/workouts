@@ -36,11 +36,10 @@ const dataService = new DataService();
 const MUSCLE_FILTER_PILLS = [
   { value: 'All', label: 'All' },
   { value: 'Upper Body', label: 'Upper Body' },
-  { value: 'Lower Body', label: 'Lower Body' },
   { value: 'Core', label: 'Core' },
-  { value: 'Lower Body and Core', label: 'Lower Body & Core' },
-  { value: 'Upper Body and Core', label: 'Upper Body & Core' },
   { value: 'Legs', label: 'Legs' },
+  { value: 'Legs and Core', label: 'Legs & Core' },
+  { value: 'Upper Body and Core', label: 'Upper & Core' },
   { value: 'Chest', label: 'Chest' },
   { value: 'Back', label: 'Back' },
   { value: 'Shoulders', label: 'Shoulders' },
@@ -577,6 +576,14 @@ function updateWorkoutTimerBarUI(wkState) {
   const wk = wkState.workout;
   const isHiit = isTimedHiitWorkout(wk);
 
+  // Do not show any timer bar for untimed Strength workouts
+  if (!isHiit) {
+    els.workoutTimerBar.hidden = true;
+    return;
+  }
+
+  els.workoutTimerBar.hidden = false;
+
   // Always rebuild steps if empty or out of sync with active exercises
   if (!timerState.steps || timerState.steps.length === 0) {
     rebuildTimerSteps(true);
@@ -607,19 +614,13 @@ function updateWorkoutTimerBarUI(wkState) {
   const firstRest = fullWorkoutSteps.find(s => s.type === 'rest');
   const cdSec = fullWorkoutSteps[0]?.duration || 10;
 
-  if (isHiit) {
-    els.openWorkoutTimerBtn.hidden = false;
-    if (firstWork && firstRest) {
-      els.workoutTimerBtnLabel.textContent = `Timer (${cdSec}s Yellow · ${workSteps.length}× ${firstWork.duration}s/${firstRest.duration}s)`;
-    } else if (firstWork) {
-      els.workoutTimerBtnLabel.textContent = `Timer (${cdSec}s Yellow · ${workSteps.length}× ${firstWork.duration}s)`;
-    } else {
-      els.workoutTimerBtnLabel.textContent = 'Start HIIT Timer';
-    }
+  els.openWorkoutTimerBtn.hidden = false;
+  if (firstWork && firstRest) {
+    els.workoutTimerBtnLabel.textContent = `Timer (${cdSec}s Yellow · ${workSteps.length}× ${firstWork.duration}s/${firstRest.duration}s)`;
+  } else if (firstWork) {
+    els.workoutTimerBtnLabel.textContent = `Timer (${cdSec}s Yellow · ${workSteps.length}× ${firstWork.duration}s)`;
   } else {
-    // Even for Strength workouts, allow launching timer or custom timer
-    els.openWorkoutTimerBtn.hidden = false;
-    els.workoutTimerBtnLabel.textContent = `Timer (${cdSec}s + ${workSteps.length} Sets)`;
+    els.workoutTimerBtnLabel.textContent = 'Start HIIT Timer';
   }
 }
 

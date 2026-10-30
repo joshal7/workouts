@@ -368,15 +368,16 @@ async function runBrowserCDPTests(wsUrl) {
           document.querySelector('#exclusionMuscleFilterBar [data-muscle-filter="All"]').click();
           document.querySelector('[data-close-modal="settingsModal"]').click();
 
-          // Test main Focus dropdown (#bodyCategorySelect) filtering by specific muscle group "Glutes" and "Lower Body and Core"
+          // Test main Focus dropdown (#bodyCategorySelect) filtering by "Legs and Core" and "Glutes" (and no redundant "Lower Body")
           const focusSelect = document.getElementById('bodyCategorySelect');
-          const hasLowerBodyOpt = !!focusSelect.querySelector('option[value="Lower Body"]');
+          const noRedundantLowerBodyOpt = !focusSelect.querySelector('option[value="Lower Body"]');
+          const hasLegsOpt = !!focusSelect.querySelector('option[value="Legs"]');
           const hasCoreOpt = !!focusSelect.querySelector('option[value="Core"]');
-          const hasLowerBodyAndCoreOpt = !!focusSelect.querySelector('option[value="Lower Body and Core"]');
+          const hasLegsAndCoreOpt = !!focusSelect.querySelector('option[value="Legs and Core"]');
 
-          focusSelect.value = 'Lower Body and Core';
+          focusSelect.value = 'Legs and Core';
           focusSelect.dispatchEvent(new Event('change'));
-          const lowerAndCoreSlotsCount = document.querySelectorAll('.exercise-slot').length;
+          const legsAndCoreSlotsCount = document.querySelectorAll('.exercise-slot').length;
 
           focusSelect.value = 'Glutes';
           focusSelect.dispatchEvent(new Event('change'));
@@ -386,10 +387,10 @@ async function runBrowserCDPTests(wsUrl) {
           );
           const allSlotsHaveGlutes = slotMetasGlutes.length > 0 && slotMetasGlutes.every(txt => txt.includes('Glutes'));
 
-          // Test Swap Modal muscle filter pill ("Hamstrings" and "Lower Body and Core")
+          // Test Swap Modal muscle filter pill ("Hamstrings" and "Legs and Core")
           document.querySelector('.exercise-slot[data-round-index="0"][data-slot-index="0"] .swap-trigger-btn').click();
-          const hasSwapLowerBodyAndCorePill = !!document.querySelector(
-            '#swapMuscleFilterBar [data-muscle-filter="Lower Body and Core"]'
+          const hasSwapLegsAndCorePill = !!document.querySelector(
+            '#swapMuscleFilterBar [data-muscle-filter="Legs and Core"]'
           );
           const swapHamPill = document.querySelector('#swapMuscleFilterBar [data-muscle-filter="Hamstrings"]');
           swapHamPill.click();
@@ -404,11 +405,12 @@ async function runBrowserCDPTests(wsUrl) {
           focusSelect.dispatchEvent(new Event('change'));
 
           return {
-            hasLowerBodyOpt,
+            noRedundantLowerBodyOpt,
+            hasLegsOpt,
             hasCoreOpt,
-            hasLowerBodyAndCoreOpt,
-            lowerAndCoreSlotsCount,
-            hasSwapLowerBodyAndCorePill,
+            hasLegsAndCoreOpt,
+            legsAndCoreSlotsCount,
+            hasSwapLegsAndCorePill,
             allExclValid,
             exclCount: exclItems.length,
             allSlotsHaveGlutes,
@@ -418,11 +420,12 @@ async function runBrowserCDPTests(wsUrl) {
           };
         });
         if (
-          !filterCheck.hasLowerBodyOpt ||
+          !filterCheck.noRedundantLowerBodyOpt ||
+          !filterCheck.hasLegsOpt ||
           !filterCheck.hasCoreOpt ||
-          !filterCheck.hasLowerBodyAndCoreOpt ||
-          filterCheck.lowerAndCoreSlotsCount === 0 ||
-          !filterCheck.hasSwapLowerBodyAndCorePill ||
+          !filterCheck.hasLegsAndCoreOpt ||
+          filterCheck.legsAndCoreSlotsCount === 0 ||
+          !filterCheck.hasSwapLegsAndCorePill ||
           !filterCheck.allExclValid ||
           !filterCheck.allSlotsHaveGlutes ||
           !filterCheck.allSwapHaveHamstrings
@@ -559,6 +562,14 @@ async function runBrowserCDPTests(wsUrl) {
         console.log('\n--- 11. Requirement 5: Timed HIIT Exercise Timer, 10s Yellow Countdown, Sliding Fill, Bottom Labels & Reset ---');
         const timerCheck = await evalInPage(async () => {
           const typeSelect = document.getElementById('workoutTypeSelect');
+
+          // Verify untimed Strength workouts have NO timer bar and NO round timers
+          typeSelect.value = 'Strength Duos';
+          typeSelect.dispatchEvent(new Event('change'));
+          const strengthTimerBarHidden = document.getElementById('workoutTimerBar').hidden === true;
+          const strengthRoundTimersCount = document.querySelectorAll('[data-action="open-round-timer"]').length;
+
+          // Switch to Timed HIIT workout
           typeSelect.value = 'Timed Duos (40/20)';
           typeSelect.dispatchEvent(new Event('change'));
 
@@ -656,6 +667,8 @@ async function runBrowserCDPTests(wsUrl) {
           document.getElementById('closeTimerModalBtn').click();
 
           return {
+            strengthTimerBarHidden,
+            strengthRoundTimersCount,
             timerBarVisible,
             individualExerciseTimerCount,
             fullWorkoutChipsCount,
@@ -692,6 +705,8 @@ async function runBrowserCDPTests(wsUrl) {
           };
         });
         if (
+          !timerCheck.strengthTimerBarHidden ||
+          timerCheck.strengthRoundTimersCount !== 0 ||
           !timerCheck.timerBarVisible ||
           timerCheck.individualExerciseTimerCount !== 0 ||
           timerCheck.fullWorkoutChipsCount !== 49 ||
