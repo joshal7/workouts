@@ -15,7 +15,7 @@
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/svg+xml" href="./diagrams/app-icon.svg" />
   <link rel="apple-touch-icon" href="./diagrams/app-icon.svg" />
-  <link rel="stylesheet" href="./src/styles.css?v=16" />
+  <link rel="stylesheet" href="./src/styles.css?v=17" />
 </head>
 <body>
   <div class="app-shell">
@@ -44,10 +44,10 @@
     </header>
 
     <main class="main-content">
-      <!-- Ultra-Compact 2x2 Generator Controls Card -->
+      <!-- Top Menu Row + 3-Part Focus Slider Card -->
       <section class="card inputs-card" aria-label="Workout Generator Inputs">
-        <div class="inputs-grid-compact">
-          <div class="input-cell">
+        <div class="top-menu-row" aria-label="Workout Filters">
+          <div class="top-menu-cell">
             <label for="workoutCategorySelect">Category</label>
             <div class="select-wrapper">
               <select id="workoutCategorySelect">
@@ -58,36 +58,17 @@
             </div>
           </div>
 
-          <div class="input-cell">
-            <label for="bodyCategorySelect">Focus</label>
+          <div class="top-menu-cell top-menu-cell-type">
+            <label for="workoutTypeSelect">Type</label>
             <div class="select-wrapper">
-              <select id="bodyCategorySelect">
-                <optgroup label="Body Areas">
-                  <option value="All">All</option>
-                  <option value="Upper Body">Upper Body</option>
-                  <option value="Core">Core</option>
-                  <option value="Legs">Legs</option>
-                  <option value="Upper Body and Core">Upper &amp; Core</option>
-                  <option value="Legs and Core">Legs &amp; Core</option>
-                  <option value="Upper Body and Legs">Upper &amp; Legs</option>
-                </optgroup>
-                <optgroup label="Muscle Groups">
-                  <option value="Chest">Chest</option>
-                  <option value="Back">Back</option>
-                  <option value="Shoulders">Shoulders</option>
-                  <option value="Biceps">Biceps</option>
-                  <option value="Triceps">Triceps</option>
-                  <option value="Abs">Abs</option>
-                  <option value="Glutes">Glutes</option>
-                  <option value="Quads">Quads</option>
-                  <option value="Hamstrings">Hamstrings</option>
-                </optgroup>
+              <select id="workoutTypeSelect">
+                <option value="Random">Random</option>
               </select>
             </div>
           </div>
 
-          <div class="input-cell">
-            <label for="equipmentSelect">Equip</label>
+          <div class="top-menu-cell">
+            <label for="equipmentSelect">Equipment</label>
             <div class="select-wrapper">
               <select id="equipmentSelect">
                 <option value="Any">Any</option>
@@ -97,14 +78,51 @@
               </select>
             </div>
           </div>
+        </div>
 
-          <div class="input-cell">
-            <label for="workoutTypeSelect">Type</label>
-            <div class="select-wrapper">
-              <select id="workoutTypeSelect">
-                <option value="Random">Random</option>
-              </select>
+        <div id="focusSliderSection" class="focus-slider-section" aria-label="Body Focus Distribution">
+          <div class="focus-labels-row">
+            <button
+              type="button"
+              id="focusLabelUpper"
+              class="focus-area-label focus-label-upper"
+              data-focus-area="Upper Body"
+              aria-pressed="true"
+            >
+              <span class="focus-label-name">Upper Body</span>
+              <span class="focus-label-pct" id="focusPctUpper">33%</span>
+            </button>
+
+            <button
+              type="button"
+              id="focusLabelCore"
+              class="focus-area-label focus-label-core"
+              data-focus-area="Core"
+              aria-pressed="true"
+            >
+              <span class="focus-label-name">Core</span>
+              <span class="focus-label-pct" id="focusPctCore">33%</span>
+            </button>
+
+            <button
+              type="button"
+              id="focusLabelLower"
+              class="focus-area-label focus-label-lower"
+              data-focus-area="Legs"
+              aria-pressed="true"
+            >
+              <span class="focus-label-name">Lower Body</span>
+              <span class="focus-label-pct" id="focusPctLower">33%</span>
+            </button>
+          </div>
+
+          <div id="focusBarTrack" class="focus-bar-track">
+            <div class="focus-bar-segments">
+              <div id="focusSegUpper" class="focus-seg focus-seg-upper" style="width: 33.3333%;"></div>
+              <div id="focusSegCore" class="focus-seg focus-seg-core" style="width: 33.3333%;"></div>
+              <div id="focusSegLower" class="focus-seg focus-seg-lower" style="width: 33.3334%;"></div>
             </div>
+            <div id="focusHandlesLayer" class="focus-handles-layer"></div>
           </div>
         </div>
 
@@ -452,6 +470,6 @@
     <div id="toast" class="toast" hidden>Updated</div>
   </div>
 
-  <script type="module" src="./src/app.js?v=16"></script>
+  <script type="module" src="./src/app.js?v=17"></script>
 </body>
 </html>

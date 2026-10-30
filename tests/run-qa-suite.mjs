@@ -5,6 +5,17 @@ import { fileURLToPath } from 'node:url';
 
 import { DataService } from '../src/services/dataService.js';
 import {
+  FOCUS_SNAP_STEPS,
+  AUTO_FOCUS_ERROR_BAR,
+  MANUAL_FOCUS_ERROR_BAR,
+  snapToFocusStep,
+  normalizeFocusWeights,
+  toggleFocusAreaState,
+  computeFocusSliderPositions,
+  updateFocusFromHandleDrag,
+  computeWorkoutAreaQuotas,
+  isWithinAutoFocusErrorBar,
+  pickAutoFillExercises,
   generateWorkout,
   filterEligibleExercises,
   filterExercisesByMuscleAndQuery,
@@ -1197,6 +1208,501 @@ test('buildRemainingTimelineCues schedules steady 1s transition pulses, work-sta
   assert.ok(step4Pulses.every(c => c.cueType === 'transition-pulse'));
   assert.equal(step4Pulses[0].offsetSec, 130);
   assert.equal(step4Pulses[9].offsetSec, 139);
+});
+
+// ----------------------------------------------------------------------------
+// 13. 3-PART FOCUS SLIDER MATH, SNAP STOPS, DESELECT RATIO & RESELECT 1/3 DEFAULT
+// ----------------------------------------------------------------------------
+console.log('\n13. 3-Part Focus Slider Snap Stops, Deselect Ratio Redistribution & Reselect 1/3');
+
+function getExArea(ex) {
+  if (ex.bodyCategories?.['Upper Body'] === 'Pri') return 'Upper Body';
+  if (ex.bodyCategories?.['Core'] === 'Pri') return 'Core';
+  return 'Legs';
+}
+
+test('snapToFocusStep snaps accurately to all 13 requested stops (0%, 10%, 20%, 25%, 1/3, 40%, 50%, 60%, 2/3, 75%, 80%, 90%, 100%)', () => {
+  const expectedStops = [0, 0.1, 0.2, 0.25, 1 / 3, 0.4, 0.5, 0.6, 2 / 3, 0.75, 0.8, 0.9, 1];
+  assert.equal(FOCUS_SNAP_STEPS.length, 13);
+  for (let i = 0; i < expectedStops.length; i++) {
+    assert.ok(Math.abs(FOCUS_SNAP_STEPS[i] - expectedStops[i]) < 1e-12);
+    assert.ok(Math.abs(snapToFocusStep(expectedStops[i]) - expectedStops[i]) < 1e-12);
+  }
+  assert.equal(snapToFocusStep(-0.2), 0);
+  assert.equal(snapToFocusStep(1.4), 1);
+  assert.ok(Math.abs(snapToFocusStep(0.32) - 1 / 3) < 1e-12);
+  assert.ok(Math.abs(snapToFocusStep(0.66) - 2 / 3) < 1e-12);
+  assert.equal(snapToFocusStep(0.24), 0.25);
+  assert.equal(snapToFocusStep(0.76), 0.75);
+});
+
+test('computeFocusSliderPositions & updateFocusFromHandleDrag handle 2 handles, 1 handle, 0 handles, and drag clamping cleanly', () => {
+  const w3 = { 'Upper Body': 1 / 3, 'Core': 1 / 3, 'Legs': 1 / 3 };
+  const en3 = { 'Upper Body': true, 'Core': true, 'Legs': true };
+
+  const pos3 = computeFocusSliderPositions(w3, en3);
+  assert.equal(pos3.activeAreas.length, 3);
+  assert.equal(pos3.handles.length, 2, '3 active groups should have 2 slider handles between them');
+  assert.ok(Math.abs(pos3.handles[0].position - 1 / 3) < 1e-9);
+  assert.ok(Math.abs(pos3.handles[1].position - 2 / 3) < 1e-9);
+
+  // Drag handle 0 to 0.75 -> pushes handle 1 to 0.75 so Core becomes 0% and Lower becomes 25%
+  const dragPush = updateFocusFromHandleDrag(w3, en3, 0, 0.74);
+  assert.equal(dragPush.snappedPosition, 0.75);
+  assert.ok(Math.abs(dragPush.weights['Upper Body'] - 0.75) < 1e-9);
+  assert.ok(Math.abs(dragPush.weights['Core'] - 0) < 1e-9);
+  assert.ok(Math.abs(dragPush.weights['Legs'] - 0.25) < 1e-9);
+
+  // Drag handle 1 left past handle 0 to 0.25 -> pulls handle 0 to 0.25
+  const dragPull = updateFocusFromHandleDrag(dragPush.weights, en3, 1, 0.25);
+  assert.ok(Math.abs(dragPull.weights['Upper Body'] - 0.25) < 1e-9);
+  assert.ok(Math.abs(dragPull.weights['Core'] - 0) < 1e-9);
+  assert.ok(Math.abs(dragPull.weights['Legs'] - 0.75) < 1e-9);
+});
+
+test('toggleFocusAreaState spreads remaining colors in exact current ratio on deselect, blocks deselecting last group, and restores to 1/3 on reselect', () => {
+  // Start with Upper = 50%, Core = 25%, Lower = 25%
+  const wStart = { 'Upper Body': 0.5, 'Core': 0.25, 'Legs': 0.25 };
+  const enStart = { 'Upper Body': true, 'Core': true, 'Legs': true };
+
+  // Deselect Core -> Upper (0.5) and Lower (0.25) have 2:1 ratio -> becomes 2/3 Upper, 1/3 Lower, 1 handle
+  const afterDeselectCore = toggleFocusAreaState(wStart, enStart, 'Core');
+  assert.equal(afterDeselectCore.changed, true);
+  assert.equal(afterDeselectCore.enabled['Core'], false);
+  assert.ok(Math.abs(afterDeselectCore.weights['Upper Body'] - 2 / 3) < 1e-9);
+  assert.equal(afterDeselectCore.weights['Core'], 0);
+  assert.ok(Math.abs(afterDeselectCore.weights['Legs'] - 1 / 3) < 1e-9);
+  assert.equal(
+    computeFocusSliderPositions(afterDeselectCore.weights, afterDeselectCore.enabled).handles.length,
+    1
+  );
+
+  // Deselect Lower Body -> Upper becomes 100%, 0 handles
+  const afterDeselectLower = toggleFocusAreaState(
+    afterDeselectCore.weights,
+    afterDeselectCore.enabled,
+    'Lower Body'
+  );
+  assert.equal(afterDeselectLower.changed, true);
+  assert.equal(afterDeselectLower.enabled['Legs'], false);
+  assert.equal(afterDeselectLower.weights['Upper Body'], 1);
+  assert.equal(
+    computeFocusSliderPositions(afterDeselectLower.weights, afterDeselectLower.enabled).handles.length,
+    0
+  );
+
+  // Attempt to deselect Upper Body (last active) -> blocked!
+  const blocked = toggleFocusAreaState(
+    afterDeselectLower.weights,
+    afterDeselectLower.enabled,
+    'Upper Body'
+  );
+  assert.equal(blocked.changed, false);
+  assert.equal(blocked.blockedLastActive, true);
+  assert.equal(blocked.enabled['Upper Body'], true);
+  assert.equal(blocked.weights['Upper Body'], 1);
+
+  // Reselect Lower Body -> Lower goes to 1/3 by default, Upper scales to 2/3
+  const afterReselectLower = toggleFocusAreaState(
+    afterDeselectLower.weights,
+    afterDeselectLower.enabled,
+    'Lower Body'
+  );
+  assert.equal(afterReselectLower.changed, true);
+  assert.equal(afterReselectLower.enabled['Legs'], true);
+  assert.ok(Math.abs(afterReselectLower.weights['Legs'] - 1 / 3) < 1e-9);
+  assert.ok(Math.abs(afterReselectLower.weights['Upper Body'] - 2 / 3) < 1e-9);
+
+  // Reselect Core -> Core goes to 1/3 by default, remaining 2/3 split in 2:1 ratio (Upper = 4/9, Lower = 2/9)
+  const afterReselectCore = toggleFocusAreaState(
+    afterReselectLower.weights,
+    afterReselectLower.enabled,
+    'Core'
+  );
+  assert.equal(afterReselectCore.changed, true);
+  assert.equal(afterReselectCore.enabled['Core'], true);
+  assert.ok(Math.abs(afterReselectCore.weights['Core'] - 1 / 3) < 1e-9);
+  assert.ok(Math.abs(afterReselectCore.weights['Upper Body'] - 4 / 9) < 1e-9);
+  assert.ok(Math.abs(afterReselectCore.weights['Legs'] - 2 / 9) < 1e-9);
+});
+
+// ----------------------------------------------------------------------------
+// 14. FOCUS WEIGHTING ACROSS FULL WORKOUT & BALANCED INDIVIDUAL ROUNDS
+// ----------------------------------------------------------------------------
+console.log('\n14. Focus Weighting Across Full Workout & Balanced Individual Rounds');
+
+test('75% Upper Body / 25% Lower Body in Duos produces 6 Upper + 2 Lower across workout and NEVER pairs both Lower exercises in the same Duo round', () => {
+  const focusWeights = { 'Upper Body': 0.75, 'Core': 0, 'Legs': 0.25 };
+  const focusEnabled = { 'Upper Body': true, 'Core': false, 'Legs': true };
+
+  for (const workoutType of ['Strength Duos', 'Timed Duos (40/20)', '8x8 Duos']) {
+    for (let trial = 0; trial < 20; trial++) {
+      const wk = generateWorkout(sheetData, {
+        workoutType,
+        equipment: 'Any',
+        focusWeights,
+        focusEnabled
+      });
+      const allEx = wk.rounds.flatMap(r => r.slots.map(s => getActiveSlotExercise(s)));
+      const upperCount = allEx.filter(e => getExArea(e) === 'Upper Body').length;
+      const coreCount = allEx.filter(e => getExArea(e) === 'Core').length;
+      const lowerCount = allEx.filter(e => getExArea(e) === 'Legs').length;
+
+      assert.equal(upperCount, 6, `Expected 6 Upper Body in ${workoutType}, got ${upperCount}`);
+      assert.equal(coreCount, 0, `Expected 0 Core in ${workoutType}, got ${coreCount}`);
+      assert.equal(lowerCount, 2, `Expected 2 Lower Body in ${workoutType}, got ${lowerCount}`);
+
+      // Verify NO Duo round has [Lower, Lower]
+      for (const r of wk.rounds) {
+        const roundLower = r.slots.filter(s => getExArea(getActiveSlotExercise(s)) === 'Legs').length;
+        assert.ok(
+          roundLower <= 1,
+          `Unbalanced Duo round in ${workoutType}: Round ${r.roundNumber} had ${roundLower} Lower Body exercises`
+        );
+      }
+
+      const analysis = analyzeMuscleLoad(wk, sheetData, []);
+      assert.equal(
+        analysis.warnings.length,
+        0,
+        `Expected 0 warnings in ${workoutType} (75/25), got: ${JSON.stringify(analysis.warnings)}`
+      );
+    }
+  }
+});
+
+test('Diverse Focus slider distributions across all 11 workout formats and equipment filters follow quotas, balance rounds, and produce 0 warnings', () => {
+  const focusScenarios = [
+    {
+      label: '1/3 each (Balanced)',
+      focusWeights: { 'Upper Body': 1 / 3, 'Core': 1 / 3, 'Legs': 1 / 3 },
+      focusEnabled: { 'Upper Body': true, 'Core': true, 'Legs': true }
+    },
+    {
+      label: '75% Upper / 25% Lower',
+      focusWeights: { 'Upper Body': 0.75, 'Core': 0, 'Legs': 0.25 },
+      focusEnabled: { 'Upper Body': true, 'Core': false, 'Legs': true }
+    },
+    {
+      label: '2/3 Upper / 1/3 Core',
+      focusWeights: { 'Upper Body': 2 / 3, 'Core': 1 / 3, 'Legs': 0 },
+      focusEnabled: { 'Upper Body': true, 'Core': true, 'Legs': false }
+    },
+    {
+      label: '50% Lower / 25% Core / 25% Upper',
+      focusWeights: { 'Upper Body': 0.25, 'Core': 0.25, 'Legs': 0.5 },
+      focusEnabled: { 'Upper Body': true, 'Core': true, 'Legs': true }
+    },
+    {
+      label: '40% Upper / 20% Core / 40% Lower',
+      focusWeights: { 'Upper Body': 0.4, 'Core': 0.2, 'Legs': 0.4 },
+      focusEnabled: { 'Upper Body': true, 'Core': true, 'Legs': true }
+    },
+    {
+      label: '80% Lower / 20% Upper',
+      focusWeights: { 'Upper Body': 0.2, 'Core': 0, 'Legs': 0.8 },
+      focusEnabled: { 'Upper Body': true, 'Core': false, 'Legs': true }
+    },
+    {
+      label: '100% Upper Body',
+      focusWeights: { 'Upper Body': 1, 'Core': 0, 'Legs': 0 },
+      focusEnabled: { 'Upper Body': true, 'Core': false, 'Legs': false }
+    },
+    {
+      label: '100% Core',
+      focusWeights: { 'Upper Body': 0, 'Core': 1, 'Legs': 0 },
+      focusEnabled: { 'Upper Body': false, 'Core': true, 'Legs': false }
+    },
+    {
+      label: '100% Lower Body',
+      focusWeights: { 'Upper Body': 0, 'Core': 0, 'Legs': 1 },
+      focusEnabled: { 'Upper Body': false, 'Core': false, 'Legs': true }
+    }
+  ];
+
+  for (const scenario of focusScenarios) {
+    for (const wkDef of sheetData.workouts) {
+      for (const equipment of ['Any', 'Weights', 'Bands', 'Nothing']) {
+        const wk = generateWorkout(sheetData, {
+          workoutType: wkDef.name,
+          equipment,
+          focusWeights: scenario.focusWeights,
+          focusEnabled: scenario.focusEnabled,
+          optionsPerSlot: 2
+        });
+
+        const allEx = wk.rounds.flatMap(r => r.slots.map(s => getActiveSlotExercise(s)));
+        const n = allEx.length;
+
+        // Deselected / 0% areas must have 0 exercises when eligible pool is sufficient
+        for (const area of ['Upper Body', 'Core', 'Legs']) {
+          const count = allEx.filter(e => getExArea(e) === area).length;
+          if (scenario.focusWeights[area] === 0) {
+            assert.equal(
+              count,
+              0,
+              `[${scenario.label} | ${wkDef.name} | ${equipment}] Expected 0 ${area} exercises, got ${count}`
+            );
+          } else {
+            assert.ok(
+              Math.abs(count / n - scenario.focusWeights[area]) <= 0.21,
+              `[${scenario.label} | ${wkDef.name} | ${equipment}] ${area} count ${count}/${n} drifted from ${scenario.focusWeights[area]}`
+            );
+          }
+        }
+
+        // Verify round-level balance: each round has between floor(count/R) and ceil(count/R) of each area
+        if (wk.rounds.length > 1) {
+          for (const area of ['Upper Body', 'Core', 'Legs']) {
+            const totalArea = allEx.filter(e => getExArea(e) === area).length;
+            const maxPerRound = Math.ceil(totalArea / wk.rounds.length);
+            for (const r of wk.rounds) {
+              const inRound = r.slots.filter(s => getExArea(getActiveSlotExercise(s)) === area).length;
+              assert.ok(
+                inRound <= maxPerRound,
+                `[${scenario.label} | ${wkDef.name} | ${equipment}] Round ${r.roundNumber} bunched ${inRound} ${area} (max expected ${maxPerRound})`
+              );
+            }
+          }
+        }
+
+        // Multi-option alternatives must also honor 0% deselected areas
+        for (const r of wk.rounds) {
+          for (const s of r.slots) {
+            for (const opt of s.options) {
+              const optArea = getExArea(opt);
+              assert.ok(
+                scenario.focusWeights[optArea] > 0,
+                `[${scenario.label} | ${wkDef.name}] Multi-option alternative "${opt.name}" violated 0% area ${optArea}`
+              );
+            }
+          }
+        }
+
+        const analysis = analyzeMuscleLoad(wk, sheetData, []);
+        assert.equal(
+          analysis.warnings.length,
+          0,
+          `[${scenario.label} | ${wkDef.name} | ${equipment}] Unexpected warning: ${JSON.stringify(analysis.warnings)}`
+        );
+      }
+    }
+  }
+});
+
+// ----------------------------------------------------------------------------
+// 15. (A) AUTO-RECOMMENDATION ERROR BARS & (B) MANUAL OVERLOAD ERROR BARS
+// ----------------------------------------------------------------------------
+console.log('\n15. Auto-Recommendation Error Bars (±15%) vs Manual Overload Error Bars (+22% & Round Bunching)');
+
+test('(a) Auto recommendations (getValidReplacementCandidates & pickAutoFillExercises) respect ±15% error bar, block 0% areas, and trigger 0 warnings', () => {
+  assert.ok(
+    AUTO_FOCUS_ERROR_BAR < MANUAL_FOCUS_ERROR_BAR,
+    'Auto recommendation error bar must be tighter than manual overload error bar'
+  );
+
+  const focusWeights = { 'Upper Body': 0.75, 'Core': 0, 'Legs': 0.25 };
+  const focusEnabled = { 'Upper Body': true, 'Core': false, 'Legs': true };
+
+  const wk = generateWorkout(sheetData, {
+    workoutType: 'Strength Duos',
+    equipment: 'Any',
+    focusWeights,
+    focusEnabled
+  });
+
+  // Find a round that already has 1 Lower Body exercise and check candidates for its OTHER (Upper Body) slot:
+  // Replacing that Upper slot with another Lower exercise would push Lower to 3/8 (37.5%, within 25%+15%=40%),
+  // EXCEPT in that specific Duo round it would create [Lower, Lower] intra-round minority bunching — so candidates must NOT recommend Lower there!
+  const mixedRoundIdx = wk.rounds.findIndex(r =>
+    r.slots.some(s => getExArea(getActiveSlotExercise(s)) === 'Legs')
+  );
+  assert.ok(mixedRoundIdx >= 0);
+  const upperSlotIdx = wk.rounds[mixedRoundIdx].slots.findIndex(
+    s => getExArea(getActiveSlotExercise(s)) === 'Upper Body'
+  );
+  const cands = getValidReplacementCandidates({
+    workoutState: wk,
+    roundIndex: mixedRoundIdx,
+    slotIndex: upperSlotIdx,
+    sheetData,
+    excludedExerciseIds: [],
+    analyzeMuscleLoadFn: analyzeMuscleLoad
+  });
+  assert.ok(cands.length > 0, 'Expected valid replacement candidates');
+  for (const c of cands) {
+    assert.notEqual(getExArea(c), 'Core', 'Auto candidate must never come from deselected 0% Core');
+    assert.notEqual(
+      getExArea(c),
+      'Legs',
+      'Auto candidate must not pair two 25% Lower Body exercises into the same Duo round'
+    );
+    const simulated = swapExerciseInSlot(wk, mixedRoundIdx, upperSlotIdx, c);
+    const simWarnings = analyzeMuscleLoad(simulated, sheetData, []).warnings;
+    assert.equal(simWarnings.length, 0, `Candidate ${c.name} caused warning: ${JSON.stringify(simWarnings)}`);
+  }
+
+  // Verify pickAutoFillExercises fills toward exact focus quotas (6 Upper, 2 Lower, 0 Core)
+  const byId = Object.fromEntries(sheetData.exercises.map(e => [e.id, e]));
+  const filled = pickAutoFillExercises(
+    sheetData,
+    { workoutCategory: 'Strength', equipment: 'Any', focusWeights, focusEnabled },
+    [byId['squats'], byId['push-ups']],
+    8
+  );
+  assert.equal(filled.length, 8);
+  assert.equal(filled.filter(e => getExArea(e) === 'Core').length, 0);
+  assert.equal(filled.filter(e => getExArea(e) === 'Legs').length, 2);
+  assert.equal(filled.filter(e => getExArea(e) === 'Upper Body').length, 6);
+});
+
+test('(b) Manual swaps tolerate +1 slot over ceiling (larger error bar) without warning, warn at >= +22% (+2 slots) or intra-round minority bunching, and resolve in 1 tap', () => {
+  const byId = Object.fromEntries(sheetData.exercises.map(e => [e.id, e]));
+  const focusWeights = { 'Upper Body': 0.75, 'Core': 0, 'Legs': 0.25 };
+  const focusEnabled = { 'Upper Body': true, 'Core': false, 'Legs': true };
+
+  // Start with 6 Upper + 2 Lower in Strength Duos (each Lower is in a separate Duo round)
+  let wk = generateWorkout(sheetData, {
+    workoutType: 'Strength Duos',
+    equipment: 'Any',
+    focusWeights,
+    focusEnabled
+  });
+
+  // Find a round with [Upper, Upper] (0 Lower) and swap 1 Upper -> Lower (total Lower = 3/8 = 37.5%, +12.5% over 25%, < 22% manual error bar!)
+  const upperOnlyRoundIdx = wk.rounds.findIndex(r =>
+    r.slots.every(s => getExArea(getActiveSlotExercise(s)) === 'Upper Body')
+  );
+  assert.ok(upperOnlyRoundIdx >= 0);
+
+  const usedIds = new Set(wk.rounds.flatMap(r => r.slots.map(s => getActiveSlotExercise(s).id)));
+  const extraLegPool = sheetData.exercises.filter(
+    e => getExArea(e) === 'Legs' && !usedIds.has(e.id)
+  );
+
+  // Ensure distinct primary muscle from the other rounds so we isolate Focus error bar behavior
+  const usedMuscles = new Set(
+    wk.rounds.flatMap(r =>
+      r.slots.map(s => Object.keys(getActiveSlotExercise(s).muscles).find(m => getActiveSlotExercise(s).muscles[m] === 'Pri'))
+    )
+  );
+  const leg1 = extraLegPool.find(e => !usedMuscles.has(Object.keys(e.muscles).find(m => e.muscles[m] === 'Pri'))) || extraLegPool[0];
+
+  const wkPlus1 = swapExerciseInSlot(wk, upperOnlyRoundIdx, 0, leg1);
+  const warningsPlus1 = analyzeMuscleLoad(wkPlus1, sheetData, []).warnings;
+  assert.equal(
+    warningsPlus1.length,
+    0,
+    `+1 manual Lower Body swap (3/8 = 37.5% vs 25% target) is within larger manual error bar and should NOT warn, got: ${JSON.stringify(warningsPlus1)}`
+  );
+
+  // Now find the OTHER [Upper, Upper] round and swap 1 more Upper -> Lower (total Lower = 4/8 = 50%, +25% >= +22% manual error bar -> WARNS!)
+  const secondUpperOnlyRoundIdx = wkPlus1.rounds.findIndex(
+    (r, idx) =>
+      idx !== upperOnlyRoundIdx &&
+      r.slots.every(s => getExArea(getActiveSlotExercise(s)) === 'Upper Body')
+  );
+  const leg2 = extraLegPool.find(e => e.id !== leg1.id) || byId['frog-pumps'];
+  const wkPlus2 = swapExerciseInSlot(wkPlus1, secondUpperOnlyRoundIdx, 0, leg2);
+  const warningsPlus2 = analyzeMuscleLoad(wkPlus2, sheetData, []).warnings;
+  assert.ok(
+    warningsPlus2.some(w => w.muscle === 'Lower Body'),
+    `Expected Lower Body focus overload warning at 4/8 (50% vs 25%), got: ${JSON.stringify(warningsPlus2)}`
+  );
+  assert.ok(warningsPlus2[0].recommendations.length > 0, 'Overload warning must provide a 1-tap Swap recommendation');
+
+  // Apply 1-tap auto-balance recommendation -> resolves cleanly to 0 warnings in 1 tap!
+  const resolvedWk = applyBalancedRecommendation(wkPlus2, warningsPlus2[0]);
+  assert.equal(
+    analyzeMuscleLoad(resolvedWk, sheetData, []).warnings.length,
+    0,
+    '1-tap auto-balance must resolve manual Focus overload to 0 warnings'
+  );
+
+  // Also test manual intra-round minority bunching: in original `wk` (25% Lower), put 2 distinct-muscle Lower exercises in Round 1 -> warns!
+  const wkRoundBunched = swapExerciseInSlot(
+    swapExerciseInSlot(wk, upperOnlyRoundIdx, 0, byId['squats']),
+    upperOnlyRoundIdx,
+    1,
+    byId['frog-pumps']
+  );
+  const bunchedWarnings = analyzeMuscleLoad(wkRoundBunched, sheetData, []).warnings;
+  assert.ok(
+    bunchedWarnings.some(w => w.muscle === 'Lower Body' && w.roundNumber === upperOnlyRoundIdx + 1),
+    `Expected intra-round Lower Body bunching warning when pairing 2 Lower exercises in one Duo round at 25% Lower focus, got: ${JSON.stringify(bunchedWarnings)}`
+  );
+  const resolvedBunched = applyBalancedRecommendation(wkRoundBunched, bunchedWarnings[0]);
+  assert.equal(
+    analyzeMuscleLoad(resolvedBunched, sheetData, []).warnings.length,
+    0,
+    '1-tap auto-balance must resolve intra-round minority Focus bunching to 0 warnings'
+  );
+
+  // At default 1/3 each (33%/33%/33%) in Strength Duos, a manual Chest + Back agonist/antagonist superset is tolerated without nagging
+  const wkBalancedDefault = generateWorkout(sheetData, {
+    workoutType: 'Strength Duos',
+    equipment: 'Any',
+    focusWeights: { 'Upper Body': 1 / 3, 'Core': 1 / 3, 'Legs': 1 / 3 },
+    focusEnabled: { 'Upper Body': true, 'Core': true, 'Legs': true }
+  });
+  const wkChestBack = swapExerciseInSlot(
+    swapExerciseInSlot(wkBalancedDefault, 0, 0, byId['push-ups']),
+    0,
+    1,
+    byId['rows']
+  );
+  // Ensure total Upper Body across workout is within manual error bar (<= 4 of 8)
+  const totalUpperInChestBack = wkChestBack.rounds
+    .flatMap(r => r.slots)
+    .filter(s => getExArea(getActiveSlotExercise(s)) === 'Upper Body').length;
+  if (totalUpperInChestBack <= 4) {
+    assert.equal(
+      analyzeMuscleLoad(wkChestBack, sheetData, []).warnings.length,
+      0,
+      'Manual Chest + Back superset at 33%/33%/33% Focus within workout error bar should not trigger false warning'
+    );
+  }
+});
+
+// ----------------------------------------------------------------------------
+// 16. STATIC UI AUDIT: TOP MENU, FOCUS COLORS & ZERO TICKS, NO SPREADSHEET MENTION, +50% TIMER FONT
+// ----------------------------------------------------------------------------
+console.log('\n16. Static Audit: Top Menu Row, Focus Bar Colors, No Spreadsheet Row Mention & +50% Timer Font');
+
+test('index.html, styles.css, app.js & qa-gallery.html satisfy Top Menu, Focus Slider, No Spreadsheet Mention, and +50% Timer Font specs', () => {
+  const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
+  const stylesCss = fs.readFileSync(path.join(rootDir, 'src', 'styles.css'), 'utf8');
+  const appJs = fs.readFileSync(path.join(rootDir, 'src', 'app.js'), 'utf8');
+  const qaGalleryHtml = fs.readFileSync(path.join(rootDir, 'qa-gallery.html'), 'utf8');
+  const enrichText = fs.readFileSync(path.join(rootDir, 'data', 'enrichments.json'), 'utf8');
+
+  // 1) Old Focus dropdown removed; new Top Menu row precedes Focus Slider section
+  assert.ok(!indexHtml.includes('id="bodyCategorySelect"'), '#bodyCategorySelect should be removed from index.html');
+  const topMenuIdx = indexHtml.indexOf('class="top-menu-row"');
+  const focusSliderIdx = indexHtml.indexOf('id="focusSliderSection"');
+  assert.ok(topMenuIdx > 0 && focusSliderIdx > topMenuIdx, '.top-menu-row must appear above #focusSliderSection');
+  assert.ok(indexHtml.includes('id="focusLabelUpper"') && indexHtml.includes('Upper Body'));
+  assert.ok(indexHtml.includes('id="focusLabelCore"') && indexHtml.includes('Core'));
+  assert.ok(indexHtml.includes('id="focusLabelLower"') && indexHtml.includes('Lower Body'));
+  assert.ok(!indexHtml.includes('focus-tick') && !stylesCss.includes('focus-tick'), 'Focus slider must have zero visible tick marks');
+
+  // 2) Focus bar light fills & dark text colors match timer style
+  assert.ok(stylesCss.includes('#fecaca') && stylesCss.includes('#7f1d1d'), 'Upper Body light red bar (#fecaca) + dark red text (#7f1d1d)');
+  assert.ok(stylesCss.includes('#fef08a') && stylesCss.includes('#713f12'), 'Core light yellow bar (#fef08a) + dark yellow text (#713f12)');
+  assert.ok(stylesCss.includes('#e9d5ff') && stylesCss.includes('#581c87'), 'Lower Body light purple bar (#e9d5ff) + dark purple text (#581c87)');
+
+  // 3) No mention of spreadsheet / Sheet Row # in exercise descriptions or UI
+  assert.ok(!/sheet\s*row\s*#/i.test(indexHtml), 'index.html must not mention Sheet Row #');
+  assert.ok(!/sheet\s*row\s*#/i.test(qaGalleryHtml), 'qa-gallery.html must not mention Sheet Row #');
+  assert.ok(!/sheet\s*row\s*#/i.test(appJs), 'src/app.js must not mention Sheet Row #');
+  assert.ok(!/spreadsheet/i.test(indexHtml), 'index.html must not mention spreadsheet');
+  assert.ok(!/spreadsheet|sheet\s*row/i.test(enrichText), 'enrichments.json must not mention spreadsheet or sheet row');
+
+  // 4) Timer exercise label font size increased by 50%: clamp(22px, 6vw, 32px) -> clamp(33px, 9vw, 48px)
+  assert.ok(
+    stylesCss.includes('clamp(33px, 9vw, 48px)'),
+    'Expected .timer-bottom-label font-size to be increased by 50% to clamp(33px, 9vw, 48px)'
+  );
 });
 
 console.log(`\n🎉 ALL ${passed} QA TEST SUITES PASSED SUCCESSFULLY!`);

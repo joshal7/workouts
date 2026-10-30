@@ -7,6 +7,51 @@
 
 export const BODY_AREAS = ['Upper Body', 'Core', 'Legs'];
 
+export const FOCUS_SNAP_STEPS = [
+  0,
+  0.1,
+  0.2,
+  0.25,
+  1 / 3,
+  0.4,
+  0.5,
+  0.6,
+  2 / 3,
+  0.75,
+  0.8,
+  0.9,
+  1
+];
+
+export const DEFAULT_FOCUS_WEIGHTS = {
+  'Upper Body': 1 / 3,
+  'Core': 1 / 3,
+  'Legs': 1 / 3
+};
+
+export const DEFAULT_FOCUS_ENABLED = {
+  'Upper Body': true,
+  'Core': true,
+  'Legs': true
+};
+
+// (a) Reasonable error bar (±15%) for auto-recommendations / valid replacement candidates
+export const AUTO_FOCUS_ERROR_BAR = 0.15;
+// (b) Larger error bar (+22% and >=2 slots over ceiling) for overload warnings from manual selections
+export const MANUAL_FOCUS_ERROR_BAR = 0.22;
+
+const MUSCLE_TO_AREA = {
+  Chest: 'Upper Body',
+  Biceps: 'Upper Body',
+  Triceps: 'Upper Body',
+  Shoulders: 'Upper Body',
+  Back: 'Upper Body',
+  Abs: 'Core',
+  Glutes: 'Legs',
+  Quads: 'Legs',
+  Hamstrings: 'Legs'
+};
+
 export const SPECIFIC_MUSCLE_LIST = [
   'Chest',
   'Biceps',
@@ -18,6 +63,430 @@ export const SPECIFIC_MUSCLE_LIST = [
   'Quads',
   'Hamstrings'
 ];
+
+/**
+ * Normalize a body area name ('Lower Body' -> 'Legs').
+ */
+export function normalizeBodyAreaKey(area) {
+  if (area === 'Lower Body' || area === 'Legs') return 'Legs';
+  if (area === 'Upper Body') return 'Upper Body';
+  if (area === 'Core') return 'Core';
+  return area;
+}
+
+/**
+ * Snap a raw [0, 1] slider position to the nearest allowed focus stop:
+ * 0%, 10%, 20%, 25%, 1/3, 40%, 50%, 60%, 2/3, 75%, 80%, 90%, 100%.
+ */
+export function snapToFocusStep(value) {
+  const clamped = Math.max(0, Math.min(1, Number(value) || 0));
+  let best = FOCUS_SNAP_STEPS[0];
+  let bestDiff = Math.abs(clamped - best);
+  for (let i = 1; i < FOCUS_SNAP_STEPS.length; i++) {
+    const diff = Math.abs(clamped - FOCUS_SNAP_STEPS[i]);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      best = FOCUS_SNAP_STEPS[i];
+    }
+  }
+  return best;
+}
+
+/**
+ * Normalize focus weights and enabled flags from inputs (supporting both 3-part slider state
+ * and legacy `bodyCategory` strings for backward compatibility).
+ */
+export function normalizeFocusWeights(inputs = {}) {
+  const rawWeights = inputs?.focusWeights;
+  const rawEnabled = inputs?.focusEnabled;
+
+  if (rawWeights && typeof rawWeights === 'object') {
+    const enabled = {
+      'Upper Body': rawEnabled ? rawEnabled['Upper Body'] !== false : true,
+      'Core': rawEnabled ? rawEnabled['Core'] !== false : true,
+      'Legs': rawEnabled
+        ? rawEnabled['Legs'] !== false && rawEnabled['Lower Body'] !== false
+        : true
+    };
+
+    if (!enabled['Upper Body'] && !enabled['Core'] && !enabled['Legs']) {
+      enabled['Upper Body'] = true;
+      enabled['Core'] = true;
+      enabled['Legs'] = true;
+    }
+
+    const w = {
+      'Upper Body': enabled['Upper Body']
+        ? Math.max(0, Number(rawWeights['Upper Body']) || 0)
+        : 0,
+      'Core': enabled['Core'] ? Math.max(0, Number(rawWeights['Core']) || 0) : 0,
+      'Legs': enabled['Legs']
+        ? Math.max(0, Number(rawWeights['Legs'] ?? rawWeights['Lower Body']) || 0)
+        : 0
+    };
+
+    const sum = w['Upper Body'] + w['Core'] + w['Legs'];
+    if (sum > 1e-9) {
+      return {
+        weights: {
+          'Upper Body': w['Upper Body'] / sum,
+          'Core': w['Core'] / sum,
+          'Legs': w['Legs'] / sum
+        },
+        enabled
+      };
+    }
+
+    const activeCount = BODY_AREAS.filter(a => enabled[a]).length || 3;
+    return {
+      weights: {
+        'Upper Body': enabled['Upper Body'] ? 1 / activeCount : 0,
+        'Core': enabled['Core'] ? 1 / activeCount : 0,
+        'Legs': enabled['Legs'] ? 1 / activeCount : 0
+      },
+      enabled
+    };
+  }
+
+  // Fallback: derive from legacy bodyCategory string
+  const cat = inputs?.bodyCategory || 'All';
+  if (cat === 'Upper Body') {
+    return {
+      weights: { 'Upper Body': 1, 'Core': 0, 'Legs': 0 },
+      enabled: { 'Upper Body': true, 'Core': false, 'Legs': false }
+    };
+  }
+  if (cat === 'Core') {
+    return {
+      weights: { 'Upper Body': 0, 'Core': 1, 'Legs': 0 },
+      enabled: { 'Upper Body': false, 'Core': true, 'Legs': false }
+    };
+  }
+  if (cat === 'Legs' || cat === 'Lower Body') {
+    return {
+      weights: { 'Upper Body': 0, 'Core': 0, 'Legs': 1 },
+      enabled: { 'Upper Body': false, 'Core': false, 'Legs': true }
+    };
+  }
+  if (cat === 'Upper Body and Core' || cat === 'Upper & Core') {
+    return {
+      weights: { 'Upper Body': 0.5, 'Core': 0.5, 'Legs': 0 },
+      enabled: { 'Upper Body': true, 'Core': true, 'Legs': false }
+    };
+  }
+  if (
+    cat === 'Legs and Core' ||
+    cat === 'Lower Body and Core' ||
+    cat === 'Lower Body & Core'
+  ) {
+    return {
+      weights: { 'Upper Body': 0, 'Core': 0.5, 'Legs': 0.5 },
+      enabled: { 'Upper Body': false, 'Core': true, 'Legs': true }
+    };
+  }
+  if (
+    cat === 'Upper Body and Legs' ||
+    cat === 'Upper Body and Lower Body' ||
+    cat === 'Upper & Lower Body'
+  ) {
+    return {
+      weights: { 'Upper Body': 0.5, 'Core': 0, 'Legs': 0.5 },
+      enabled: { 'Upper Body': true, 'Core': false, 'Legs': true }
+    };
+  }
+  if (SPECIFIC_MUSCLE_LIST.includes(cat)) {
+    const targetArea = MUSCLE_TO_AREA[cat] || 'Upper Body';
+    return {
+      weights: {
+        'Upper Body': targetArea === 'Upper Body' ? 1 : 0,
+        'Core': targetArea === 'Core' ? 1 : 0,
+        'Legs': targetArea === 'Legs' ? 1 : 0
+      },
+      enabled: {
+        'Upper Body': targetArea === 'Upper Body',
+        'Core': targetArea === 'Core',
+        'Legs': targetArea === 'Legs'
+      }
+    };
+  }
+
+  return {
+    weights: { ...DEFAULT_FOCUS_WEIGHTS },
+    enabled: { ...DEFAULT_FOCUS_ENABLED }
+  };
+}
+
+/**
+ * Derive a backward-compatible bodyCategory string summary from focus weights.
+ */
+export function deriveBodyCategoryFromFocus(weights, enabled) {
+  const { weights: w } = normalizeFocusWeights({ focusWeights: weights, focusEnabled: enabled });
+  if (w['Upper Body'] > 0.999) return 'Upper Body';
+  if (w['Core'] > 0.999) return 'Core';
+  if (w['Legs'] > 0.999) return 'Legs';
+  if (Math.abs(w['Upper Body'] - 0.5) < 0.01 && Math.abs(w['Core'] - 0.5) < 0.01 && w['Legs'] < 0.001) {
+    return 'Upper Body and Core';
+  }
+  if (Math.abs(w['Core'] - 0.5) < 0.01 && Math.abs(w['Legs'] - 0.5) < 0.01 && w['Upper Body'] < 0.001) {
+    return 'Legs and Core';
+  }
+  if (Math.abs(w['Upper Body'] - 0.5) < 0.01 && Math.abs(w['Legs'] - 0.5) < 0.01 && w['Core'] < 0.001) {
+    return 'Upper Body and Legs';
+  }
+  if (
+    Math.abs(w['Upper Body'] - 1 / 3) < 0.02 &&
+    Math.abs(w['Core'] - 1 / 3) < 0.02 &&
+    Math.abs(w['Legs'] - 1 / 3) < 0.02
+  ) {
+    return 'All';
+  }
+  return 'Custom';
+}
+
+/**
+ * Toggle selection state of a focus body group ('Upper Body', 'Core', or 'Legs' / 'Lower Body'):
+ * - Deselecting removes its color and spreads the remaining enabled color(s) across 100% in their current ratio.
+ *   (Cannot deselect the last remaining active body group.)
+ * - Reselecting restores that body group to 1/3 by default and scales the remaining enabled group(s) to 2/3 in their current ratio.
+ */
+export function toggleFocusAreaState(currentWeights, currentEnabled, areaInput) {
+  const area = normalizeBodyAreaKey(areaInput);
+  if (!BODY_AREAS.includes(area)) {
+    return { weights: { ...currentWeights }, enabled: { ...currentEnabled }, changed: false };
+  }
+
+  const norm = normalizeFocusWeights({ focusWeights: currentWeights, focusEnabled: currentEnabled });
+  const w = { ...norm.weights };
+  const en = { ...norm.enabled };
+
+  if (en[area]) {
+    const activeAreas = BODY_AREAS.filter(a => en[a]);
+    if (activeAreas.length <= 1) {
+      return { weights: w, enabled: en, changed: false, blockedLastActive: true };
+    }
+    en[area] = false;
+    const remainingAreas = BODY_AREAS.filter(a => en[a]);
+    const remSum = remainingAreas.reduce((acc, a) => acc + (w[a] || 0), 0);
+    const nextWeights = { 'Upper Body': 0, 'Core': 0, 'Legs': 0 };
+    if (remSum > 1e-9) {
+      remainingAreas.forEach(a => {
+        nextWeights[a] = w[a] / remSum;
+      });
+    } else {
+      remainingAreas.forEach(a => {
+        nextWeights[a] = 1 / remainingAreas.length;
+      });
+    }
+    return { weights: nextWeights, enabled: en, changed: true };
+  } else {
+    en[area] = true;
+    const otherActive = BODY_AREAS.filter(a => a !== area && en[a]);
+    const nextWeights = { 'Upper Body': 0, 'Core': 0, 'Legs': 0 };
+    if (otherActive.length === 0) {
+      nextWeights[area] = 1;
+    } else {
+      nextWeights[area] = 1 / 3;
+      const otherSum = otherActive.reduce((acc, a) => acc + (w[a] || 0), 0);
+      if (otherSum > 1e-9) {
+        otherActive.forEach(a => {
+          nextWeights[a] = (2 / 3) * (w[a] / otherSum);
+        });
+      } else {
+        otherActive.forEach(a => {
+          nextWeights[a] = (2 / 3) / otherActive.length;
+        });
+      }
+    }
+    return { weights: nextWeights, enabled: en, changed: true };
+  }
+}
+
+/**
+ * Compute active body areas and slider handle positions between adjacent active areas.
+ */
+export function computeFocusSliderPositions(weights, enabled) {
+  const norm = normalizeFocusWeights({ focusWeights: weights, focusEnabled: enabled });
+  const activeAreas = BODY_AREAS.filter(a => norm.enabled[a]);
+  const handles = [];
+  let cumulative = 0;
+  for (let i = 0; i < activeAreas.length - 1; i++) {
+    cumulative += norm.weights[activeAreas[i]];
+    handles.push({
+      index: i,
+      leftArea: activeAreas[i],
+      rightArea: activeAreas[i + 1],
+      position: Math.max(0, Math.min(1, cumulative))
+    });
+  }
+  return {
+    activeAreas,
+    handles,
+    weights: norm.weights,
+    enabled: norm.enabled
+  };
+}
+
+/**
+ * Update focus weights when dragging handle `handleIndex` to `rawFraction` in [0, 1],
+ * snapping to FOCUS_SNAP_STEPS.
+ */
+export function updateFocusFromHandleDrag(weights, enabled, handleIndex, rawFraction) {
+  const { activeAreas, handles, enabled: en } = computeFocusSliderPositions(weights, enabled);
+  if (handles.length === 0 || handleIndex < 0 || handleIndex >= handles.length) {
+    return { weights: { ...weights }, enabled: { ...en }, snappedPosition: null };
+  }
+
+  const snapped = snapToFocusStep(rawFraction);
+  const nextWeights = { 'Upper Body': 0, 'Core': 0, 'Legs': 0 };
+
+  if (activeAreas.length === 2) {
+    nextWeights[activeAreas[0]] = snapped;
+    nextWeights[activeAreas[1]] = Math.max(0, 1 - snapped);
+  } else if (activeAreas.length === 3) {
+    let p0 = handles[0].position;
+    let p1 = handles[1].position;
+    if (handleIndex === 0) {
+      p0 = snapped;
+      if (p0 > p1) p1 = p0;
+    } else {
+      p1 = snapped;
+      if (p1 < p0) p0 = p1;
+    }
+    nextWeights[activeAreas[0]] = p0;
+    nextWeights[activeAreas[1]] = Math.max(0, p1 - p0);
+    nextWeights[activeAreas[2]] = Math.max(0, 1 - p1);
+  }
+
+  return {
+    weights: nextWeights,
+    enabled: { ...en },
+    snappedPosition: snapped
+  };
+}
+
+/**
+ * Compute integer exercise slot quotas across the full workout (sum = totalSlots)
+ * matching `focusWeights` via Largest-Remainder (Hamilton's method).
+ */
+export function computeWorkoutAreaQuotas(totalSlots, focusWeights, areaPoolSizes = null) {
+  const n = Math.max(1, parseInt(totalSlots, 10) || 1);
+  const { weights } = normalizeFocusWeights({ focusWeights });
+  const quotas = { 'Upper Body': 0, 'Core': 0, 'Legs': 0 };
+  const exact = { 'Upper Body': 0, 'Core': 0, 'Legs': 0 };
+
+  const activeAreas = BODY_AREAS.filter(a => weights[a] > 1e-9);
+  if (activeAreas.length === 0) {
+    quotas['Upper Body'] = Math.ceil(n / 3);
+    quotas['Core'] = Math.floor(n / 3);
+    quotas['Legs'] = n - quotas['Upper Body'] - quotas['Core'];
+    return quotas;
+  }
+
+  let assigned = 0;
+  for (const a of activeAreas) {
+    exact[a] = weights[a] * n;
+    quotas[a] = Math.floor(exact[a] + 1e-9);
+    assigned += quotas[a];
+  }
+
+  let remaining = n - assigned;
+  if (remaining > 0) {
+    const ranked = [...activeAreas].sort((a, b) => {
+      const remA = exact[a] - quotas[a];
+      const remB = exact[b] - quotas[b];
+      if (Math.abs(remB - remA) > 1e-6) return remB - remA;
+      // Tie-breaker: favor a non-zero active area that currently has 0 slots
+      if ((quotas[a] === 0) !== (quotas[b] === 0)) {
+        return quotas[a] === 0 ? -1 : 1;
+      }
+      return weights[b] - weights[a];
+    });
+    for (let i = 0; i < remaining; i++) {
+      quotas[ranked[i % ranked.length]] += 1;
+    }
+  }
+
+  // Optional capacity smoothing when multiple areas are active and an active area
+  // has 0 exercises (all excluded) or fewer unique exercises than its quota
+  if (areaPoolSizes && activeAreas.length > 1) {
+    for (const a of activeAreas) {
+      const cap = areaPoolSizes[a] ?? Infinity;
+      if (cap === 0 && quotas[a] > 0) {
+        const receivers = activeAreas.filter(b => b !== a && (areaPoolSizes[b] ?? Infinity) > 0);
+        if (receivers.length > 0) {
+          let idx = 0;
+          while (quotas[a] > 0) {
+            quotas[a] -= 1;
+            quotas[receivers[idx % receivers.length]] += 1;
+            idx += 1;
+          }
+        }
+        continue;
+      }
+      while (cap > 0 && quotas[a] > cap) {
+        const donorPctAfter = (quotas[a] - 1) / n;
+        if (weights[a] - donorPctAfter > AUTO_FOCUS_ERROR_BAR + 1e-9) break;
+        const receiver = activeAreas
+          .filter(
+            b =>
+              b !== a &&
+              quotas[b] < (areaPoolSizes[b] ?? Infinity) &&
+              (quotas[b] + 1) / n - weights[b] <= AUTO_FOCUS_ERROR_BAR + 1e-9
+          )
+          .sort((x, y) => (exact[y] - quotas[y]) - (exact[x] - quotas[x]))[0];
+        if (!receiver) break;
+        quotas[a] -= 1;
+        quotas[receiver] += 1;
+      }
+    }
+  }
+
+  return quotas;
+}
+
+/**
+ * Check whether replacing `oldArea` with `candArea` in a workout of `totalSlots`
+ * stays within (a) the reasonable auto-recommendation error bar around `focusWeights`.
+ */
+export function isWithinAutoFocusErrorBar({
+  focusWeights,
+  currentAreaCounts,
+  totalSlots,
+  oldArea,
+  candArea
+}) {
+  const n = Math.max(1, totalSlots || 1);
+  const wCand = focusWeights?.[candArea] || 0;
+  // Never auto-recommend a 0% / deselected body area
+  if (wCand <= 1e-9) return false;
+
+  const newCandCount =
+    (currentAreaCounts[candArea] || 0) - (candArea === oldArea ? 1 : 0) + 1;
+  const targetCand = wCand * n;
+  const maxCandAllowed = Math.min(
+    n,
+    Math.max(
+      Math.ceil(targetCand - 1e-9),
+      Math.floor((wCand + AUTO_FOCUS_ERROR_BAR) * n + 1e-9)
+    )
+  );
+  if (newCandCount > maxCandAllowed) return false;
+
+  if (oldArea && candArea !== oldArea && (focusWeights?.[oldArea] || 0) > 1e-9) {
+    const wOld = focusWeights[oldArea];
+    const newOldCount = Math.max(0, (currentAreaCounts[oldArea] || 0) - 1);
+    const minOldAllowed = Math.max(
+      0,
+      Math.min(
+        Math.floor(wOld * n + 1e-9),
+        Math.ceil((wOld - AUTO_FOCUS_ERROR_BAR) * n - 1e-9)
+      )
+    );
+    if (newOldCount < minOldAllowed) return false;
+  }
+
+  return true;
+}
 
 export const MAX_BODY_CATEGORY_PERCENTAGES = {
   'All': 0.33,
@@ -135,7 +604,9 @@ export function filterEligibleExercises(allExercises, {
   bodyCategory = 'All',
   equipment = 'Any',
   excludedExerciseIds = [],
-  muscleGroup = null
+  muscleGroup = null,
+  focusWeights = null,
+  focusEnabled = null
 }) {
   const excludedSet = new Set(excludedExerciseIds);
 
@@ -160,9 +631,17 @@ export function filterEligibleExercises(allExercises, {
     );
   }
 
-  // 4. Filter by bodyCategory or specific muscle group
-  const targetFilter = muscleGroup && muscleGroup !== 'All' ? muscleGroup : bodyCategory;
-  if (targetFilter === 'Upper Body') {
+  // 4. Filter by explicit muscleGroup, specific muscle bodyCategory, focusWeights, or legacy bodyCategory
+  const hasExplicitMuscleGroup = Boolean(muscleGroup && muscleGroup !== 'All');
+  const targetFilter = hasExplicitMuscleGroup ? muscleGroup : bodyCategory;
+
+  if (!hasExplicitMuscleGroup && !SPECIFIC_MUSCLE_LIST.includes(targetFilter) && focusWeights && typeof focusWeights === 'object') {
+    const { weights } = normalizeFocusWeights({ focusWeights, focusEnabled, bodyCategory });
+    pool = pool.filter(ex => {
+      const area = getPrimaryBodyArea(ex);
+      return (weights[area] || 0) > 1e-9;
+    });
+  } else if (targetFilter === 'Upper Body') {
     pool = pool.filter(ex => ex.bodyCategories['Upper Body'] === 'Pri');
   } else if (targetFilter === 'Core') {
     pool = pool.filter(ex => ex.bodyCategories['Core'] === 'Pri');
@@ -336,8 +815,131 @@ function prunePoolByBodyCategory(pool, bodyCategoryPercent, maxBodyCategoryPerce
 }
 
 /**
- * Generate a complete workout matching the Apps Script algorithm + multi-option slots,
- * while guaranteeing zero avoidable muscle overload warnings in any round.
+ * Fisher-Yates shuffle returning a new array using the supplied RNG.
+ */
+function shuffleArrayWithRng(items, rng = Math.random) {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/**
+ * Pick `quota` exercises from `areaPool` while balancing primary muscles and avoiding
+ * avoidable intra-round collisions when partitioned across `nRounds`.
+ */
+function selectAreaExercisesWithMuscleBalance(areaPool, quota, nRounds, nExercisesPerRound, rng = Math.random) {
+  if (quota <= 0 || !areaPool || areaPool.length === 0) return [];
+
+  const idCounts = new Map();
+  const muscleCounts = {};
+  const picked = [];
+
+  function pickFromTiedByMuscle(candidates) {
+    const minM = Math.min(...candidates.map(ex => muscleCounts[getPrimaryMuscle(ex)] || 0));
+    const minMuscleCands = candidates.filter(
+      ex => (muscleCounts[getPrimaryMuscle(ex)] || 0) === minM
+    );
+    const minId = Math.min(...minMuscleCands.map(ex => idCounts.get(ex.id) || 0));
+    const bestCands = minMuscleCands.filter(ex => (idCounts.get(ex.id) || 0) === minId);
+
+    const byMuscle = new Map();
+    for (const ex of bestCands) {
+      const m = getPrimaryMuscle(ex) || '__none__';
+      if (!byMuscle.has(m)) byMuscle.set(m, []);
+      byMuscle.get(m).push(ex);
+    }
+    const chosenMuscle = getRandomEntry([...byMuscle.keys()], rng);
+    return getRandomEntry(byMuscle.get(chosenMuscle), rng);
+  }
+
+  const multiRoundSmallGroup = nRounds >= 2 && nExercisesPerRound <= 4;
+
+  for (let i = 0; i < quota; i++) {
+    let candidatePool = null;
+    if (multiRoundSmallGroup) {
+      const unusedCollisionFree = areaPool.filter(
+        ex =>
+          (idCounts.get(ex.id) || 0) === 0 &&
+          (muscleCounts[getPrimaryMuscle(ex)] || 0) < nRounds
+      );
+      if (unusedCollisionFree.length > 0) {
+        candidatePool = unusedCollisionFree;
+      } else {
+        const reusableCollisionFree = areaPool.filter(
+          ex =>
+            (idCounts.get(ex.id) || 0) < nRounds &&
+            (muscleCounts[getPrimaryMuscle(ex)] || 0) < nRounds
+        );
+        if (reusableCollisionFree.length > 0) {
+          candidatePool = reusableCollisionFree;
+        }
+      }
+    }
+
+    if (!candidatePool) {
+      const unusedAny = areaPool.filter(ex => (idCounts.get(ex.id) || 0) === 0);
+      if (unusedAny.length > 0) {
+        candidatePool = unusedAny;
+      } else if (multiRoundSmallGroup) {
+        const reusableBounded = areaPool.filter(ex => (idCounts.get(ex.id) || 0) < nRounds);
+        candidatePool = reusableBounded.length > 0 ? reusableBounded : areaPool;
+      } else {
+        candidatePool = areaPool;
+      }
+    }
+
+    const chosen = pickFromTiedByMuscle(candidatePool);
+    if (!chosen) break;
+    picked.push(chosen);
+    idCounts.set(chosen.id, (idCounts.get(chosen.id) || 0) + 1);
+    const pm = getPrimaryMuscle(chosen);
+    if (pm) {
+      muscleCounts[pm] = (muscleCounts[pm] || 0) + 1;
+    }
+  }
+
+  return picked;
+}
+
+/**
+ * Randomize round ordering and intra-round slot ordering while preserving balanced
+ * superset pairings (e.g., Quads pairs) and single-round sequence separation.
+ */
+function randomizePartitionOrdering(partitionedGroups, workoutId = '', rng = Math.random) {
+  if (!partitionedGroups || partitionedGroups.length === 0) return [];
+  const nRounds = partitionedGroups.length;
+  if (nRounds === 1) {
+    const seq = [...partitionedGroups[0]];
+    if (seq.length <= 3) {
+      return [shuffleArrayWithRng(seq, rng)];
+    }
+    if (workoutId !== '5-constant-5-change-40-20' && rng() < 0.5) {
+      return [[...seq].reverse()];
+    }
+    return [seq];
+  }
+
+  const randomizedRounds = partitionedGroups.map(group => {
+    if (group.length <= 3) {
+      return shuffleArrayWithRng(group, rng);
+    }
+    if (group.length === 4) {
+      let p1 = rng() < 0.5 ? [group[0], group[1]] : [group[1], group[0]];
+      let p2 = rng() < 0.5 ? [group[2], group[3]] : [group[3], group[2]];
+      return rng() < 0.5 ? [...p1, ...p2] : [...p2, ...p1];
+    }
+    return [...group];
+  });
+
+  return shuffleArrayWithRng(randomizedRounds, rng);
+}
+
+/**
+ * Generate a complete workout matching the Apps Script algorithm + Focus weighting + multi-option slots,
+ * while guaranteeing zero avoidable muscle overload warnings and balanced round distributions.
  */
 export function generateWorkout(sheetData, inputs = {}, rng = Math.random) {
   const {
@@ -350,6 +952,11 @@ export function generateWorkout(sheetData, inputs = {}, rng = Math.random) {
   } = inputs;
 
   const numOptions = Math.min(3, Math.max(1, Number(optionsPerSlot) || 1));
+  const isSpecificMuscleMode = SPECIFIC_MUSCLE_LIST.includes(bodyCategory);
+  const { weights: focusWeights, enabled: focusEnabled } = normalizeFocusWeights(inputs);
+  const effectiveBodyCategory = isSpecificMuscleMode
+    ? bodyCategory
+    : deriveBodyCategoryFromFocus(focusWeights, focusEnabled);
 
   // Step 1: Resolve Workout Category if 'Either'
   let resolvedWorkoutCategory = rawWorkoutCategory;
@@ -377,216 +984,282 @@ export function generateWorkout(sheetData, inputs = {}, rng = Math.random) {
   // Step 3: Filter eligible exercises
   const allFiltered = filterEligibleExercises(sheetData.exercises, {
     workoutCategory: resolvedWorkoutCategory,
-    bodyCategory,
+    bodyCategory: effectiveBodyCategory,
     equipment,
-    excludedExerciseIds
+    excludedExerciseIds,
+    focusWeights: isSpecificMuscleMode ? null : focusWeights,
+    focusEnabled: isSpecificMuscleMode ? null : focusEnabled
   });
 
   // Fallback if user excluded almost everything
   const basePool = allFiltered.length > 0
     ? [...allFiltered]
-    : sheetData.exercises.filter(ex => !excludedExerciseIds.includes(ex.id));
-
-  let masterExercises = [...basePool];
+    : sheetData.exercises.filter(
+        ex => !excludedExerciseIds.includes(ex.id) && !excludedExerciseIds.includes(ex.name)
+      );
 
   const nRounds = parseInt(selectedWorkout.rounds, 10) || 1;
   const nExercisesPerRound = parseInt(selectedWorkout.exercisesPerRound, 10) || 1;
-  const maxBodyCategoryPercent =
-    MAX_BODY_CATEGORY_PERCENTAGES[bodyCategory] !== undefined
-      ? MAX_BODY_CATEGORY_PERCENTAGES[bodyCategory]
-      : 1.0;
+  const totalSlots = nRounds * nExercisesPerRound;
 
   const usedExerciseIds = new Set();
   const rounds = [];
 
-  // Step 4: Loop over rounds and select balanced exercises
-  for (let rnd = 0; rnd < nRounds; rnd++) {
-    let exercisesRound = masterExercises.filter(ex => !usedExerciseIds.has(ex.id));
-    const roundSlots = [];
-
-    const bodyCategoryPercent = {
-      'Upper Body': 0,
-      'Core': 0,
-      'Legs': 0
+  if (!isSpecificMuscleMode) {
+    // Step 4A: Focus-weighted full-workout quota selection + balanced round partitioning
+    const areaPools = {
+      'Upper Body': basePool.filter(ex => ex.bodyCategories?.['Upper Body'] === 'Pri'),
+      'Core': basePool.filter(ex => ex.bodyCategories?.['Core'] === 'Pri'),
+      'Legs': basePool.filter(ex => ex.bodyCategories?.['Legs'] === 'Pri')
     };
+    const areaPoolSizes = {
+      'Upper Body': areaPools['Upper Body'].length,
+      'Core': areaPools['Core'].length,
+      'Legs': areaPools['Legs'].length
+    };
+    const quotas = computeWorkoutAreaQuotas(totalSlots, focusWeights, areaPoolSizes);
 
-    for (let exIdx = 0; exIdx < nExercisesPerRound; exIdx++) {
-      if (exercisesRound.length === 0) {
-        exercisesRound = prunePoolByBodyCategory(
-          masterExercises.filter(ex => !usedExerciseIds.has(ex.id)),
-          bodyCategoryPercent,
-          maxBodyCategoryPercent
-        );
-      }
-      if (exercisesRound.length === 0) {
-        const roundIds = new Set(
-          roundSlots.flatMap(s => s.options.map(o => o.id))
-        );
-        exercisesRound = prunePoolByBodyCategory(
-          basePool.filter(ex => !roundIds.has(ex.id)),
-          bodyCategoryPercent,
-          maxBodyCategoryPercent
-        );
-      }
-      if (exercisesRound.length === 0) {
-        exercisesRound = [...basePool];
-      }
+    let chosenExercises = [];
+    for (const area of BODY_AREAS) {
+      const q = quotas[area] || 0;
+      if (q <= 0) continue;
+      const poolForArea = areaPools[area].length > 0 ? areaPools[area] : basePool;
+      const pickedForArea = selectAreaExercisesWithMuscleBalance(
+        poolForArea,
+        q,
+        nRounds,
+        nExercisesPerRound,
+        rng
+      );
+      chosenExercises.push(...pickedForArea);
+    }
 
-      // Count how many times each Primary muscle is already used in this round
-      const roundPriMuscleCounts = {};
-      SPECIFIC_MUSCLE_LIST.forEach(m => {
-        roundPriMuscleCounts[m] = 0;
+    while (chosenExercises.length < totalSlots && basePool.length > 0) {
+      const fallbackEx = getRandomEntry(basePool, rng);
+      if (!fallbackEx) break;
+      chosenExercises.push(fallbackEx);
+    }
+
+    const shuffledChosen = shuffleArrayWithRng(chosenExercises.slice(0, totalSlots), rng);
+    const partitioned = autoSlotExercises(shuffledChosen, selectedWorkout);
+    const orderedGroups = randomizePartitionOrdering(partitioned, selectedWorkout.id, rng);
+
+    orderedGroups.forEach((group, rndIdx) => {
+      const roundSlots = group.map((primaryExercise, exIdx) => {
+        usedExerciseIds.add(primaryExercise.id);
+        return {
+          roundIndex: rndIdx,
+          slotIndex: exIdx,
+          options: [primaryExercise],
+          selectedOptionIndex: 0,
+          optionChosen: false,
+          completed: false,
+          completedSets:
+            checkMode.mode === 'exercise-sets'
+              ? Array.from({ length: checkMode.count }, () => false)
+              : [],
+          manuallyModified: false
+        };
       });
-      const roundUsedPriMuscles = new Set();
-      roundSlots.forEach(s => {
-        const active = s.options[0];
-        if (!active?.muscles) return;
-        Object.entries(active.muscles).forEach(([m, lvl]) => {
-          if (lvl === 'Pri') {
-            roundUsedPriMuscles.add(m);
-            roundPriMuscleCounts[m] = (roundPriMuscleCounts[m] || 0) + 1;
-          }
+      rounds.push({
+        roundNumber: rndIdx + 1,
+        completed: false,
+        slots: roundSlots
+      });
+    });
+  } else {
+    // Step 4B: Specific single-muscle filter mode
+    let masterExercises = [...basePool];
+    const maxBodyCategoryPercent =
+      MAX_BODY_CATEGORY_PERCENTAGES[bodyCategory] !== undefined
+        ? MAX_BODY_CATEGORY_PERCENTAGES[bodyCategory]
+        : 1.0;
+
+    for (let rnd = 0; rnd < nRounds; rnd++) {
+      let exercisesRound = masterExercises.filter(ex => !usedExerciseIds.has(ex.id));
+      const roundSlots = [];
+
+      const bodyCategoryPercent = {
+        'Upper Body': 0,
+        'Core': 0,
+        'Legs': 0
+      };
+
+      for (let exIdx = 0; exIdx < nExercisesPerRound; exIdx++) {
+        if (exercisesRound.length === 0) {
+          exercisesRound = prunePoolByBodyCategory(
+            masterExercises.filter(ex => !usedExerciseIds.has(ex.id)),
+            bodyCategoryPercent,
+            maxBodyCategoryPercent
+          );
+        }
+        if (exercisesRound.length === 0) {
+          const roundIds = new Set(
+            roundSlots.flatMap(s => s.options.map(o => o.id))
+          );
+          exercisesRound = prunePoolByBodyCategory(
+            basePool.filter(ex => !roundIds.has(ex.id)),
+            bodyCategoryPercent,
+            maxBodyCategoryPercent
+          );
+        }
+        if (exercisesRound.length === 0) {
+          exercisesRound = [...basePool];
+        }
+
+        const roundPriMuscleCounts = {};
+        SPECIFIC_MUSCLE_LIST.forEach(m => {
+          roundPriMuscleCounts[m] = 0;
         });
-      });
+        const roundUsedPriMuscles = new Set();
+        roundSlots.forEach(s => {
+          const active = s.options[0];
+          if (!active?.muscles) return;
+          Object.entries(active.muscles).forEach(([m, lvl]) => {
+            if (lvl === 'Pri') {
+              roundUsedPriMuscles.add(m);
+              roundPriMuscleCounts[m] = (roundPriMuscleCounts[m] || 0) + 1;
+            }
+          });
+        });
 
-      let nonCollidingRoundPool = exercisesRound.filter(ex => {
-        const exPri = getPrimaryMuscle(ex);
-        return !exPri || !roundUsedPriMuscles.has(exPri);
-      });
-
-      // If unused masterExercises ran out of non-colliding muscles for this round,
-      // check basePool (not already in this round) before allowing any muscle collision in the round!
-      if (nonCollidingRoundPool.length === 0) {
-        const roundIds = new Set(roundSlots.flatMap(s => s.options.map(o => o.id)));
-        const fallbackCandidates = prunePoolByBodyCategory(
-          basePool.filter(ex => !roundIds.has(ex.id) && !usedExerciseIds.has(ex.id)),
-          bodyCategoryPercent,
-          maxBodyCategoryPercent
-        ).filter(ex => {
+        let nonCollidingRoundPool = exercisesRound.filter(ex => {
           const exPri = getPrimaryMuscle(ex);
           return !exPri || !roundUsedPriMuscles.has(exPri);
         });
-        if (fallbackCandidates.length > 0) {
-          nonCollidingRoundPool = fallbackCandidates;
-        }
-      }
 
-      // Try inter-round swap with an earlier round if nonCollidingRoundPool is still empty
-      let primaryExercise = null;
-      if (nonCollidingRoundPool.length === 0 && rnd > 0 && exercisesRound.length > 0) {
-        outerSwap: for (const strandedEx of exercisesRound) {
-          const strandedPri = getPrimaryMuscle(strandedEx);
-          const strandedArea = getPrimaryBodyArea(strandedEx);
-          for (let prevR = 0; prevR < rnd; prevR++) {
-            const prevRound = rounds[prevR];
-            const prevMuscles = new Set(
-              prevRound.slots.map(s => getPrimaryMuscle(s.options[0]))
-            );
-            if (prevMuscles.has(strandedPri)) continue;
-            for (let prevS = 0; prevS < prevRound.slots.length; prevS++) {
-              const candidateFromPrev = prevRound.slots[prevS].options[0];
-              const candPri = getPrimaryMuscle(candidateFromPrev);
-              const candArea = getPrimaryBodyArea(candidateFromPrev);
-              if (
-                candPri &&
-                !roundUsedPriMuscles.has(candPri) &&
-                candArea === strandedArea &&
-                prevRound.slots[prevS].options.length === 1
-              ) {
-                // Swap strandedEx into prevRound and use candidateFromPrev here!
-                prevRound.slots[prevS].options[0] = strandedEx;
-                usedExerciseIds.add(strandedEx.id);
-                masterExercises = masterExercises.filter(ex => ex.id !== strandedEx.id);
-                exercisesRound = exercisesRound.filter(ex => ex.id !== strandedEx.id);
-                primaryExercise = candidateFromPrev;
-                break outerSwap;
+        if (nonCollidingRoundPool.length === 0) {
+          const roundIds = new Set(roundSlots.flatMap(s => s.options.map(o => o.id)));
+          const fallbackCandidates = prunePoolByBodyCategory(
+            basePool.filter(ex => !roundIds.has(ex.id) && !usedExerciseIds.has(ex.id)),
+            bodyCategoryPercent,
+            maxBodyCategoryPercent
+          ).filter(ex => {
+            const exPri = getPrimaryMuscle(ex);
+            return !exPri || !roundUsedPriMuscles.has(exPri);
+          });
+          if (fallbackCandidates.length > 0) {
+            nonCollidingRoundPool = fallbackCandidates;
+          }
+        }
+
+        let primaryExercise = null;
+        if (nonCollidingRoundPool.length === 0 && rnd > 0 && exercisesRound.length > 0) {
+          outerSwap: for (const strandedEx of exercisesRound) {
+            const strandedPri = getPrimaryMuscle(strandedEx);
+            const strandedArea = getPrimaryBodyArea(strandedEx);
+            for (let prevR = 0; prevR < rnd; prevR++) {
+              const prevRound = rounds[prevR];
+              const prevMuscles = new Set(
+                prevRound.slots.map(s => getPrimaryMuscle(s.options[0]))
+              );
+              if (prevMuscles.has(strandedPri)) continue;
+              for (let prevS = 0; prevS < prevRound.slots.length; prevS++) {
+                const candidateFromPrev = prevRound.slots[prevS].options[0];
+                const candPri = getPrimaryMuscle(candidateFromPrev);
+                const candArea = getPrimaryBodyArea(candidateFromPrev);
+                if (
+                  candPri &&
+                  !roundUsedPriMuscles.has(candPri) &&
+                  candArea === strandedArea &&
+                  prevRound.slots[prevS].options.length === 1
+                ) {
+                  prevRound.slots[prevS].options[0] = strandedEx;
+                  usedExerciseIds.add(strandedEx.id);
+                  masterExercises = masterExercises.filter(ex => ex.id !== strandedEx.id);
+                  exercisesRound = exercisesRound.filter(ex => ex.id !== strandedEx.id);
+                  primaryExercise = candidateFromPrev;
+                  break outerSwap;
+                }
               }
             }
           }
         }
-      }
 
-      // If still no non-colliding exercise from unused pool, check basePool (not in current round)
-      if (!primaryExercise && nonCollidingRoundPool.length === 0) {
-        const roundIds = new Set(roundSlots.flatMap(s => s.options.map(o => o.id)));
-        const reuseNonColliding = prunePoolByBodyCategory(
-          basePool.filter(ex => !roundIds.has(ex.id)),
+        if (!primaryExercise && nonCollidingRoundPool.length === 0) {
+          const roundIds = new Set(roundSlots.flatMap(s => s.options.map(o => o.id)));
+          const reuseNonColliding = prunePoolByBodyCategory(
+            basePool.filter(ex => !roundIds.has(ex.id)),
+            bodyCategoryPercent,
+            maxBodyCategoryPercent
+          ).filter(ex => {
+            const exPri = getPrimaryMuscle(ex);
+            return !exPri || !roundUsedPriMuscles.has(exPri);
+          });
+          if (reuseNonColliding.length > 0) {
+            nonCollidingRoundPool = reuseNonColliding;
+          }
+        }
+
+        if (!primaryExercise) {
+          if (nonCollidingRoundPool.length > 0) {
+            primaryExercise = getRandomEntry(nonCollidingRoundPool, rng);
+          } else {
+            const roundIds = new Set(roundSlots.flatMap(s => s.options.map(o => o.id)));
+            const candidatePool =
+              exercisesRound.length > 0
+                ? exercisesRound
+                : basePool.filter(ex => !roundIds.has(ex.id));
+            const poolToScore = candidatePool.length > 0 ? candidatePool : basePool;
+            const minCount = Math.min(
+              ...poolToScore.map(ex => roundPriMuscleCounts[getPrimaryMuscle(ex)] || 0)
+            );
+            const minCountPool = poolToScore.filter(
+              ex => (roundPriMuscleCounts[getPrimaryMuscle(ex)] || 0) === minCount
+            );
+            primaryExercise = getRandomEntry(minCountPool, rng);
+          }
+        }
+
+        usedExerciseIds.add(primaryExercise.id);
+        masterExercises = masterExercises.filter(ex => ex.id !== primaryExercise.id);
+        exercisesRound = exercisesRound.filter(ex => ex.id !== primaryExercise.id);
+
+        BODY_AREAS.forEach(area => {
+          const isPri = primaryExercise.bodyCategories[area] === 'Pri' ? 1 : 0;
+          bodyCategoryPercent[area] += isPri / nExercisesPerRound;
+        });
+
+        exercisesRound = prunePoolByBodyCategory(
+          exercisesRound,
           bodyCategoryPercent,
           maxBodyCategoryPercent
-        ).filter(ex => {
-          const exPri = getPrimaryMuscle(ex);
-          return !exPri || !roundUsedPriMuscles.has(exPri);
+        );
+
+        roundSlots.push({
+          roundIndex: rnd,
+          slotIndex: exIdx,
+          options: [primaryExercise],
+          selectedOptionIndex: 0,
+          optionChosen: false,
+          completed: false,
+          completedSets:
+            checkMode.mode === 'exercise-sets'
+              ? Array.from({ length: checkMode.count }, () => false)
+              : [],
+          manuallyModified: false
         });
-        if (reuseNonColliding.length > 0) {
-          nonCollidingRoundPool = reuseNonColliding;
-        }
       }
 
-      if (!primaryExercise) {
-        if (nonCollidingRoundPool.length > 0) {
-          primaryExercise = getRandomEntry(nonCollidingRoundPool, rng);
-        } else {
-          // If round has more slots than distinct primary muscles in pool (e.g. 8-slot Upper Body round with 5 muscles),
-          // pick from candidates whose primary muscle has the MINIMUM count in the current round so far!
-          const roundIds = new Set(roundSlots.flatMap(s => s.options.map(o => o.id)));
-          const candidatePool =
-            exercisesRound.length > 0
-              ? exercisesRound
-              : basePool.filter(ex => !roundIds.has(ex.id));
-          const poolToScore = candidatePool.length > 0 ? candidatePool : basePool;
-          const minCount = Math.min(
-            ...poolToScore.map(ex => roundPriMuscleCounts[getPrimaryMuscle(ex)] || 0)
-          );
-          const minCountPool = poolToScore.filter(
-            ex => (roundPriMuscleCounts[getPrimaryMuscle(ex)] || 0) === minCount
-          );
-          primaryExercise = getRandomEntry(minCountPool, rng);
-        }
-      }
-
-      usedExerciseIds.add(primaryExercise.id);
-
-      masterExercises = masterExercises.filter(ex => ex.id !== primaryExercise.id);
-      exercisesRound = exercisesRound.filter(ex => ex.id !== primaryExercise.id);
-
-      BODY_AREAS.forEach(area => {
-        const isPri = primaryExercise.bodyCategories[area] === 'Pri' ? 1 : 0;
-        bodyCategoryPercent[area] += isPri / nExercisesPerRound;
-      });
-
-      exercisesRound = prunePoolByBodyCategory(
-        exercisesRound,
-        bodyCategoryPercent,
-        maxBodyCategoryPercent
-      );
-
-      const slotOptions = [primaryExercise];
-
-      roundSlots.push({
-        roundIndex: rnd,
-        slotIndex: exIdx,
-        options: slotOptions,
-        selectedOptionIndex: 0,
-        optionChosen: false,
+      rounds.push({
+        roundNumber: rnd + 1,
         completed: false,
-        completedSets:
-          checkMode.mode === 'exercise-sets'
-            ? Array.from({ length: checkMode.count }, () => false)
-            : [],
-        manuallyModified: false
+        slots: roundSlots
       });
     }
-
-    rounds.push({
-      roundNumber: rnd + 1,
-      completed: false,
-      slots: roundSlots
-    });
   }
 
   // Step 5: Populate additional options (Option 2 / Option 3) if optionsPerSlot > 1
   // Done after all primary slot exercises are chosen so every round's full muscle profile is known
   if (numOptions > 1) {
+    const currentPrimaryAreaCounts = { 'Upper Body': 0, 'Core': 0, 'Legs': 0 };
+    rounds.forEach(r =>
+      r.slots.forEach(s => {
+        const a = getPrimaryBodyArea(s.options[0]);
+        if (currentPrimaryAreaCounts[a] !== undefined) currentPrimaryAreaCounts[a] += 1;
+      })
+    );
+
     for (const round of rounds) {
       for (let sIdx = 0; sIdx < round.slots.length; sIdx++) {
         const slot = round.slots[sIdx];
@@ -617,16 +1290,38 @@ export function generateWorkout(sheetData, inputs = {}, rng = Math.random) {
           round.slots.flatMap(s => s.options.map(o => o.id))
         );
 
+        const coreMaxPerRound = isSpecificMuscleMode
+          ? 1
+          : Math.ceil((currentPrimaryAreaCounts['Core'] || 0) / Math.max(1, nRounds));
+
         for (let optIdx = 1; optIdx < numOptions; optIdx++) {
+          const getMaxOtherForMuscle = m => {
+            if (isSpecificMuscleMode && m === bodyCategory) return round.slots.length;
+            if (m === 'Abs' && coreMaxPerRound > 1) return coreMaxPerRound - 1;
+            return round.slots.length > 4 ? 1 : 0;
+          };
           const isZeroCollision = ex =>
-            !Object.entries(ex.muscles || {}).some(
-              ([m, lvl]) => lvl === 'Pri' && otherSlotsPriMuscles.has(m)
-            );
-          const maxOtherAllowed = round.slots.length > 4 ? 1 : 0;
+            !Object.entries(ex.muscles || {}).some(([m, lvl]) => {
+              if (lvl !== 'Pri') return false;
+              if (isSpecificMuscleMode && m === bodyCategory) return false;
+              if (m === 'Abs' && coreMaxPerRound > 1) {
+                return (otherSlotsPriCounts[m] || 0) > coreMaxPerRound - 1;
+              }
+              return otherSlotsPriMuscles.has(m);
+            });
           const isSafeForRound = ex =>
             !Object.entries(ex.muscles || {}).some(
-              ([m, lvl]) => lvl === 'Pri' && (otherSlotsPriCounts[m] || 0) > maxOtherAllowed
+              ([m, lvl]) => lvl === 'Pri' && (otherSlotsPriCounts[m] || 0) > getMaxOtherForMuscle(m)
             );
+          const isWithinFocusBand = ex =>
+            isSpecificMuscleMode ||
+            isWithinAutoFocusErrorBar({
+              focusWeights,
+              currentAreaCounts: currentPrimaryAreaCounts,
+              totalSlots,
+              oldArea: targetArea,
+              candArea: getPrimaryBodyArea(ex)
+            });
 
           // Tier 1: Unused in workout, same body area, zero muscle collision in round
           let altCandidates = basePool.filter(
@@ -637,12 +1332,13 @@ export function generateWorkout(sheetData, inputs = {}, rng = Math.random) {
               isZeroCollision(ex)
           );
 
-          // Tier 2: Unused in workout, any body area in pool, zero muscle collision in round
+          // Tier 2: Unused in workout, within focus error bar, zero muscle collision in round
           if (altCandidates.length === 0) {
             altCandidates = basePool.filter(
               ex =>
                 !usedExerciseIds.has(ex.id) &&
                 !roundExerciseIds.has(ex.id) &&
+                isWithinFocusBand(ex) &&
                 isZeroCollision(ex)
             );
           }
@@ -658,18 +1354,19 @@ export function generateWorkout(sheetData, inputs = {}, rng = Math.random) {
             );
           }
 
-          // Tier 4: Not in current round, safe for round (no overload)
+          // Tier 4: Not in current round, within focus error bar, safe for round (no overload)
           if (altCandidates.length === 0) {
             altCandidates = basePool.filter(
               ex =>
                 !roundExerciseIds.has(ex.id) &&
                 !slot.options.some(o => o.id === ex.id) &&
+                isWithinFocusBand(ex) &&
                 isSafeForRound(ex)
             );
           }
 
           // Tier 4b: If narrow filter pool exhausted a muscle group (e.g. only 1 Glutes in Strength+Legs+Weights),
-          // expand to non-excluded exercises in the same body area / equipment that are safe for the round
+          // expand to non-excluded exercises in the same body area / active focus areas that are safe for the round
           if (altCandidates.length === 0) {
             const nonExcludedAll = sheetData.exercises.filter(
               ex =>
@@ -683,7 +1380,7 @@ export function generateWorkout(sheetData, inputs = {}, rng = Math.random) {
               ex => targetArea === 'All' || ex.bodyCategories[targetArea] === 'Pri'
             );
             if (altCandidates.length === 0) {
-              altCandidates = nonExcludedAll;
+              altCandidates = nonExcludedAll.filter(isWithinFocusBand);
             }
           }
 
@@ -722,7 +1419,9 @@ export function generateWorkout(sheetData, inputs = {}, rng = Math.random) {
     inputs: {
       workoutCategory: rawWorkoutCategory,
       effectiveWorkoutCategory: resolvedWorkoutCategory,
-      bodyCategory,
+      bodyCategory: effectiveBodyCategory,
+      focusWeights: { ...focusWeights },
+      focusEnabled: { ...focusEnabled },
       equipment,
       workoutType,
       optionsPerSlot: numOptions
@@ -750,11 +1449,18 @@ export function generateWorkout(sheetData, inputs = {}, rng = Math.random) {
  */
 function scoreExerciseGroup(group, idealAreaBounds = null) {
   let cost = 0;
+  const seenIds = new Set();
   const priMuscleCounts = {};
   const secMuscleCounts = {};
   const areaCounts = { 'Upper Body': 0, 'Core': 0, 'Legs': 0 };
 
   for (const ex of group) {
+    if (ex?.id) {
+      if (seenIds.has(ex.id)) {
+        cost += 10000;
+      }
+      seenIds.add(ex.id);
+    }
     const area = getPrimaryBodyArea(ex);
     if (areaCounts[area] !== undefined) {
       areaCounts[area] += 1;
@@ -1001,6 +1707,129 @@ export function autoSlotExercises(selectedExercises, workout, maybeExercisesPerR
 }
 
 /**
+ * Auto-fill remaining exercises up to `totalNeeded` from `sheetData` respecting `focusWeights`
+ * quotas across the full workout and balancing primary muscle groups.
+ */
+export function pickAutoFillExercises(
+  sheetData,
+  inputs = {},
+  existingExercises = [],
+  totalNeeded = 8,
+  rng = Math.random
+) {
+  const {
+    workoutCategory: rawWorkoutCategory = 'HIIT',
+    bodyCategory = 'All',
+    equipment = 'Any',
+    excludedExerciseIds = []
+  } = inputs;
+
+  const isSpecificMuscleMode = SPECIFIC_MUSCLE_LIST.includes(bodyCategory);
+  const { weights: focusWeights, enabled: focusEnabled } = normalizeFocusWeights(inputs);
+  const effectiveBodyCategory = isSpecificMuscleMode
+    ? bodyCategory
+    : deriveBodyCategoryFromFocus(focusWeights, focusEnabled);
+
+  const exMap = new Map((sheetData?.exercises || []).map(e => [e.id, e]));
+  const chosenList = [];
+  const chosenIds = new Set();
+
+  for (const item of existingExercises) {
+    const ex = typeof item === 'string' ? exMap.get(item) : exMap.get(item?.id) || item;
+    if (ex && !chosenIds.has(ex.id)) {
+      chosenList.push(ex);
+      chosenIds.add(ex.id);
+    }
+  }
+
+  if (chosenList.length >= totalNeeded) {
+    return chosenList.slice(0, totalNeeded);
+  }
+
+  const eligible = filterEligibleExercises(sheetData?.exercises || [], {
+    workoutCategory: rawWorkoutCategory,
+    bodyCategory: effectiveBodyCategory,
+    equipment,
+    excludedExerciseIds,
+    focusWeights: isSpecificMuscleMode ? null : focusWeights,
+    focusEnabled: isSpecificMuscleMode ? null : focusEnabled
+  }).filter(e => !chosenIds.has(e.id));
+
+  const fallbackPool =
+    eligible.length >= totalNeeded - chosenList.length
+      ? eligible
+      : (sheetData?.exercises || []).filter(
+          e =>
+            !chosenIds.has(e.id) &&
+            !excludedExerciseIds.includes(e.id) &&
+            !excludedExerciseIds.includes(e.name)
+        );
+
+  const areaPoolSizes = {
+    'Upper Body':
+      chosenList.filter(e => getPrimaryBodyArea(e) === 'Upper Body').length +
+      fallbackPool.filter(e => getPrimaryBodyArea(e) === 'Upper Body').length,
+    'Core':
+      chosenList.filter(e => getPrimaryBodyArea(e) === 'Core').length +
+      fallbackPool.filter(e => getPrimaryBodyArea(e) === 'Core').length,
+    'Legs':
+      chosenList.filter(e => getPrimaryBodyArea(e) === 'Legs').length +
+      fallbackPool.filter(e => getPrimaryBodyArea(e) === 'Legs').length
+  };
+  const targetQuotas = isSpecificMuscleMode
+    ? null
+    : computeWorkoutAreaQuotas(totalNeeded, focusWeights, areaPoolSizes);
+
+  while (chosenList.length < totalNeeded && fallbackPool.length > 0) {
+    const muscleCounts = {};
+    const areaCounts = { 'Upper Body': 0, 'Core': 0, 'Legs': 0 };
+    chosenList.forEach(e => {
+      const pm = getPrimaryMuscle(e);
+      if (pm) muscleCounts[pm] = (muscleCounts[pm] || 0) + 1;
+      const area = getPrimaryBodyArea(e);
+      if (areaCounts[area] !== undefined) areaCounts[area] += 1;
+    });
+
+    const available = shuffleArrayWithRng(
+      fallbackPool.filter(e => !chosenIds.has(e.id)),
+      rng
+    );
+    if (available.length === 0) break;
+
+    available.sort((a, b) => {
+      const areaA = getPrimaryBodyArea(a);
+      const areaB = getPrimaryBodyArea(b);
+      if (!isSpecificMuscleMode && targetQuotas) {
+        const activeA = (focusWeights[areaA] || 0) > 1e-9 ? 1 : 0;
+        const activeB = (focusWeights[areaB] || 0) > 1e-9 ? 1 : 0;
+        if (activeA !== activeB) return activeB - activeA;
+
+        const defA = (targetQuotas[areaA] || 0) - (areaCounts[areaA] || 0);
+        const defB = (targetQuotas[areaB] || 0) - (areaCounts[areaB] || 0);
+        const needsA = defA > 0 ? 1 : 0;
+        const needsB = defB > 0 ? 1 : 0;
+        if (needsA !== needsB) return needsB - needsA;
+        if (defA !== defB) return defB - defA;
+      }
+
+      const mA = muscleCounts[getPrimaryMuscle(a)] || 0;
+      const mB = muscleCounts[getPrimaryMuscle(b)] || 0;
+      if (mA !== mB) return mA - mB;
+
+      const aA = areaCounts[areaA] || 0;
+      const aB = areaCounts[areaB] || 0;
+      return aA - aB;
+    });
+
+    const pick = available[0];
+    chosenList.push(pick);
+    chosenIds.add(pick.id);
+  }
+
+  return chosenList;
+}
+
+/**
  * Generate a complete workout from a list of user-selected exercises (X exercises),
  * auto-slotting them to distribute muscle groups per pair, trio, or round.
  */
@@ -1019,6 +1848,12 @@ export function generateWorkoutFromSelectedExercises(
     workoutType = 'Random',
     excludedExerciseIds = []
   } = inputs;
+
+  const isSpecificMuscleMode = SPECIFIC_MUSCLE_LIST.includes(bodyCategory);
+  const { weights: focusWeights, enabled: focusEnabled } = normalizeFocusWeights(inputs);
+  const effectiveBodyCategory = isSpecificMuscleMode
+    ? bodyCategory
+    : deriveBodyCategoryFromFocus(focusWeights, focusEnabled);
 
   // Resolve target workout
   let resolvedWorkoutCategory = rawWorkoutCategory;
@@ -1046,7 +1881,7 @@ export function generateWorkoutFromSelectedExercises(
 
   // Map IDs or objects to full exercise objects
   const exMap = new Map(sheetData.exercises.map(e => [e.id, e]));
-  const chosenList = [];
+  let chosenList = [];
   const chosenIds = new Set();
 
   for (const item of selectedExercises) {
@@ -1057,47 +1892,23 @@ export function generateWorkoutFromSelectedExercises(
     }
   }
 
-  // If fewer than totalNeeded were provided, auto-fill remaining with balanced eligible exercises
+  // If fewer than totalNeeded were provided, auto-fill remaining with focus-weighted balanced exercises
   if (chosenList.length < totalNeeded) {
-    const eligible = filterEligibleExercises(sheetData.exercises, {
-      workoutCategory: resolvedWorkoutCategory,
-      bodyCategory,
-      equipment,
-      excludedExerciseIds
-    }).filter(e => !chosenIds.has(e.id));
-
-    const fallbackPool =
-      eligible.length >= totalNeeded - chosenList.length
-        ? eligible
-        : sheetData.exercises.filter(e => !chosenIds.has(e.id));
-
-    while (chosenList.length < totalNeeded && fallbackPool.length > 0) {
-      // Pick an exercise whose primary muscle & body area are least represented so far
-      const muscleCounts = {};
-      const areaCounts = { 'Upper Body': 0, 'Core': 0, 'Legs': 0 };
-      chosenList.forEach(e => {
-        const pm = getPrimaryMuscle(e);
-        if (pm) muscleCounts[pm] = (muscleCounts[pm] || 0) + 1;
-        const area = getPrimaryBodyArea(e);
-        if (areaCounts[area] !== undefined) areaCounts[area] += 1;
-      });
-
-      const available = fallbackPool.filter(e => !chosenIds.has(e.id));
-      if (available.length === 0) break;
-
-      available.sort((a, b) => {
-        const mA = muscleCounts[getPrimaryMuscle(a)] || 0;
-        const mB = muscleCounts[getPrimaryMuscle(b)] || 0;
-        if (mA !== mB) return mA - mB;
-        const aA = areaCounts[getPrimaryBodyArea(a)] || 0;
-        const aB = areaCounts[getPrimaryBodyArea(b)] || 0;
-        return aA - aB;
-      });
-
-      const pick = available[0];
-      chosenList.push(pick);
-      chosenIds.add(pick.id);
-    }
+    chosenList = pickAutoFillExercises(
+      sheetData,
+      {
+        ...inputs,
+        workoutCategory: resolvedWorkoutCategory,
+        bodyCategory: effectiveBodyCategory,
+        equipment,
+        excludedExerciseIds,
+        focusWeights,
+        focusEnabled
+      },
+      chosenList,
+      totalNeeded,
+      rng
+    );
   }
 
   // Auto-slot the X exercises across rounds to distribute muscle groups per pair/trio/round
@@ -1128,7 +1939,9 @@ export function generateWorkoutFromSelectedExercises(
     inputs: {
       workoutCategory: rawWorkoutCategory,
       effectiveWorkoutCategory: resolvedWorkoutCategory,
-      bodyCategory,
+      bodyCategory: effectiveBodyCategory,
+      focusWeights: { ...focusWeights },
+      focusEnabled: { ...focusEnabled },
       equipment,
       workoutType: selectedWorkout.name,
       optionsPerSlot: 1
@@ -1227,10 +2040,10 @@ export function swapExerciseInSlot(workoutState, roundIndex, slotIndex, newExerc
 
 /**
  * Compute valid replacement exercises for a specific round & slot that:
- * 1) Match active filters and user exclusions
+ * 1) Match active filters, Focus weights (within AUTO_FOCUS_ERROR_BAR), and user exclusions
  * 2) Are not already used in the workout
- * 3) Respect the round's body-category balance
- * 4) Do NOT trigger any muscle overload warning in that round!
+ * 3) Respect both full-workout Focus distribution and intra-round body-area balance
+ * 4) Do NOT trigger any muscle or focus overload warning!
  */
 export function getValidReplacementCandidates({
   workoutState,
@@ -1244,6 +2057,30 @@ export function getValidReplacementCandidates({
   const currentSlot = round?.slots[slotIndex];
   const currentEx = getActiveSlotExercise(currentSlot);
   const targetBodyArea = currentEx ? getPrimaryBodyArea(currentEx) : 'All';
+
+  const bodyCategory = workoutState.inputs?.bodyCategory || 'All';
+  const isSpecificMuscleMode = SPECIFIC_MUSCLE_LIST.includes(bodyCategory);
+  const { weights: focusWeights, enabled: focusEnabled } = normalizeFocusWeights(
+    workoutState.inputs || { bodyCategory }
+  );
+
+  const nRounds = workoutState.rounds.length || 1;
+  const totalSlots = workoutState.rounds.reduce((acc, r) => acc + r.slots.length, 0);
+  const currentAreaCounts = { 'Upper Body': 0, 'Core': 0, 'Legs': 0 };
+  workoutState.rounds.forEach(r =>
+    r.slots.forEach(s => {
+      const a = getPrimaryBodyArea(getActiveSlotExercise(s));
+      if (currentAreaCounts[a] !== undefined) currentAreaCounts[a] += 1;
+    })
+  );
+  const expectedAreaQuotas = computeWorkoutAreaQuotas(totalSlots, focusWeights);
+
+  const otherRoundAreaCounts = { 'Upper Body': 0, 'Core': 0, 'Legs': 0 };
+  (round?.slots || []).forEach((s, idx) => {
+    if (idx === slotIndex) return;
+    const a = getPrimaryBodyArea(getActiveSlotExercise(s));
+    if (otherRoundAreaCounts[a] !== undefined) otherRoundAreaCounts[a] += 1;
+  });
 
   const usedIds = new Set(
     workoutState.rounds.flatMap(r => r.slots.flatMap(s => s.options.map(o => o.id)))
@@ -1259,14 +2096,26 @@ export function getValidReplacementCandidates({
 
   const eligible = filterEligibleExercises(sheetData.exercises, {
     workoutCategory: workoutState.inputs.effectiveWorkoutCategory,
-    bodyCategory: workoutState.inputs.bodyCategory,
+    bodyCategory,
     equipment: workoutState.inputs.equipment,
-    excludedExerciseIds
+    excludedExerciseIds,
+    focusWeights: isSpecificMuscleMode ? null : focusWeights,
+    focusEnabled: isSpecificMuscleMode ? null : focusEnabled
   }).filter(ex => !usedIds.has(ex.id) && ex.id !== currentEx?.id);
 
   function isCandidateWarningFree(candidate) {
     const candPri = getPrimaryMuscle(candidate);
-    if ((round?.slots?.length || 2) <= 4 && candPri && otherSlotsPriMuscles.has(candPri)) {
+    const maxExpectedCoreInRound = Math.ceil((expectedAreaQuotas['Core'] || 0) / Math.max(1, nRounds));
+    const allowAbsInRound =
+      candPri === 'Abs' &&
+      focusWeights['Core'] >= 0.5 - 1e-9 &&
+      (otherRoundAreaCounts['Core'] + 1) <= maxExpectedCoreInRound;
+    if (
+      (round?.slots?.length || 2) <= 4 &&
+      candPri &&
+      otherSlotsPriMuscles.has(candPri) &&
+      !allowAbsInRound
+    ) {
       return false;
     }
     if (!analyzeMuscleLoadFn) return true;
@@ -1284,10 +2133,66 @@ export function getValidReplacementCandidates({
     return roundWarnings.length === 0;
   }
 
+  function passesAutoFocus(candidate) {
+    if (isSpecificMuscleMode) return true;
+    return isWithinAutoFocusErrorBar({
+      focusWeights,
+      currentAreaCounts,
+      totalSlots,
+      oldArea: targetBodyArea,
+      candArea: getPrimaryBodyArea(candidate)
+    });
+  }
+
+  function passesRoundAreaBalance(candidate) {
+    if (isSpecificMuscleMode || nRounds < 2) return true;
+    const candArea = getPrimaryBodyArea(candidate);
+    const newTotalCandArea =
+      (currentAreaCounts[candArea] || 0) - (candArea === targetBodyArea ? 1 : 0) + 1;
+    const maxBalancedInRound = Math.max(1, Math.ceil(newTotalCandArea / nRounds));
+    return (otherRoundAreaCounts[candArea] || 0) + 1 <= maxBalancedInRound;
+  }
+
+  function focusDeviationAfterSwap(candidate) {
+    if (isSpecificMuscleMode) return 0;
+    const candArea = getPrimaryBodyArea(candidate);
+    let l1 = 0;
+    for (const a of BODY_AREAS) {
+      const nextCount =
+        (currentAreaCounts[a] || 0) - (a === targetBodyArea ? 1 : 0) + (a === candArea ? 1 : 0);
+      l1 += Math.abs(nextCount / Math.max(1, totalSlots) - (focusWeights[a] || 0));
+    }
+    return l1;
+  }
+
+  function sortByFocusAlignment(list) {
+    return [...list].sort((a, b) => {
+      const diff = focusDeviationAfterSwap(a) - focusDeviationAfterSwap(b);
+      if (Math.abs(diff) > 1e-6) return diff;
+      const sameA = a.bodyCategories?.[targetBodyArea] === 'Pri' ? 0 : 1;
+      const sameB = b.bodyCategories?.[targetBodyArea] === 'Pri' ? 0 : 1;
+      return sameA - sameB;
+    });
+  }
+
   let warningFree = eligible.filter(isCandidateWarningFree);
 
+  if (!isSpecificMuscleMode && warningFree.length > 0) {
+    const strictFocusAndRound = warningFree.filter(
+      ex => passesAutoFocus(ex) && passesRoundAreaBalance(ex)
+    );
+    if (strictFocusAndRound.length > 0) {
+      return sortByFocusAlignment(strictFocusAndRound);
+    }
+    const strictFocusOnly = warningFree.filter(passesAutoFocus);
+    if (strictFocusOnly.length > 0) {
+      return sortByFocusAlignment(strictFocusOnly);
+    }
+    return sortByFocusAlignment(warningFree);
+  }
+
   // If restrictive filters left 0 warning-free candidates in `eligible`,
-  // widen to all non-excluded exercises not used in the workout that are warning-free!
+  // widen to equipment-matching non-excluded exercises not used in the workout that are warning-free!
   if (warningFree.length === 0) {
     const widerPool = filterEligibleExercises(sheetData.exercises, {
       workoutCategory: workoutState.inputs.effectiveWorkoutCategory,
@@ -1295,17 +2200,26 @@ export function getValidReplacementCandidates({
       equipment: workoutState.inputs.equipment,
       excludedExerciseIds
     }).filter(ex => !usedIds.has(ex.id) && ex.id !== currentEx?.id);
-    warningFree = widerPool.filter(isCandidateWarningFree);
+    const widerWarningFree = widerPool.filter(isCandidateWarningFree);
+    const widerInFocus = widerWarningFree.filter(passesAutoFocus);
+    warningFree = widerInFocus.length > 0 ? widerInFocus : widerWarningFree;
   }
 
   if (warningFree.length === 0) {
     const allPool = sheetData.exercises.filter(
       ex =>
         !excludedExerciseIds.includes(ex.id) &&
+        !excludedExerciseIds.includes(ex.name) &&
         !usedIds.has(ex.id) &&
         ex.id !== currentEx?.id
     );
-    warningFree = allPool.filter(isCandidateWarningFree);
+    const allWarningFree = allPool.filter(isCandidateWarningFree);
+    const allInFocus = allWarningFree.filter(passesAutoFocus);
+    warningFree = allInFocus.length > 0 ? allInFocus : allWarningFree;
+  }
+
+  if (!isSpecificMuscleMode && warningFree.length > 0) {
+    return sortByFocusAlignment(warningFree);
   }
 
   const sameAreaWarningFree = warningFree.filter(
@@ -1437,8 +2351,12 @@ export function swapExercisesAcrossRounds(
   const slotA = nextState.rounds[fromRoundIndex].slots[fromSlotIndex];
   const slotB = nextState.rounds[toRoundIndex].slots[toSlotIndex];
 
+  slotA.roundIndex = toRoundIndex;
   slotA.slotIndex = toSlotIndex;
+  slotA.manuallyModified = true;
+  slotB.roundIndex = fromRoundIndex;
   slotB.slotIndex = fromSlotIndex;
+  slotB.manuallyModified = true;
 
   nextState.rounds[fromRoundIndex].slots[fromSlotIndex] = slotB;
   nextState.rounds[toRoundIndex].slots[toSlotIndex] = slotA;

@@ -133,6 +133,16 @@ async function runBrowserCDPTests(wsUrl) {
         await send('DOM.enable');
         await send('Page.enable');
 
+        const pageErrors = [];
+        ws.addEventListener('message', evt => {
+          try {
+            const msg = JSON.parse(evt.data);
+            if (msg.method === 'Runtime.exceptionThrown') {
+              pageErrors.push(msg.params?.exceptionDetails?.text || JSON.stringify(msg.params));
+            }
+          } catch {}
+        });
+
         // Emulate iPhone viewport (390 x 844)
         await send('Emulation.setDeviceMetricsOverride', {
           width: 390,
@@ -141,9 +151,21 @@ async function runBrowserCDPTests(wsUrl) {
           mobile: true
         });
 
-        // Ensure page is on our app (allow time for any SW controllerchange reload to settle)
+        // Ensure page is on our app (allow time for any SW controllerchange reload & stylesheet + bootstrap to settle)
         await send('Page.navigate', { url: 'http://127.0.0.1:8080/index.html' });
-        await new Promise(r => setTimeout(r, 1000));
+        await new Promise(r => setTimeout(r, 1200));
+        for (let attempt = 0; attempt < 25; attempt++) {
+          const ready = await evalInPage(() => {
+            const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg-primary').trim();
+            const slots = document.querySelectorAll('.exercise-slot').length;
+            return document.readyState === 'complete' && bg !== '' && slots > 0;
+          }).catch(() => false);
+          if (ready) break;
+          await new Promise(r => setTimeout(r, 150));
+        }
+        if (pageErrors.length > 0) {
+          throw new Error('Uncaught browser JS exception(s): ' + pageErrors.join(' | '));
+        }
 
         console.log('\n--- 1. Viewport, Light Blue Palette & Single-Screen Layout Check ---');
         const vpCheck = await evalInPage(() => {
@@ -180,21 +202,23 @@ async function runBrowserCDPTests(wsUrl) {
         }
         console.log(`  ✅ PASS: Hyperlink opens modal for "${modalCheck.title}" with format explanation and closes cleanly`);
 
-        console.log('\n--- 3. Exercise Details & 68 Bespoke SVG Diagrams Check ---');
+        console.log('\n--- 3. Exercise Details, No Spreadsheet Mention & Bespoke SVG Diagrams Check ---');
         const exCheck = await evalInPage(() => {
           document.querySelector('.exercise-name-btn').click();
           const modal = document.getElementById('exerciseModal');
           const isOpen = modal && !modal.hidden;
           const title = document.getElementById('exerciseModalTitle')?.innerText;
+          const modalText = modal?.innerText || '';
+          const noSpreadsheetMention = !/sheet\s*row|spreadsheet|row\s*#\s*\d+/i.test(modalText);
           const imgSrc = document.getElementById('exerciseModalDiagram')?.getAttribute('src');
           const stepsCount = document.querySelectorAll('#exerciseModalSteps li').length;
           document.querySelector('[data-close-modal="exerciseModal"]').click();
-          return { isOpen, title, imgSrc, stepsCount };
+          return { isOpen, title, imgSrc, stepsCount, noSpreadsheetMention };
         });
-        if (!exCheck.isOpen || !exCheck.imgSrc || exCheck.stepsCount === 0) {
-          throw new Error('Exercise detail modal failed');
+        if (!exCheck.isOpen || !exCheck.imgSrc || exCheck.stepsCount === 0 || !exCheck.noSpreadsheetMention) {
+          throw new Error('Exercise detail modal failed: ' + JSON.stringify(exCheck));
         }
-        console.log(`  ✅ PASS: Exercise modal for "${exCheck.title}" loads SVG diagram (${exCheck.imgSrc}) and instructions`);
+        console.log(`  ✅ PASS: Exercise modal for "${exCheck.title}" loads SVG diagram (${exCheck.imgSrc}), instructions, and has 0 spreadsheet mentions`);
 
         console.log('\n--- 4. Format-Aware Checkboxes & Blue Check Verification ---');
         const cbCheck = await evalInPage(() => {
@@ -352,7 +376,61 @@ async function runBrowserCDPTests(wsUrl) {
         }
         console.log('  ✅ PASS: Profile/login button removed, top-nav has settings only, and clutter completely removed');
 
-        console.log('\n--- 8. Requirement 1: Filter by Muscle Group Across Main Dropdown, Swap Modal & Settings ---');
+        console.log('\n--- 8. Top Menu 1-Row Layout (375px & 390px), 3-Part Focus Slider, Deselect/Reselect, Drag & Modal Filters ---');
+        // First test narrow 375px iPhone SE/Mini width for Top Menu layout squishing/overflow
+        await send('Emulation.setDeviceMetricsOverride', {
+          width: 375,
+          height: 812,
+          deviceScaleFactor: 3,
+          mobile: true
+        });
+        const narrow375MenuCheck = await evalInPage(() => {
+          const cells = Array.from(document.querySelectorAll('.top-menu-row .top-menu-cell'));
+          const rects = cells.map(c => c.getBoundingClientRect());
+          const labels = cells.map(c => c.querySelector('label')?.getBoundingClientRect());
+          const selects = cells.map(c => c.querySelector('select')?.getBoundingClientRect());
+          const focusRect = document.getElementById('focusSliderSection')?.getBoundingClientRect();
+          const rowRect = document.querySelector('.top-menu-row')?.getBoundingClientRect();
+          return {
+            cellCount: cells.length,
+            sameRow:
+              rects.length === 3 &&
+              Math.abs(rects[0].top - rects[1].top) < 2 &&
+              Math.abs(rects[1].top - rects[2].top) < 2,
+            nonOverlapping:
+              rects.length === 3 &&
+              rects[0].right <= rects[1].left + 1 &&
+              rects[1].right <= rects[2].left + 1,
+            labelsAboveSelects:
+              labels.length === 3 &&
+              labels.every((l, idx) => l && selects[idx] && l.bottom <= selects[idx].top + 4),
+            aboveFocusSection: !!(rowRect && focusRect && rowRect.bottom <= focusRect.top + 4),
+            noHorizontalOverflow:
+              document.documentElement.scrollWidth <= window.innerWidth &&
+              document.body.scrollWidth <= window.innerWidth,
+            minSelectWidth: Math.min(...selects.map(s => s?.width || 0))
+          };
+        });
+        if (
+          narrow375MenuCheck.cellCount !== 3 ||
+          !narrow375MenuCheck.sameRow ||
+          !narrow375MenuCheck.nonOverlapping ||
+          !narrow375MenuCheck.labelsAboveSelects ||
+          !narrow375MenuCheck.aboveFocusSection ||
+          !narrow375MenuCheck.noHorizontalOverflow ||
+          narrow375MenuCheck.minSelectWidth < 80
+        ) {
+          throw new Error('Top menu 375px layout check failed: ' + JSON.stringify(narrow375MenuCheck));
+        }
+
+        // Restore 390px iPhone Pro viewport
+        await send('Emulation.setDeviceMetricsOverride', {
+          width: 390,
+          height: 844,
+          deviceScaleFactor: 3,
+          mobile: true
+        });
+
         const filterCheck = await evalInPage(() => {
           // Reset optionsPerSlot to 1 for clean inspection
           document.getElementById('settingsBtn').click();
@@ -365,28 +443,128 @@ async function runBrowserCDPTests(wsUrl) {
             el => el.innerText
           );
           const allExclValid = exclItems.length >= 4;
-          // Reset exclusion filter pill back to All and close settings
           document.querySelector('#exclusionMuscleFilterBar [data-muscle-filter="All"]').click();
           document.querySelector('[data-close-modal="settingsModal"]').click();
 
-          // Test main Focus dropdown (#bodyCategorySelect) filtering by "Legs and Core" and "Glutes" (and no redundant "Lower Body")
-          const focusSelect = document.getElementById('bodyCategorySelect');
-          const noRedundantLowerBodyOpt = !focusSelect.querySelector('option[value="Lower Body"]');
-          const hasLegsOpt = !!focusSelect.querySelector('option[value="Legs"]');
-          const hasCoreOpt = !!focusSelect.querySelector('option[value="Core"]');
-          const hasLegsAndCoreOpt = !!focusSelect.querySelector('option[value="Legs and Core"]');
+          // Verify old Focus dropdown is completely removed
+          const noLegacyFocusDropdown = !document.getElementById('bodyCategorySelect');
 
-          focusSelect.value = 'Legs and Core';
-          focusSelect.dispatchEvent(new Event('change'));
-          const legsAndCoreSlotsCount = document.querySelectorAll('.exercise-slot').length;
+          // Verify 3-Part Focus Slider initial colors, alignment, 2 handles, and zero tick marks
+          const upperBtn = document.getElementById('focusLabelUpper');
+          const coreBtn = document.getElementById('focusLabelCore');
+          const lowerBtn = document.getElementById('focusLabelLower');
+          const segUpper = document.getElementById('focusSegUpper');
+          const segCore = document.getElementById('focusSegCore');
+          const segLower = document.getElementById('focusSegLower');
+          const track = document.getElementById('focusBarTrack');
 
-          focusSelect.value = 'Glutes';
-          focusSelect.dispatchEvent(new Event('change'));
+          const upperTextColor = getComputedStyle(upperBtn).color;
+          const coreTextColor = getComputedStyle(coreBtn).color;
+          const lowerTextColor = getComputedStyle(lowerBtn).color;
+          const upperBarColor = getComputedStyle(segUpper).backgroundColor;
+          const coreBarColor = getComputedStyle(segCore).backgroundColor;
+          const lowerBarColor = getComputedStyle(segLower).backgroundColor;
 
-          const slotMetasGlutes = Array.from(document.querySelectorAll('.exercise-slot .exercise-inline-meta')).map(
-            el => el.innerText
-          );
-          const allSlotsHaveGlutes = slotMetasGlutes.length > 0 && slotMetasGlutes.every(txt => txt.includes('Glutes'));
+          const uRect = upperBtn.getBoundingClientRect();
+          const cRect = coreBtn.getBoundingClientRect();
+          const lRect = lowerBtn.getBoundingClientRect();
+          const labelsOrderedLeftCenterRight = uRect.left < cRect.left && cRect.left < lRect.left;
+          const initialHandlesCount = document.querySelectorAll('#focusHandlesLayer .focus-slider-thumb').length;
+          const zeroTickMarks = document.querySelectorAll('[class*="tick"]').length === 0;
+
+          // Switch to Strength Duos so we can inspect 8 slots across 4 Duo rounds
+          const typeSelect = document.getElementById('workoutTypeSelect');
+          typeSelect.value = 'Strength Duos';
+          typeSelect.dispatchEvent(new Event('change'));
+
+          // 1) Tap "Core" to deselect -> turns grey, yellow bar hidden, 50%/50% Upper/Lower, 1 handle
+          coreBtn.click();
+          const coreDeselectedGrey = getComputedStyle(coreBtn).color;
+          const coreSegHidden = segCore.hidden === true;
+          const handlesAfterDeselectCore = document.querySelectorAll('#focusHandlesLayer .focus-slider-thumb').length;
+          const pctAfterDeselectCore = {
+            upper: document.getElementById('focusPctUpper').innerText.trim(),
+            core: document.getElementById('focusPctCore').innerText.trim(),
+            lower: document.getElementById('focusPctLower').innerText.trim()
+          };
+
+          // 2) Drag the single handle to 75% of track width -> snaps to 75% Upper / 25% Lower -> 6 Upper + 2 Lower, max 1 Lower per Duo round!
+          const trackRect = track.getBoundingClientRect();
+          const thumb0 = document.querySelector('#focusHandlesLayer .focus-slider-thumb');
+          const startX = trackRect.left + trackRect.width * 0.5;
+          const endX75 = trackRect.left + trackRect.width * 0.75;
+          thumb0.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: startX, pointerId: 1, button: 0 }));
+          track.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: endX75, pointerId: 1 }));
+          track.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: endX75, pointerId: 1 }));
+
+          const pctAfterDrag75 = {
+            upper: document.getElementById('focusPctUpper').innerText.trim(),
+            lower: document.getElementById('focusPctLower').innerText.trim()
+          };
+
+          const legMuscles = ['Glutes', 'Quads', 'Hamstrings'];
+          const roundLegCounts = Array.from(document.querySelectorAll('.round-card')).map(card => {
+            const metas = Array.from(card.querySelectorAll('.exercise-inline-meta')).map(m => m.innerText);
+            return metas.filter(txt => legMuscles.some(lm => txt.startsWith(lm))).length;
+          });
+          const totalLower75 = roundLegCounts.reduce((a, b) => a + b, 0);
+          const maxLowerPerRound75 = Math.max(...roundLegCounts);
+          const bannersOnAuto75 = document.querySelectorAll('.overload-banner').length;
+
+          // 3) Live Manual Focus Overload & 1-Tap Resolution:
+          // Swap 2 Upper Body slots in separate rounds to Lower Body exercises -> triggers Lower Body overload -> 1-tap auto-balance clears it!
+          const upperRoundIndices = roundLegCounts
+            .map((cnt, idx) => (cnt === 0 ? idx : -1))
+            .filter(idx => idx >= 0);
+          const swapInput = document.getElementById('swapSearchInput');
+
+          document
+            .querySelector(`.exercise-slot[data-round-index="${upperRoundIndices[0]}"][data-slot-index="0"] .swap-trigger-btn`)
+            .click();
+          swapInput.value = 'Squats';
+          swapInput.dispatchEvent(new Event('input'));
+          document.querySelector('#swapExerciseList .swap-option-item').click();
+          const bannersAfterPlus1Manual = document.querySelectorAll('.overload-banner').length;
+
+          document
+            .querySelector(`.exercise-slot[data-round-index="${upperRoundIndices[1]}"][data-slot-index="0"] .swap-trigger-btn`)
+            .click();
+          document.querySelector('#swapMuscleFilterBar [data-muscle-filter="Hamstrings"]').click();
+          document.querySelector('#swapExerciseList .swap-option-item').click();
+          const focusOverloadBanner = document.querySelector('.overload-banner');
+          const focusOverloadText = focusOverloadBanner?.innerText.replace(/\s+/g, ' ').trim() || '';
+          focusOverloadBanner?.querySelector('[data-action="auto-balance"]')?.click();
+          const bannersAfterFocusAutoBalance = document.querySelectorAll('.overload-banner').length;
+
+          // 4) Tap "Lower Body" to deselect -> 0 handles, 100% Upper Body; tapping "Upper Body" blocked as last active group
+          lowerBtn.click();
+          const handlesWhenOneActive = document.querySelectorAll('#focusHandlesLayer .focus-slider-thumb').length;
+          upperBtn.click(); // Attempt to deselect last remaining active group -> blocked!
+          const lastActiveStillEnabled = !upperBtn.classList.contains('is-deselected');
+
+          // 5) Reselect "Lower Body" -> goes to 1/3 (33%) by default, Upper scales to 2/3 (67%)!
+          lowerBtn.click();
+          const pctAfterReselectLower = {
+            upper: document.getElementById('focusPctUpper').innerText.trim(),
+            lower: document.getElementById('focusPctLower').innerText.trim()
+          };
+
+          // 6) Reselect "Core" -> goes to 1/3 (33%) by default, 2 handles reappear! Then restore 1/3 each (33%/33%/33%)
+          coreBtn.click();
+          const pctCoreOnReselect = document.getElementById('focusPctCore').innerText.trim();
+          const handlesAfterReselectAll = document.querySelectorAll('#focusHandlesLayer .focus-slider-thumb').length;
+
+          // Snap handle 0 -> 1/3 and handle 1 -> 2/3 to restore balanced 33%/33%/33%
+          const thumbs = document.querySelectorAll('#focusHandlesLayer .focus-slider-thumb');
+          const x33 = trackRect.left + trackRect.width * (1 / 3);
+          const x67 = trackRect.left + trackRect.width * (2 / 3);
+          thumbs[0].dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: x33, pointerId: 2, button: 0 }));
+          track.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: x33, pointerId: 2 }));
+          track.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: x33, pointerId: 2 }));
+          const thumbs2 = document.querySelectorAll('#focusHandlesLayer .focus-slider-thumb');
+          thumbs2[1].dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: x67, pointerId: 3, button: 0 }));
+          track.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: x67, pointerId: 3 }));
+          track.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: x67, pointerId: 3 }));
 
           // Test Swap Modal muscle filter pill ("Hamstrings" and "Legs and Core")
           document.querySelector('.exercise-slot[data-round-index="0"][data-slot-index="0"] .swap-trigger-btn').click();
@@ -401,40 +579,75 @@ async function runBrowserCDPTests(wsUrl) {
           const allSwapHaveHamstrings = swapItems.length >= 4;
           document.querySelector('[data-close-modal="swapModal"]').click();
 
-          // Reset Focus dropdown back to All
-          focusSelect.value = 'All';
-          focusSelect.dispatchEvent(new Event('change'));
-
           return {
-            noRedundantLowerBodyOpt,
-            hasLegsOpt,
-            hasCoreOpt,
-            hasLegsAndCoreOpt,
-            legsAndCoreSlotsCount,
+            noLegacyFocusDropdown,
+            colorsMatchSpec:
+              upperTextColor === 'rgb(127, 29, 29)' &&
+              upperBarColor === 'rgb(254, 202, 202)' &&
+              coreTextColor === 'rgb(113, 63, 18)' &&
+              coreBarColor === 'rgb(254, 240, 138)' &&
+              lowerTextColor === 'rgb(88, 28, 135)' &&
+              lowerBarColor === 'rgb(233, 213, 255)',
+            labelsOrderedLeftCenterRight,
+            initialHandlesCount,
+            zeroTickMarks,
+            coreDeselectedGrey,
+            coreSegHidden,
+            handlesAfterDeselectCore,
+            pctAfterDeselectCore,
+            pctAfterDrag75,
+            totalLower75,
+            maxLowerPerRound75,
+            bannersOnAuto75,
+            bannersAfterPlus1Manual,
+            focusOverloadDetected: !!focusOverloadBanner && focusOverloadText.includes('overload'),
+            focusOverloadText,
+            bannersAfterFocusAutoBalance,
+            handlesWhenOneActive,
+            lastActiveStillEnabled,
+            pctAfterReselectLower,
+            pctCoreOnReselect,
+            handlesAfterReselectAll,
             hasSwapLegsAndCorePill,
             allExclValid,
             exclCount: exclItems.length,
-            allSlotsHaveGlutes,
-            glutesSlotCount: slotMetasGlutes.length,
             allSwapHaveHamstrings,
             swapHamCount: swapItems.length
           };
         });
         if (
-          !filterCheck.noRedundantLowerBodyOpt ||
-          !filterCheck.hasLegsOpt ||
-          !filterCheck.hasCoreOpt ||
-          !filterCheck.hasLegsAndCoreOpt ||
-          filterCheck.legsAndCoreSlotsCount === 0 ||
+          !filterCheck.noLegacyFocusDropdown ||
+          !filterCheck.colorsMatchSpec ||
+          !filterCheck.labelsOrderedLeftCenterRight ||
+          filterCheck.initialHandlesCount !== 2 ||
+          !filterCheck.zeroTickMarks ||
+          filterCheck.coreDeselectedGrey !== 'rgb(148, 163, 184)' ||
+          !filterCheck.coreSegHidden ||
+          filterCheck.handlesAfterDeselectCore !== 1 ||
+          filterCheck.pctAfterDeselectCore.upper !== '50%' ||
+          filterCheck.pctAfterDeselectCore.lower !== '50%' ||
+          filterCheck.pctAfterDrag75.upper !== '75%' ||
+          filterCheck.pctAfterDrag75.lower !== '25%' ||
+          filterCheck.totalLower75 !== 2 ||
+          filterCheck.maxLowerPerRound75 > 1 ||
+          filterCheck.bannersOnAuto75 !== 0 ||
+          filterCheck.bannersAfterPlus1Manual !== 0 ||
+          !filterCheck.focusOverloadDetected ||
+          filterCheck.bannersAfterFocusAutoBalance !== 0 ||
+          filterCheck.handlesWhenOneActive !== 0 ||
+          !filterCheck.lastActiveStillEnabled ||
+          filterCheck.pctAfterReselectLower.lower !== '33%' ||
+          filterCheck.pctAfterReselectLower.upper !== '67%' ||
+          filterCheck.pctCoreOnReselect !== '33%' ||
+          filterCheck.handlesAfterReselectAll !== 2 ||
           !filterCheck.hasSwapLegsAndCorePill ||
           !filterCheck.allExclValid ||
-          !filterCheck.allSlotsHaveGlutes ||
           !filterCheck.allSwapHaveHamstrings
         ) {
-          throw new Error('Muscle group filter check failed: ' + JSON.stringify(filterCheck));
+          throw new Error('Top Menu & 3-Part Focus Slider check failed: ' + JSON.stringify(filterCheck));
         }
         console.log(
-          `  ✅ PASS: Muscle group filtering verified across Main Focus (Glutes: ${filterCheck.glutesSlotCount} slots), Swap Modal (Hamstrings: ${filterCheck.swapHamCount}), and Settings (Triceps: ${filterCheck.exclCount})`
+          `  ✅ PASS: Top Menu (1-row @ 375px & 390px) + 3-Part Focus Slider verified (75/25 drag -> 6 Upper + 2 Lower across 4 Duos, +1 manual tolerated, +2 warns "${filterCheck.focusOverloadText}" & resolves in 1 tap, deselect/reselect 1/3)`
         );
 
         console.log('\n--- 9. Requirement 2 & 3: Dismiss Overload Warning & Replacement Exercises Never Trigger New Warnings ---');
@@ -627,6 +840,8 @@ async function runBrowserCDPTests(wsUrl) {
           const step1TextColor = getComputedStyle(bottomLabelEl).color;
           const step1FillBg = getComputedStyle(stageFill).backgroundColor;
           const step1ResetFillStyle = stageFill?.style.height;
+          const bottomLabelFontSize = parseFloat(getComputedStyle(bottomLabelEl).fontSize);
+          const noOverflowOnWorkStep = document.documentElement.scrollWidth <= window.innerWidth;
 
           // Skip from Step 1 (40s green work) -> Step 2 (20s blue rest)
           document.getElementById('timerNextStepBtn').click();
@@ -738,6 +953,8 @@ async function runBrowserCDPTests(wsUrl) {
             step1TextColor,
             step1FillBg,
             step1ResetFillStyle,
+            bottomLabelFontSize,
+            noOverflowOnWorkStep,
             step2Clock,
             step2IsBlue: step2StageClass.includes('timer-color-blue'),
             step2BottomLabel,
@@ -786,6 +1003,8 @@ async function runBrowserCDPTests(wsUrl) {
           timerCheck.step1TextColor !== 'rgb(20, 83, 45)' ||
           timerCheck.step1FillBg !== 'rgb(187, 247, 208)' ||
           timerCheck.step1ResetFillStyle !== '100%' ||
+          Math.abs(timerCheck.bottomLabelFontSize - 35.1) > 0.6 ||
+          !timerCheck.noOverflowOnWorkStep ||
           timerCheck.step2Clock !== '00:20' ||
           !timerCheck.step2IsBlue ||
           timerCheck.step2BottomLabel !== 'Rest' ||
@@ -907,11 +1126,17 @@ async function runBrowserCDPTests(wsUrl) {
         );
 
         console.log('\n--- 13. Mobile Viewport Screenshot Capture ---');
+        await evalInPage(() => {
+          document.getElementById('generateWorkoutBtn')?.click();
+          const toast = document.getElementById('toastContainer');
+          if (toast) toast.innerHTML = '';
+        });
         const screenshotData = await send('Page.captureScreenshot', { format: 'png' });
         fs.writeFileSync('/tmp/workout-mobile-screenshot.png', Buffer.from(screenshotData.data, 'base64'));
-        // Also capture the full-screen executed HIIT timer view
+        // Also capture the full-screen executed HIIT timer view on an active Exercise Work Step (+50% font size)
         await evalInPage(() => {
           document.querySelector('[data-action="open-round-timer"][data-round-index="0"]')?.click();
+          document.getElementById('timerNextStepBtn')?.click();
         });
         const timerScreenshotData = await send('Page.captureScreenshot', { format: 'png' });
         fs.writeFileSync('/tmp/workout-timer-screenshot.png', Buffer.from(timerScreenshotData.data, 'base64'));
@@ -920,7 +1145,7 @@ async function runBrowserCDPTests(wsUrl) {
         });
         console.log('  ✅ PASS: Mobile screenshots saved to /tmp/workout-mobile-screenshot.png and /tmp/workout-timer-screenshot.png');
 
-        console.log('\n--- 13. QA Gallery All 68 Diagrams Render, Muscle Filter & No Audit Box Check ---');
+        console.log('\n--- 14. QA Gallery All 90 Diagrams Render, Zero Spreadsheet Mention, Muscle Filter & No Audit Box Check ---');
         await send('Emulation.setDeviceMetricsOverride', {
           width: 1280,
           height: 900,
@@ -944,6 +1169,7 @@ async function runBrowserCDPTests(wsUrl) {
             })
             .filter(x => !x.complete || x.w !== 680 || x.h !== 248);
           const auditBoxes = document.querySelectorAll('.audit-note-box').length;
+          const noSpreadsheetMention = !/sheet\s*row|spreadsheet|row\s*#\s*\d+/i.test(document.body.innerText);
 
           // Test clicking the "Glutes" muscle filter button in QA Gallery
           const glutesBtn = document.querySelector('.qa-filter-bar [data-filter="Glutes"]');
@@ -960,6 +1186,7 @@ async function runBrowserCDPTests(wsUrl) {
             brokenCount: broken.length,
             broken,
             auditBoxes,
+            noSpreadsheetMention,
             glutesCardCount: glutesCards.length,
             allGlutesValid
           };
@@ -968,12 +1195,13 @@ async function runBrowserCDPTests(wsUrl) {
           galleryCheck.totalCards !== 90 ||
           galleryCheck.brokenCount > 0 ||
           galleryCheck.auditBoxes > 0 ||
+          !galleryCheck.noSpreadsheetMention ||
           !galleryCheck.allGlutesValid
         ) {
           throw new Error('QA Gallery check failed: ' + JSON.stringify(galleryCheck));
         }
         console.log(
-          `  ✅ PASS: All 90/90 exercise SVG diagrams rendered cleanly (680x248) and QA Gallery muscle filter verified (${galleryCheck.glutesCardCount} Glutes exercises)`
+          `  ✅ PASS: All 90/90 exercise SVG diagrams rendered cleanly (680x248), 0 spreadsheet row mentions, and QA Gallery muscle filter verified (${galleryCheck.glutesCardCount} Glutes exercises)`
         );
 
         ws.close();

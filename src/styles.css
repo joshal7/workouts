@@ -137,35 +137,44 @@ html, body {
   overflow: hidden;
 }
 
-/* Compact 2x2 Inputs Grid */
-.inputs-grid-compact {
-  padding: 6px 10px 4px;
+/* Top Menu Row (Category, Type, Equipment) + 3-Part Focus Slider */
+.top-menu-row {
+  padding: 8px 10px 7px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px 12px;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.52fr) minmax(0, 0.92fr);
+  gap: 7px;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
-.input-cell {
+.top-menu-cell {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 3px 0;
-  border-bottom: 1px solid var(--border-subtle);
+  flex-direction: column;
+  gap: 3px;
   min-width: 0;
 }
 
-.input-cell label {
-  font-size: 11.5px;
-  font-weight: 400;
-  color: var(--text-secondary);
-  flex-shrink: 0;
+.top-menu-cell label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.15px;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
 .select-wrapper {
   position: relative;
-  flex: 1;
+  width: 100%;
   min-width: 0;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.select-wrapper:focus-within {
+  border-color: var(--link-color);
+  background: #ffffff;
 }
 
 .select-wrapper select {
@@ -175,11 +184,11 @@ html, body {
   background: transparent;
   color: var(--text-primary);
   border: none;
-  padding: 2px 14px 2px 0;
+  padding: 5px 18px 5px 7px;
   font-size: 12px;
-  font-weight: 500;
-  text-align: right;
-  text-align-last: right;
+  font-weight: 600;
+  text-align: left;
+  text-align-last: left;
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
@@ -193,12 +202,177 @@ html, body {
 .select-wrapper::after {
   content: "▾";
   position: absolute;
-  right: 0;
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--text-muted);
   pointer-events: none;
   font-size: 10px;
+}
+
+/* 3-Part Focus Slider */
+.focus-slider-section {
+  padding: 7px 12px 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.focus-labels-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.focus-area-label {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+  padding: 2px 3px;
+  margin: 0;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+
+.focus-area-label:hover {
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.focus-area-label:active {
+  transform: scale(0.98);
+}
+
+.focus-label-upper {
+  justify-self: start;
+  text-align: left;
+  color: #7f1d1d;
+}
+
+.focus-label-core {
+  justify-self: center;
+  text-align: center;
+  color: #713f12;
+}
+
+.focus-label-lower {
+  justify-self: end;
+  text-align: right;
+  color: #581c87;
+}
+
+.focus-area-label.is-deselected {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.focus-label-pct {
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.86;
+}
+
+.focus-area-label.is-deselected .focus-label-pct {
+  display: none;
+}
+
+.focus-bar-track {
+  position: relative;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  touch-action: none;
+  user-select: none;
+  cursor: pointer;
+}
+
+.focus-bar-segments {
+  width: 100%;
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  display: flex;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #e2e8f0;
+}
+
+.focus-seg {
+  height: 100%;
+  transition: width 0.1s ease-out;
+}
+
+.focus-bar-track.is-dragging .focus-seg {
+  transition: none;
+}
+
+.focus-seg-upper {
+  background: #fecaca;
+}
+
+.focus-seg-core {
+  background: #fef08a;
+}
+
+.focus-seg-lower {
+  background: #e9d5ff;
+}
+
+.focus-handles-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.focus-slider-thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #334155;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
+  pointer-events: auto;
+  cursor: ew-resize;
+  touch-action: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.focus-slider-thumb::after {
+  content: "";
+  width: 2px;
+  height: 8px;
+  border-radius: 1px;
+  background: #64748b;
+}
+
+.focus-slider-thumb:hover,
+.focus-slider-thumb:focus-visible,
+.focus-slider-thumb.is-active {
+  border-color: var(--link-color);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2), 0 1px 4px rgba(15, 23, 42, 0.25);
+  outline: none;
+}
+
+.focus-slider-thumb.is-active {
+  transform: translate(-50%, -50%) scale(1.08);
 }
 
 /* Compact Generate & Select Exercises Button Row */
@@ -1447,13 +1621,14 @@ html, body {
 
 .timer-bottom-label {
   width: 100%;
-  font-size: clamp(22px, 6vw, 32px);
+  font-size: clamp(33px, 9vw, 48px);
   font-weight: 900;
-  line-height: 1.2;
-  letter-spacing: -0.3px;
+  line-height: 1.12;
+  letter-spacing: -0.4px;
   padding: 6px 12px 2px;
   max-width: 100%;
-  word-break: break-word;
+  overflow-wrap: break-word;
+  word-break: normal;
   color: inherit;
 }
 

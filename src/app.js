@@ -1,5 +1,14 @@
-import { DataService } from './services/dataService.js?v=16';
+import { DataService } from './services/dataService.js?v=17';
 import {
+  FOCUS_SNAP_STEPS,
+  DEFAULT_FOCUS_WEIGHTS,
+  DEFAULT_FOCUS_ENABLED,
+  normalizeFocusWeights,
+  deriveBodyCategoryFromFocus,
+  toggleFocusAreaState,
+  computeFocusSliderPositions,
+  updateFocusFromHandleDrag,
+  pickAutoFillExercises,
   generateWorkout,
   generateWorkoutFromSelectedExercises,
   getTargetExerciseCount,
@@ -16,12 +25,12 @@ import {
   getRandomEntry,
   getPrimaryMuscle,
   getPrimaryBodyArea
-} from './engine/workoutEngine.js?v=16';
+} from './engine/workoutEngine.js?v=17';
 import {
   analyzeMuscleLoad,
   applyBalancedRecommendation,
   SPECIFIC_MUSCLES
-} from './engine/muscleLoadAnalyzer.js?v=16';
+} from './engine/muscleLoadAnalyzer.js?v=17';
 import {
   TIMER_COLORS,
   CUSTOM_TIMER_PRESETS,
@@ -35,7 +44,7 @@ import {
   finalizeWithCountdown,
   getStepStartSoundType,
   shouldPlaySteadyTransitionPulse
-} from './engine/timerEngine.js?v=16';
+} from './engine/timerEngine.js?v=17';
 
 const dataService = new DataService();
 
@@ -96,6 +105,11 @@ const timerState = {
   getAudioContextState: () => (sharedAudioCtx ? sharedAudioCtx.state : 'uncreated')
 };
 
+let focusState = {
+  weights: { ...DEFAULT_FOCUS_WEIGHTS },
+  enabled: { ...DEFAULT_FOCUS_ENABLED }
+};
+
 if (typeof window !== 'undefined') {
   window.__workoutTimerState = timerState;
 }
@@ -106,9 +120,22 @@ const els = {
   excludedCountBadge: document.getElementById('excludedCountBadge'),
 
   workoutCategorySelect: document.getElementById('workoutCategorySelect'),
-  bodyCategorySelect: document.getElementById('bodyCategorySelect'),
   equipmentSelect: document.getElementById('equipmentSelect'),
   workoutTypeSelect: document.getElementById('workoutTypeSelect'),
+
+  focusSliderSection: document.getElementById('focusSliderSection'),
+  focusLabelUpper: document.getElementById('focusLabelUpper'),
+  focusLabelCore: document.getElementById('focusLabelCore'),
+  focusLabelLower: document.getElementById('focusLabelLower'),
+  focusPctUpper: document.getElementById('focusPctUpper'),
+  focusPctCore: document.getElementById('focusPctCore'),
+  focusPctLower: document.getElementById('focusPctLower'),
+  focusBarTrack: document.getElementById('focusBarTrack'),
+  focusSegUpper: document.getElementById('focusSegUpper'),
+  focusSegCore: document.getElementById('focusSegCore'),
+  focusSegLower: document.getElementById('focusSegLower'),
+  focusHandlesLayer: document.getElementById('focusHandlesLayer'),
+
   generateWorkoutBtn: document.getElementById('generateWorkoutBtn'),
   selectExercisesBtn: document.getElementById('selectExercisesBtn'),
 
@@ -137,7 +164,7 @@ async function bootstrap() {
   // long before any timer AudioContext is created or resumed (prevents synchronous click race condition).
   configureAmbientAudioSession();
 
-  await dataService.init('./data/sheet-data.json?v=16', './data/enrichments.json?v=16');
+  await dataService.init('./data/sheet-data.json?v=17', './data/enrichments.json?v=17');
   populateWorkoutTypeSelect();
   populateCustomTimerPresetsSelect();
   syncUIFromActiveProfile();
@@ -152,7 +179,7 @@ async function bootstrap() {
       refreshing = true;
       window.location.reload();
     });
-    navigator.serviceWorker.register('./sw.js?v=16', { updateViaCache: 'none' }).then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=17', { updateViaCache: 'none' }).then(reg => {
       reg.update().catch(() => {});
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
@@ -182,6 +209,86 @@ function populateCustomTimerPresetsSelect() {
   ).join('');
 }
 
+function formatAreaUiName(area) {
+  return area === 'Legs' ? 'Lower Body' : area;
+}
+
+function formatFocusPercentLabel(val) {
+  return `${Math.round((val || 0) * 100)}%`;
+}
+
+function renderFocusSliderUI(activeDragHandleIndex = null) {
+  if (!els.focusSliderSection) return;
+  const { handles, weights, enabled } = computeFocusSliderPositions(
+    focusState.weights,
+    focusState.enabled
+  );
+  focusState = { weights: { ...weights }, enabled: { ...enabled } };
+
+  const labelSpecs = [
+    { area: 'Upper Body', btn: els.focusLabelUpper, pct: els.focusPctUpper, seg: els.focusSegUpper },
+    { area: 'Core', btn: els.focusLabelCore, pct: els.focusPctCore, seg: els.focusSegCore },
+    { area: 'Legs', btn: els.focusLabelLower, pct: els.focusPctLower, seg: els.focusSegLower }
+  ];
+
+  labelSpecs.forEach(({ area, btn, pct, seg }) => {
+    const isEnabled = !!enabled[area];
+    const wPct = isEnabled ? Math.max(0, Math.min(100, (weights[area] || 0) * 100)) : 0;
+    if (btn) {
+      btn.classList.toggle('is-deselected', !isEnabled);
+      btn.setAttribute('aria-pressed', String(isEnabled));
+    }
+    if (pct) {
+      pct.textContent = formatFocusPercentLabel(weights[area]);
+    }
+    if (seg) {
+      seg.hidden = !isEnabled;
+      seg.style.width = `${wPct.toFixed(4)}%`;
+    }
+  });
+
+  if (els.focusHandlesLayer) {
+    const existingThumbs = Array.from(
+      els.focusHandlesLayer.querySelectorAll('.focus-slider-thumb')
+    );
+    if (existingThumbs.length !== handles.length) {
+      els.focusHandlesLayer.innerHTML = handles
+        .map(h => {
+          const pctNow = Math.round(h.position * 100);
+          const leftLabel = formatAreaUiName(h.leftArea);
+          const rightLabel = formatAreaUiName(h.rightArea);
+          return `<button
+            type="button"
+            class="focus-slider-thumb ${activeDragHandleIndex === h.index ? 'is-active' : ''}"
+            role="slider"
+            data-handle-index="${h.index}"
+            aria-label="Adjust focus split between ${leftLabel} and ${rightLabel}"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="${pctNow}"
+            style="left: ${(h.position * 100).toFixed(4)}%;"
+          ></button>`;
+        })
+        .join('');
+    } else {
+      handles.forEach((h, idx) => {
+        const thumb = existingThumbs[idx];
+        const pctNow = Math.round(h.position * 100);
+        const leftLabel = formatAreaUiName(h.leftArea);
+        const rightLabel = formatAreaUiName(h.rightArea);
+        thumb.dataset.handleIndex = String(h.index);
+        thumb.style.left = `${(h.position * 100).toFixed(4)}%`;
+        thumb.setAttribute('aria-valuenow', String(pctNow));
+        thumb.setAttribute(
+          'aria-label',
+          `Adjust focus split between ${leftLabel} and ${rightLabel}`
+        );
+        thumb.classList.toggle('is-active', activeDragHandleIndex === h.index);
+      });
+    }
+  }
+}
+
 function syncUIFromActiveProfile() {
   const profile = dataService.getActiveProfile();
 
@@ -196,9 +303,15 @@ function syncUIFromActiveProfile() {
   // Inputs
   const inputs = profile.inputs || {};
   els.workoutCategorySelect.value = inputs.workoutCategory || 'HIIT';
-  els.bodyCategorySelect.value = inputs.bodyCategory || 'All';
   els.equipmentSelect.value = inputs.equipment === 'All' ? 'Any' : (inputs.equipment || 'Any');
   els.workoutTypeSelect.value = inputs.workoutType || 'Timed Trios (40/20)';
+
+  const normFocus = normalizeFocusWeights(inputs);
+  focusState = {
+    weights: { ...normFocus.weights },
+    enabled: { ...normFocus.enabled }
+  };
+  renderFocusSliderUI();
 
   // Ensure an active workout exists
   if (!profile.activeWorkout) {
@@ -221,6 +334,11 @@ function rehydrateActiveWorkout(workoutState) {
   const wkMap = new Map(dataService.sheetData.workouts.map(w => [w.id, w]));
   if (workoutState.workout?.id && wkMap.has(workoutState.workout.id)) {
     workoutState.workout = wkMap.get(workoutState.workout.id);
+  }
+  if (workoutState.inputs && !workoutState.inputs.focusWeights) {
+    const norm = normalizeFocusWeights(workoutState.inputs);
+    workoutState.inputs.focusWeights = { ...norm.weights };
+    workoutState.inputs.focusEnabled = { ...norm.enabled };
   }
   if (!Array.isArray(workoutState.dismissedWarnings)) {
     workoutState.dismissedWarnings = [];
@@ -245,9 +363,12 @@ function rehydrateActiveWorkout(workoutState) {
 
 function getSelectedInputs() {
   const profile = dataService.getActiveProfile();
+  const bodyCategory = deriveBodyCategoryFromFocus(focusState.weights, focusState.enabled);
   return {
     workoutCategory: els.workoutCategorySelect.value,
-    bodyCategory: els.bodyCategorySelect.value,
+    bodyCategory,
+    focusWeights: { ...focusState.weights },
+    focusEnabled: { ...focusState.enabled },
     equipment: els.equipmentSelect.value,
     workoutType: els.workoutTypeSelect.value,
     excludedExerciseIds: profile.excludedExerciseIds || [],
@@ -282,6 +403,8 @@ function handleGenerateWorkout(showFeedback = true) {
     inputs: {
       workoutCategory: inputs.workoutCategory,
       bodyCategory: inputs.bodyCategory,
+      focusWeights: { ...inputs.focusWeights },
+      focusEnabled: { ...inputs.focusEnabled },
       equipment: inputs.equipment,
       workoutType: inputs.workoutType
     },
@@ -1344,7 +1467,10 @@ function openExerciseModal(exerciseId, roundIndex = null, slotIndex = null) {
 
   const enrich = ex.enrichment || {};
   document.getElementById('exerciseModalCategory').textContent =
-    `${Object.entries(ex.bodyCategories).filter(([, v]) => v === 'Pri').map(([k]) => k).join(' · ')} · ${ex.workoutCategory}`;
+    `${Object.entries(ex.bodyCategories)
+      .filter(([, v]) => v === 'Pri')
+      .map(([k]) => formatAreaUiName(k))
+      .join(' · ')} · ${ex.workoutCategory}`;
   document.getElementById('exerciseModalTitle').textContent = ex.name;
 
   const diagramImg = document.getElementById('exerciseModalDiagram');
@@ -1488,15 +1614,16 @@ function renderSwapExerciseList() {
     pool = [...dataService.sheetData.exercises];
   } else {
     // If user explicitly clicked a muscle group filter pill in the Swap modal,
-    // use that muscle filter rather than locking to wkState.inputs.bodyCategory
-    const effectiveBodyFilter =
-      currentSwapMuscleFilter !== 'All'
-        ? currentSwapMuscleFilter
-        : els.bodyCategorySelect.value || wkState.inputs.bodyCategory;
-
+    // use that muscle filter rather than locking to Focus slider weights
+    const hasExplicitChip = currentSwapMuscleFilter !== 'All';
     pool = filterEligibleExercises(dataService.sheetData.exercises, {
       workoutCategory: wkState.inputs.effectiveWorkoutCategory,
-      bodyCategory: effectiveBodyFilter,
+      bodyCategory: hasExplicitChip
+        ? currentSwapMuscleFilter
+        : deriveBodyCategoryFromFocus(focusState.weights, focusState.enabled),
+      muscleGroup: hasExplicitChip ? currentSwapMuscleFilter : null,
+      focusWeights: hasExplicitChip ? null : focusState.weights,
+      focusEnabled: hasExplicitChip ? null : focusState.enabled,
       equipment: els.equipmentSelect.value || wkState.inputs.equipment,
       excludedExerciseIds: profile.excludedExerciseIds || []
     });
@@ -1515,7 +1642,7 @@ function renderSwapExerciseList() {
 
   const listEl = document.getElementById('swapExerciseList');
   if (pool.length === 0) {
-    listEl.innerHTML = `<p class="settings-help">No matching exercises found. Tap "All Exercises" to browse all 68 movements.</p>`;
+    listEl.innerHTML = `<p class="settings-help">No matching exercises found. Tap "All Exercises" to browse all ${dataService.sheetData.exercises.length} movements.</p>`;
     return;
   }
 
@@ -1666,11 +1793,13 @@ function renderSelectExercisesModalContent() {
   if (currentSelectShowAll) {
     pool = [...dataService.sheetData.exercises];
   } else {
-    const effectiveBodyFilter =
-      currentSelectMuscleFilter !== 'All' ? currentSelectMuscleFilter : inputs.bodyCategory;
+    const hasExplicitChip = currentSelectMuscleFilter !== 'All';
     pool = filterEligibleExercises(dataService.sheetData.exercises, {
       workoutCategory: inputs.workoutCategory,
-      bodyCategory: effectiveBodyFilter,
+      bodyCategory: hasExplicitChip ? currentSelectMuscleFilter : inputs.bodyCategory,
+      muscleGroup: hasExplicitChip ? currentSelectMuscleFilter : null,
+      focusWeights: hasExplicitChip ? null : inputs.focusWeights,
+      focusEnabled: hasExplicitChip ? null : inputs.focusEnabled,
       equipment: inputs.equipment,
       excludedExerciseIds: profile.excludedExerciseIds || []
     });
@@ -1684,7 +1813,7 @@ function renderSelectExercisesModalContent() {
   const selectedSet = new Set(selectedCustomExerciseIds);
   const listEl = document.getElementById('selectExercisesList');
   if (pool.length === 0) {
-    listEl.innerHTML = `<p class="settings-help">No matching exercises found. Tap "All Exercises" to browse all 68 movements.</p>`;
+    listEl.innerHTML = `<p class="settings-help">No matching exercises found. Tap "All Exercises" to browse all ${dataService.sheetData.exercises.length} movements.</p>`;
     return;
   }
 
@@ -1770,13 +1899,198 @@ function renderExclusionChecklist() {
     .join('');
 }
 
+function weightsDiffer(a, b) {
+  return (
+    Math.abs((a?.['Upper Body'] || 0) - (b?.['Upper Body'] || 0)) > 1e-4 ||
+    Math.abs((a?.['Core'] || 0) - (b?.['Core'] || 0)) > 1e-4 ||
+    Math.abs((a?.['Legs'] || 0) - (b?.['Legs'] || 0)) > 1e-4
+  );
+}
+
+function bindFocusSliderEvents() {
+  if (!els.focusSliderSection || !els.focusBarTrack) return;
+
+  // 1. Tapping Upper Body, Core, or Lower Body label toggles deselection/reselection
+  els.focusSliderSection.addEventListener('click', e => {
+    const labelBtn = e.target.closest('[data-focus-area]');
+    if (!labelBtn) return;
+    const area = labelBtn.getAttribute('data-focus-area');
+    const result = toggleFocusAreaState(focusState.weights, focusState.enabled, area);
+    if (result.blockedLastActive) {
+      showToast('Keep at least one body area active');
+      return;
+    }
+    if (result.changed) {
+      focusState = { weights: result.weights, enabled: result.enabled };
+      renderFocusSliderUI();
+      handleGenerateWorkout(true);
+    }
+  });
+
+  // 2. Dragging slider handles or tapping on the 3-color bar track
+  let dragSession = null;
+
+  function getTrackFraction(clientX) {
+    const rect = els.focusBarTrack.getBoundingClientRect();
+    if (!rect || rect.width <= 0) return 0;
+    return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  }
+
+  els.focusBarTrack.addEventListener('pointerdown', e => {
+    if (e.button !== undefined && e.button !== 0) return;
+    const { handles } = computeFocusSliderPositions(focusState.weights, focusState.enabled);
+    if (handles.length === 0) return;
+
+    e.preventDefault();
+    const rawFrac = getTrackFraction(e.clientX);
+    const thumbEl = e.target.closest('[data-handle-index]');
+
+    let handleIndex = null;
+    let isOverlappingAmbiguous = false;
+    let overlapPos = 0;
+
+    if (handles.length === 1) {
+      handleIndex = 0;
+    } else if (Math.abs(handles[0].position - handles[1].position) < 0.005) {
+      overlapPos = handles[0].position;
+      if (!thumbEl && Math.abs(rawFrac - overlapPos) > 0.015) {
+        handleIndex = rawFrac < overlapPos ? 0 : 1;
+      } else {
+        isOverlappingAmbiguous = true;
+        handleIndex = 0;
+      }
+    } else if (thumbEl) {
+      handleIndex = Number(thumbEl.getAttribute('data-handle-index')) || 0;
+    } else {
+      const d0 = Math.abs(rawFrac - handles[0].position);
+      const d1 = Math.abs(rawFrac - handles[1].position);
+      handleIndex = d0 <= d1 ? 0 : 1;
+    }
+
+    dragSession = {
+      pointerId: e.pointerId,
+      initialWeights: { ...focusState.weights },
+      startWeights: { ...focusState.weights },
+      handleIndex,
+      isOverlappingAmbiguous,
+      overlapPos
+    };
+
+    els.focusBarTrack.classList.add('is-dragging');
+    try {
+      els.focusBarTrack.setPointerCapture(e.pointerId);
+    } catch {}
+
+    // If user tapped directly on the track away from an ambiguous overlap, snap immediately
+    if (!thumbEl && !isOverlappingAmbiguous) {
+      const updated = updateFocusFromHandleDrag(
+        dragSession.startWeights,
+        focusState.enabled,
+        dragSession.handleIndex,
+        rawFrac
+      );
+      focusState.weights = updated.weights;
+    }
+    renderFocusSliderUI(dragSession.handleIndex);
+  });
+
+  els.focusBarTrack.addEventListener('pointermove', e => {
+    if (!dragSession || e.pointerId !== dragSession.pointerId) return;
+    const rawFrac = getTrackFraction(e.clientX);
+
+    if (dragSession.isOverlappingAmbiguous) {
+      if (Math.abs(rawFrac - dragSession.overlapPos) < 0.012) return;
+      dragSession.handleIndex = rawFrac < dragSession.overlapPos ? 0 : 1;
+      dragSession.isOverlappingAmbiguous = false;
+    }
+
+    const updated = updateFocusFromHandleDrag(
+      dragSession.startWeights,
+      focusState.enabled,
+      dragSession.handleIndex,
+      rawFrac
+    );
+    focusState.weights = updated.weights;
+    renderFocusSliderUI(dragSession.handleIndex);
+  });
+
+  function finishFocusDrag(e) {
+    if (!dragSession || (e && e.pointerId !== dragSession.pointerId)) return;
+    const prevWeights = dragSession.initialWeights;
+    dragSession = null;
+    els.focusBarTrack.classList.remove('is-dragging');
+    try {
+      if (e && els.focusBarTrack.hasPointerCapture?.(e.pointerId)) {
+        els.focusBarTrack.releasePointerCapture(e.pointerId);
+      }
+    } catch {}
+    renderFocusSliderUI(null);
+    if (weightsDiffer(prevWeights, focusState.weights)) {
+      handleGenerateWorkout(true);
+    }
+  }
+
+  els.focusBarTrack.addEventListener('pointerup', finishFocusDrag);
+  els.focusBarTrack.addEventListener('pointercancel', finishFocusDrag);
+
+  // 3. Keyboard arrow accessibility along FOCUS_SNAP_STEPS
+  els.focusBarTrack.addEventListener('keydown', e => {
+    const thumb = e.target.closest('[data-handle-index]');
+    if (!thumb) return;
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
+      return;
+    }
+    e.preventDefault();
+    const handleIndex = Number(thumb.getAttribute('data-handle-index')) || 0;
+    const { handles } = computeFocusSliderPositions(focusState.weights, focusState.enabled);
+    const h = handles[handleIndex];
+    if (!h) return;
+
+    let currentStepIdx = 0;
+    let bestDiff = Infinity;
+    FOCUS_SNAP_STEPS.forEach((stepVal, idx) => {
+      const diff = Math.abs(stepVal - h.position);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        currentStepIdx = idx;
+      }
+    });
+
+    let nextIdx = currentStepIdx;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+      nextIdx = Math.max(0, currentStepIdx - 1);
+    } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+      nextIdx = Math.min(FOCUS_SNAP_STEPS.length - 1, currentStepIdx + 1);
+    } else if (e.key === 'Home') {
+      nextIdx = 0;
+    } else if (e.key === 'End') {
+      nextIdx = FOCUS_SNAP_STEPS.length - 1;
+    }
+
+    const prevWeights = { ...focusState.weights };
+    const updated = updateFocusFromHandleDrag(
+      focusState.weights,
+      focusState.enabled,
+      handleIndex,
+      FOCUS_SNAP_STEPS[nextIdx]
+    );
+    focusState.weights = updated.weights;
+    renderFocusSliderUI(null);
+    if (weightsDiffer(prevWeights, focusState.weights)) {
+      handleGenerateWorkout(true);
+    }
+  });
+}
+
 // ============================================================================
 // Event Listeners
 // ============================================================================
 function bindEvents() {
   els.generateWorkoutBtn.addEventListener('click', () => handleGenerateWorkout(true));
 
-  // Auto-generate & sync when any of the 4 filter dropdowns changes
+  bindFocusSliderEvents();
+
+  // Auto-generate & sync when any top menu dropdown changes
   els.workoutCategorySelect.addEventListener('change', () => {
     const cat = els.workoutCategorySelect.value;
     const curType = els.workoutTypeSelect.value;
@@ -1786,10 +2100,6 @@ function bindEvents() {
         els.workoutTypeSelect.value = 'Random';
       }
     }
-    handleGenerateWorkout(true);
-  });
-
-  els.bodyCategorySelect.addEventListener('change', () => {
     handleGenerateWorkout(true);
   });
 
@@ -1838,49 +2148,14 @@ function bindEvents() {
   });
 
   document.getElementById('autoFillRemainingBtn').addEventListener('click', () => {
-    const profile = dataService.getActiveProfile();
     const inputs = getSelectedInputs();
-    const eligible = filterEligibleExercises(dataService.sheetData.exercises, {
-      workoutCategory: inputs.workoutCategory,
-      bodyCategory: inputs.bodyCategory,
-      equipment: inputs.equipment,
-      excludedExerciseIds: profile.excludedExerciseIds || []
-    });
-    const exMap = new Map(dataService.sheetData.exercises.map(e => [e.id, e]));
-    let pool = (eligible.length >= targetCustomExerciseCount ? eligible : dataService.sheetData.exercises)
-      .filter(e => !selectedCustomExerciseIds.includes(e.id));
-
-    while (selectedCustomExerciseIds.length < targetCustomExerciseCount && pool.length > 0) {
-      const muscleCounts = {};
-      const areaCounts = { 'Upper Body': 0, 'Core': 0, 'Legs': 0 };
-      selectedCustomExerciseIds.forEach(id => {
-        const ex = exMap.get(id);
-        if (!ex) return;
-        const pm = getPrimaryMuscle(ex);
-        if (pm) muscleCounts[pm] = (muscleCounts[pm] || 0) + 1;
-        const area = getPrimaryBodyArea(ex);
-        if (areaCounts[area] !== undefined) areaCounts[area] += 1;
-      });
-
-      pool.sort((a, b) => {
-        const scoreA = (muscleCounts[getPrimaryMuscle(a)] || 0) * 10 + (areaCounts[getPrimaryBodyArea(a)] || 0) * 3;
-        const scoreB = (muscleCounts[getPrimaryMuscle(b)] || 0) * 10 + (areaCounts[getPrimaryBodyArea(b)] || 0) * 3;
-        return scoreA - scoreB;
-      });
-
-      const bestScore =
-        (muscleCounts[getPrimaryMuscle(pool[0])] || 0) * 10 +
-        (areaCounts[getPrimaryBodyArea(pool[0])] || 0) * 3;
-      const topTied = pool.filter(
-        c =>
-          (muscleCounts[getPrimaryMuscle(c)] || 0) * 10 +
-            (areaCounts[getPrimaryBodyArea(c)] || 0) * 3 ===
-          bestScore
-      );
-      const chosen = getRandomEntry(topTied) || pool[0];
-      selectedCustomExerciseIds.push(chosen.id);
-      pool = pool.filter(e => e.id !== chosen.id);
-    }
+    const filled = pickAutoFillExercises(
+      dataService.sheetData,
+      inputs,
+      selectedCustomExerciseIds,
+      targetCustomExerciseCount
+    );
+    selectedCustomExerciseIds = filled.map(ex => ex.id);
     renderSelectExercisesModalContent();
   });
 
@@ -1912,6 +2187,8 @@ function bindEvents() {
       inputs: {
         workoutCategory: workoutState.inputs.effectiveWorkoutCategory,
         bodyCategory: inputs.bodyCategory,
+        focusWeights: { ...inputs.focusWeights },
+        focusEnabled: { ...inputs.focusEnabled },
         equipment: inputs.equipment,
         workoutType: workoutState.workout.name
       },
@@ -2426,7 +2703,7 @@ function bindEvents() {
     dataService.updateActiveProfile({ excludedExerciseIds: [] });
     syncUIFromActiveProfile();
     renderExclusionChecklist();
-    showToast('All 68 exercises included');
+    showToast(`All ${dataService.sheetData.exercises.length} exercises included`);
   });
 
   bindDragAndDropEvents();

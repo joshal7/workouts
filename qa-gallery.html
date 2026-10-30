@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>90 Exercises &amp; Diagrams — Fact-Check &amp; QA Gallery</title>
-  <link rel="stylesheet" href="./src/styles.css?v=16" />
+  <link rel="stylesheet" href="./src/styles.css?v=17" />
   <style>
     .qa-shell {
       max-width: 1180px;
@@ -41,11 +41,11 @@
       justify-content: space-between;
       gap: 8px;
     }
-    .qa-row-num {
+    .qa-card-eyebrow {
       font-size: 11px;
       font-weight: 800;
-      color: var(--accent-blue);
-      background: rgba(56, 189, 248, 0.14);
+      color: var(--accent-blue-text);
+      background: var(--accent-blue-soft);
       padding: 2px 7px;
       border-radius: 6px;
     }
@@ -107,11 +107,11 @@
         refreshing = true;
         window.location.reload();
       });
-      navigator.serviceWorker.register('./sw.js?v=16', { updateViaCache: 'none' }).then(reg => reg.update()).catch(() => {});
+      navigator.serviceWorker.register('./sw.js?v=17', { updateViaCache: 'none' }).then(reg => reg.update()).catch(() => {});
     }
 
     const ds = new DataService();
-    await ds.init('./data/sheet-data.json?v=16', './data/enrichments.json?v=16');
+    await ds.init('./data/sheet-data.json?v=17', './data/enrichments.json?v=17');
 
     const totalExCount = ds.sheetData.exercises.length;
     const totalWkCount = ds.sheetData.workouts.length;
@@ -136,11 +136,15 @@
         const enrich = ex.enrichment || {};
         const pri = SPECIFIC_MUSCLES.filter(m => ex.muscles[m] === 'Pri');
         const sec = SPECIFIC_MUSCLES.filter(m => ex.muscles[m] === 'Sec');
+        const areaLabels = Object.entries(ex.bodyCategories || {})
+          .filter(([, v]) => v === 'Pri')
+          .map(([k]) => (k === 'Legs' ? 'Lower Body' : k))
+          .join(' · ');
         return `
           <article class="qa-card" data-exercise-id="${ex.id}">
             <div class="qa-card-top">
               <div>
-                <span class="qa-row-num">Sheet Row #${ex.row} • Pose: ${enrich.pose}</span>
+                <span class="qa-card-eyebrow">${areaLabels} · ${ex.workoutCategory}</span>
                 <h2 style="margin:4px 0 0;font-size:17px;">${ex.name}</h2>
               </div>
               <span class="mini-tag">${ex.equipment}</span>

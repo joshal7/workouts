@@ -11,6 +11,16 @@ const STORAGE_KEY_REMOTE_CACHE = 'joshal_workout_remote_sheet_cache_v1';
 export const DEFAULT_INPUTS = {
   workoutCategory: 'HIIT',
   bodyCategory: 'All',
+  focusWeights: {
+    'Upper Body': 1 / 3,
+    'Core': 1 / 3,
+    'Legs': 1 / 3
+  },
+  focusEnabled: {
+    'Upper Body': true,
+    'Core': true,
+    'Legs': true
+  },
   equipment: 'Any',
   workoutType: 'Timed Trios (40/20)'
 };
@@ -25,7 +35,7 @@ export function createDefaultProfiles() {
       name: 'User',
       excludedExerciseIds: [],
       optionsPerSlot: 1,
-      inputs: { ...DEFAULT_INPUTS },
+      inputs: structuredClone(DEFAULT_INPUTS),
       activeWorkout: null
     }
   ];
@@ -42,7 +52,7 @@ export class DataService {
   /**
    * Load static JSON files (Option A) and merge enrichments with sheet rows.
    */
-  async init(sheetUrl = './data/sheet-data.json?v=16', enrichmentsUrl = './data/enrichments.json?v=16') {
+  async init(sheetUrl = './data/sheet-data.json?v=17', enrichmentsUrl = './data/enrichments.json?v=17') {
     const [sheetRes, enrichRes] = await Promise.all([
       fetch(sheetUrl, { cache: 'no-cache' }),
       fetch(enrichmentsUrl, { cache: 'no-cache' })
@@ -164,7 +174,7 @@ export class DataService {
       name: cleanName,
       excludedExerciseIds: [],
       optionsPerSlot: 1,
-      inputs: { ...DEFAULT_INPUTS },
+      inputs: structuredClone(DEFAULT_INPUTS),
       activeWorkout: null
     };
     this.profiles.push(newProfile);
