@@ -140,9 +140,16 @@ async function bootstrap() {
   syncUIFromActiveProfile();
   bindEvents();
 
-  // Register offline Service Worker if supported
+  // Register offline Service Worker if supported and check for updates
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      reg.update().catch(() => {});
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          reg.update().catch(() => {});
+        }
+      });
+    }).catch(() => {});
   }
 }
 
@@ -557,7 +564,7 @@ function stopTimerLoop() {
     timerState.intervalId = null;
   }
   timerState.isRunning = false;
-  stopSleepAndSilentKeepAlive();
+  stopTimerSessionKeepAlive();
 }
 
 function resetTimerForWorkoutType(workoutTypeKey) {
@@ -977,28 +984,27 @@ function renderTimerCustomizerView(wkState) {
 }
 
 // ============================================================================
-// Timer Audio Engine (Silent-Switch Bypass, Sleep Keepalive & Distinct Cues)
+// Timer Audio Engine (Ambient Audio Mixing & Zero Background Audio Interruption)
 // ============================================================================
 let sharedAudioCtx = null;
-const preloadedCueAudios = new Map();
-let keepAliveAudioEl = null;
 let activeWakeLockSentinel = null;
-let scheduledBgNodes = [];
 
-function ensurePlaybackAudioSession() {
-  // 1. Force OS Media Playback session so audio plays even when the hardware Silent switch is ON (iOS 16.4+ / Safari)
+function ensureAmbientAudioSession() {
+  // 1. Request OS Ambient audio session so our timer sounds MIX seamlessly with
+  //    background music, audiobooks, or podcasts (Libby, Hoopla, Spotify, Apple Podcasts, etc.)
+  //    and NEVER pause, interrupt, or duck them.
   try {
     if (typeof navigator !== 'undefined' && navigator.audioSession) {
-      navigator.audioSession.type = 'playback';
-      timerState.audioSessionType = navigator.audioSession.type || 'playback';
+      navigator.audioSession.type = 'ambient';
+      timerState.audioSessionType = navigator.audioSession.type || 'ambient';
     } else {
-      timerState.audioSessionType = 'playback-html5-media';
+      timerState.audioSessionType = 'ambient-web-audio';
     }
   } catch {
-    timerState.audioSessionType = 'playback-html5-media';
+    timerState.audioSessionType = 'ambient-web-audio';
   }
 
-  // 2. Ensure shared Web Audio API context is created and running
+  // 2. Ensure shared Web Audio API context is created and running on the ambient mixing bus
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (AudioCtx) {
@@ -1008,24 +1014,6 @@ function ensurePlaybackAudioSession() {
       if (sharedAudioCtx.state === 'suspended') {
         sharedAudioCtx.resume().catch(() => {});
       }
-    }
-  } catch {}
-
-  // 3. Preload HTML5 <audio> WAV elements on the Media Playback channel (bypasses hardware silent switch on iOS/Android)
-  try {
-    for (const cueType of ['work-start', 'rest-start', 'transition-pulse', 'workout-complete']) {
-      if (!preloadedCueAudios.has(cueType)) {
-        const audio = new Audio(synthesizeCueWavDataUri(cueType));
-        audio.preload = 'auto';
-        audio.playsInline = true;
-        preloadedCueAudios.set(cueType, audio);
-      }
-    }
-    if (!keepAliveAudioEl) {
-      keepAliveAudioEl = new Audio(synthesizeCueWavDataUri('keepalive'));
-      keepAliveAudioEl.loop = true;
-      keepAliveAudioEl.preload = 'auto';
-      keepAliveAudioEl.playsInline = true;
     }
   } catch {}
 }
@@ -1055,16 +1043,6 @@ function releaseScreenWakeLock() {
   timerState.wakeLockActive = false;
 }
 
-function clearBackgroundHardwareAudioCues() {
-  while (scheduledBgNodes.length > 0) {
-    const node = scheduledBgNodes.pop();
-    try {
-      node.stop();
-      node.disconnect();
-    } catch {}
-  }
-}
-
 function scheduleSoundProfileOnContext(ctx, profile, startAtContextTime) {
   if (!ctx || !profile) return;
   for (const note of profile.notes) {
@@ -1084,7 +1062,6 @@ function scheduleSoundProfileOnContext(ctx, profile, startAtContextTime) {
     gain.connect(ctx.destination);
     osc.start(t0);
     osc.stop(tEnd + 0.01);
-    scheduledBgNodes.push(osc);
 
     if (note.overtoneFreq) {
       const overOsc = ctx.createOscillator();
@@ -1098,79 +1075,17 @@ function scheduleSoundProfileOnContext(ctx, profile, startAtContextTime) {
       overGain.connect(ctx.destination);
       overOsc.start(t0);
       overOsc.stop(tEnd + 0.01);
-      scheduledBgNodes.push(overOsc);
     }
   }
 }
 
-function scheduleBackgroundHardwareAudioCues() {
-  clearBackgroundHardwareAudioCues();
-  if (!timerState.isRunning || !sharedAudioCtx) return;
-  try {
-    if (sharedAudioCtx.state === 'suspended') {
-      sharedAudioCtx.resume().catch(() => {});
-    }
-    const upcoming = buildRemainingTimelineCues(
-      timerState.steps,
-      timerState.currentStepIndex,
-      timerState.remainingMs
-    );
-    const nowCtx = sharedAudioCtx.currentTime;
-    for (const cue of upcoming) {
-      if (cue.offsetSec <= 0.02) continue;
-      const profile = TIMER_SOUND_PROFILES[cue.cueType];
-      if (profile) {
-        scheduleSoundProfileOnContext(sharedAudioCtx, profile, nowCtx + cue.offsetSec);
-      }
-    }
-  } catch {}
-}
-
-function startSleepAndSilentKeepAlive() {
-  ensurePlaybackAudioSession();
+function startTimerSessionKeepAlive() {
+  ensureAmbientAudioSession();
   requestScreenWakeLock();
-
-  // Start looping Media Playback keepalive audio so the OS keeps audio & timers active when screen locks / sleeps
-  try {
-    if (keepAliveAudioEl) {
-      keepAliveAudioEl.currentTime = 0;
-      keepAliveAudioEl.play().catch(() => {});
-    }
-  } catch {}
-
-  // Register MediaSession metadata so lock screen treats the workout timer as active media playback
-  try {
-    if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
-      const wkName = dataService.getActiveProfile()?.activeWorkout?.workout?.name || 'HIIT Timer';
-      if (typeof MediaMetadata !== 'undefined') {
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: wkName,
-          artist: 'Workout Timer',
-          album: 'Active Interval Session'
-        });
-      }
-      navigator.mediaSession.playbackState = 'playing';
-      navigator.mediaSession.setActionHandler('play', () => {
-        if (!timerState.isRunning) toggleTimerPlayPause();
-      });
-      navigator.mediaSession.setActionHandler('pause', () => {
-        if (timerState.isRunning) toggleTimerPlayPause();
-      });
-    }
-  } catch {}
 }
 
-function stopSleepAndSilentKeepAlive() {
-  clearBackgroundHardwareAudioCues();
+function stopTimerSessionKeepAlive() {
   releaseScreenWakeLock();
-  try {
-    if (keepAliveAudioEl) {
-      keepAliveAudioEl.pause();
-    }
-    if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
-      navigator.mediaSession.playbackState = 'paused';
-    }
-  } catch {}
 }
 
 /**
@@ -1195,20 +1110,16 @@ function playTimerSoundCue(cueType, stepIndex = timerState.currentStepIndex) {
     timerState.soundLog.shift();
   }
 
-  ensurePlaybackAudioSession();
+  ensureAmbientAudioSession();
 
-  // 1. Play via HTML5 <audio> WAV on the Media Playback channel (ignores hardware Silent switch on iOS/Android)
+  // Synthesize via Web Audio API directly on the ambient mixing bus.
+  // This mixes cleanly with Libby, Hoopla, Spotify, Apple Podcasts, etc.,
+  // without ever pausing, interrupting, or ducking them.
   try {
-    const baseAudio = preloadedCueAudios.get(profile.id);
-    if (baseAudio) {
-      baseAudio.currentTime = 0;
-      baseAudio.play().catch(() => {});
-    }
-  } catch {}
-
-  // 2. Also synthesize via Web Audio API for zero-latency crisp bell harmonics
-  try {
-    if (sharedAudioCtx && (!document.hidden || scheduledBgNodes.length === 0)) {
+    if (sharedAudioCtx) {
+      if (sharedAudioCtx.state === 'suspended') {
+        sharedAudioCtx.resume().catch(() => {});
+      }
       scheduleSoundProfileOnContext(sharedAudioCtx, profile, sharedAudioCtx.currentTime);
     }
   } catch {}
@@ -1217,12 +1128,8 @@ function playTimerSoundCue(cueType, stepIndex = timerState.currentStepIndex) {
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (!timerState.isRunning) return;
-    if (document.hidden) {
-      // Phone screen locked / went to sleep -> pre-schedule all remaining cues on hardware audio clock
-      scheduleBackgroundHardwareAudioCues();
-    } else {
-      // Phone woke up -> clear remaining hardware pre-schedule and re-request wake lock
-      clearBackgroundHardwareAudioCues();
+    if (!document.hidden) {
+      // Re-request wake lock when user switches back to workouts
       requestScreenWakeLock();
     }
   });
@@ -1249,7 +1156,7 @@ function toggleTimerPlayPause() {
     timerState.remainingMs = startDur * 1000;
   }
 
-  startSleepAndSilentKeepAlive();
+  startTimerSessionKeepAlive();
 
   // Play the initial cue if starting at the beginning of a step
   const initialStep = timerState.steps[timerState.currentStepIndex];
