@@ -212,11 +212,64 @@ html, body {
 
 /* 3-Part Focus Slider */
 .focus-slider-section {
-  padding: 7px 12px 7px;
+  padding: 6px 12px 7px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   border-bottom: 1px solid var(--border-subtle);
+}
+
+.focus-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.focus-section-title {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.15px;
+  line-height: 1.15;
+}
+
+.focus-reset-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--accent-soft, #eff6ff);
+  color: var(--link-color, #2563eb);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.focus-reset-btn:hover {
+  background: #dbeafe;
+  border-color: rgba(37, 99, 235, 0.4);
+}
+
+.focus-reset-btn:active {
+  transform: scale(0.97);
+}
+
+.focus-reset-btn.is-default {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border-subtle);
+  opacity: 0.65;
+}
+
+.focus-reset-btn.is-default:hover {
+  opacity: 0.95;
+  background: rgba(15, 23, 42, 0.04);
 }
 
 .focus-labels-row {

@@ -10,6 +10,8 @@ import {
   MANUAL_FOCUS_ERROR_BAR,
   snapToFocusStep,
   normalizeFocusWeights,
+  resetFocusState,
+  isDefaultFocusState,
   toggleFocusAreaState,
   computeFocusSliderPositions,
   updateFocusFromHandleDrag,
@@ -1302,7 +1304,7 @@ test('toggleFocusAreaState spreads remaining colors in exact current ratio on de
   assert.equal(blocked.enabled['Upper Body'], true);
   assert.equal(blocked.weights['Upper Body'], 1);
 
-  // Reselect Lower Body -> Lower goes to 1/3 by default, Upper scales to 2/3
+  // Reselect Lower Body when ONLY Upper Body is active -> Lower goes to 50% and Upper goes to 50%!
   const afterReselectLower = toggleFocusAreaState(
     afterDeselectLower.weights,
     afterDeselectLower.enabled,
@@ -1310,20 +1312,37 @@ test('toggleFocusAreaState spreads remaining colors in exact current ratio on de
   );
   assert.equal(afterReselectLower.changed, true);
   assert.equal(afterReselectLower.enabled['Legs'], true);
-  assert.ok(Math.abs(afterReselectLower.weights['Legs'] - 1 / 3) < 1e-9);
-  assert.ok(Math.abs(afterReselectLower.weights['Upper Body'] - 2 / 3) < 1e-9);
+  assert.ok(Math.abs(afterReselectLower.weights['Legs'] - 0.5) < 1e-9);
+  assert.ok(Math.abs(afterReselectLower.weights['Upper Body'] - 0.5) < 1e-9);
+  assert.equal(isDefaultFocusState(afterReselectLower.weights, afterReselectLower.enabled), false);
 
-  // Reselect Core -> Core goes to 1/3 by default, remaining 2/3 split in 2:1 ratio (Upper = 4/9, Lower = 2/9)
-  const afterReselectCore = toggleFocusAreaState(
+  // Reselect Core when BOTH Upper Body (50%) and Lower Body (50%) are active -> Core goes to 1/3 and remaining 2/3 split 1:1 (1/3 each!)
+  const afterReselectCoreBalanced = toggleFocusAreaState(
     afterReselectLower.weights,
     afterReselectLower.enabled,
     'Core'
   );
-  assert.equal(afterReselectCore.changed, true);
-  assert.equal(afterReselectCore.enabled['Core'], true);
-  assert.ok(Math.abs(afterReselectCore.weights['Core'] - 1 / 3) < 1e-9);
-  assert.ok(Math.abs(afterReselectCore.weights['Upper Body'] - 4 / 9) < 1e-9);
-  assert.ok(Math.abs(afterReselectCore.weights['Legs'] - 2 / 9) < 1e-9);
+  assert.equal(afterReselectCoreBalanced.changed, true);
+  assert.equal(afterReselectCoreBalanced.enabled['Core'], true);
+  assert.ok(Math.abs(afterReselectCoreBalanced.weights['Core'] - 1 / 3) < 1e-9);
+  assert.ok(Math.abs(afterReselectCoreBalanced.weights['Upper Body'] - 1 / 3) < 1e-9);
+  assert.ok(Math.abs(afterReselectCoreBalanced.weights['Legs'] - 1 / 3) < 1e-9);
+  assert.equal(isDefaultFocusState(afterReselectCoreBalanced.weights, afterReselectCoreBalanced.enabled), true);
+
+  // Also verify re-adding Core when Upper/Lower are unequal (75%/25%) sets Core to 1/3 and scales Upper/Lower to 50% (3/6) and 1/6
+  const afterReselectCoreFrom75 = toggleFocusAreaState(
+    { 'Upper Body': 0.75, 'Core': 0, 'Legs': 0.25 },
+    { 'Upper Body': true, 'Core': false, 'Legs': true },
+    'Core'
+  );
+  assert.ok(Math.abs(afterReselectCoreFrom75.weights['Core'] - 1 / 3) < 1e-9);
+  assert.ok(Math.abs(afterReselectCoreFrom75.weights['Upper Body'] - 0.5) < 1e-9);
+  assert.ok(Math.abs(afterReselectCoreFrom75.weights['Legs'] - 1 / 6) < 1e-9);
+  assert.equal(isDefaultFocusState(afterReselectCoreFrom75.weights, afterReselectCoreFrom75.enabled), false);
+
+  // Reset helper restores exact 1/3, 1/3, 1/3 with all 3 enabled
+  const reset = resetFocusState();
+  assert.equal(isDefaultFocusState(reset.weights, reset.enabled), true);
 });
 
 // ----------------------------------------------------------------------------
@@ -1684,6 +1703,7 @@ test('index.html, styles.css, app.js & qa-gallery.html satisfy Top Menu, Focus S
   assert.ok(indexHtml.includes('id="focusLabelUpper"') && indexHtml.includes('Upper Body'));
   assert.ok(indexHtml.includes('id="focusLabelCore"') && indexHtml.includes('Core'));
   assert.ok(indexHtml.includes('id="focusLabelLower"') && indexHtml.includes('Lower Body'));
+  assert.ok(indexHtml.includes('id="resetFocusBtn"'), 'Focus slider must include #resetFocusBtn to reset to 1/3, 1/3, 1/3');
   assert.ok(!indexHtml.includes('focus-tick') && !stylesCss.includes('focus-tick'), 'Focus slider must have zero visible tick marks');
 
   // 2) Focus bar light fills & dark text colors match timer style

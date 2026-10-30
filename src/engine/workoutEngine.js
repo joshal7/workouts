@@ -244,10 +244,36 @@ export function deriveBodyCategoryFromFocus(weights, enabled) {
 }
 
 /**
+ * Return the default balanced Focus state (1/3 Upper Body, 1/3 Core, 1/3 Legs).
+ */
+export function resetFocusState() {
+  return {
+    weights: { ...DEFAULT_FOCUS_WEIGHTS },
+    enabled: { ...DEFAULT_FOCUS_ENABLED }
+  };
+}
+
+/**
+ * Return true when all three body areas are enabled and at ~1/3 each.
+ */
+export function isDefaultFocusState(weights, enabled) {
+  const norm = normalizeFocusWeights({ focusWeights: weights, focusEnabled: enabled });
+  return (
+    !!norm.enabled['Upper Body'] &&
+    !!norm.enabled['Core'] &&
+    !!norm.enabled['Legs'] &&
+    Math.abs((norm.weights['Upper Body'] || 0) - 1 / 3) < 0.005 &&
+    Math.abs((norm.weights['Core'] || 0) - 1 / 3) < 0.005 &&
+    Math.abs((norm.weights['Legs'] || 0) - 1 / 3) < 0.005
+  );
+}
+
+/**
  * Toggle selection state of a focus body group ('Upper Body', 'Core', or 'Legs' / 'Lower Body'):
  * - Deselecting removes its color and spreads the remaining enabled color(s) across 100% in their current ratio.
  *   (Cannot deselect the last remaining active body group.)
- * - Reselecting restores that body group to 1/3 by default and scales the remaining enabled group(s) to 2/3 in their current ratio.
+ * - Reselecting sets that body group to 50% if only one other area is selected, or 1/3 if two others are selected
+ *   (scaling the two other enabled groups across 2/3 in their current ratio).
  */
 export function toggleFocusAreaState(currentWeights, currentEnabled, areaInput) {
   const area = normalizeBodyAreaKey(areaInput);
@@ -284,6 +310,9 @@ export function toggleFocusAreaState(currentWeights, currentEnabled, areaInput) 
     const nextWeights = { 'Upper Body': 0, 'Core': 0, 'Legs': 0 };
     if (otherActive.length === 0) {
       nextWeights[area] = 1;
+    } else if (otherActive.length === 1) {
+      nextWeights[area] = 0.5;
+      nextWeights[otherActive[0]] = 0.5;
     } else {
       nextWeights[area] = 1 / 3;
       const otherSum = otherActive.reduce((acc, a) => acc + (w[a] || 0), 0);

@@ -15,7 +15,7 @@
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/svg+xml" href="./diagrams/app-icon.svg" />
   <link rel="apple-touch-icon" href="./diagrams/app-icon.svg" />
-  <link rel="stylesheet" href="./src/styles.css?v=18" />
+  <link rel="stylesheet" href="./src/styles.css?v=19" />
 </head>
 <body>
   <div class="app-shell">
@@ -81,6 +81,17 @@
         </div>
 
         <div id="focusSliderSection" class="focus-slider-section" aria-label="Body Focus Distribution">
+          <div class="focus-header-row">
+            <span class="focus-section-title">Focus</span>
+            <button
+              type="button"
+              id="resetFocusBtn"
+              class="focus-reset-btn is-default"
+              aria-label="Reset focus to 1/3 Upper Body, 1/3 Core, 1/3 Lower Body"
+            >
+              ↺ Reset
+            </button>
+          </div>
           <div class="focus-labels-row">
             <button
               type="button"
@@ -470,6 +481,6 @@
     <div id="toast" class="toast" hidden>Updated</div>
   </div>
 
-  <script type="module" src="./src/app.js?v=18"></script>
+  <script type="module" src="./src/app.js?v=19"></script>
 </body>
 </html>

@@ -1,10 +1,12 @@
-import { DataService } from './services/dataService.js?v=18';
+import { DataService } from './services/dataService.js?v=19';
 import {
   FOCUS_SNAP_STEPS,
   DEFAULT_FOCUS_WEIGHTS,
   DEFAULT_FOCUS_ENABLED,
   normalizeFocusWeights,
   deriveBodyCategoryFromFocus,
+  resetFocusState,
+  isDefaultFocusState,
   toggleFocusAreaState,
   computeFocusSliderPositions,
   updateFocusFromHandleDrag,
@@ -25,12 +27,12 @@ import {
   getRandomEntry,
   getPrimaryMuscle,
   getPrimaryBodyArea
-} from './engine/workoutEngine.js?v=18';
+} from './engine/workoutEngine.js?v=19';
 import {
   analyzeMuscleLoad,
   applyBalancedRecommendation,
   SPECIFIC_MUSCLES
-} from './engine/muscleLoadAnalyzer.js?v=18';
+} from './engine/muscleLoadAnalyzer.js?v=19';
 import {
   TIMER_COLORS,
   CUSTOM_TIMER_PRESETS,
@@ -44,7 +46,7 @@ import {
   finalizeWithCountdown,
   getStepStartSoundType,
   shouldPlaySteadyTransitionPulse
-} from './engine/timerEngine.js?v=18';
+} from './engine/timerEngine.js?v=19';
 
 const dataService = new DataService();
 
@@ -77,6 +79,7 @@ let currentSelectShowAll = false;
 let currentSelectMuscleFilter = 'All';
 let selectedCustomExerciseIds = [];
 let targetCustomExerciseCount = 9;
+let targetCustomWorkout = null;
 
 let currentBalanceWarningId = null;
 let currentAnalysis = null;
@@ -124,6 +127,7 @@ const els = {
   workoutTypeSelect: document.getElementById('workoutTypeSelect'),
 
   focusSliderSection: document.getElementById('focusSliderSection'),
+  resetFocusBtn: document.getElementById('resetFocusBtn'),
   focusLabelUpper: document.getElementById('focusLabelUpper'),
   focusLabelCore: document.getElementById('focusLabelCore'),
   focusLabelLower: document.getElementById('focusLabelLower'),
@@ -164,7 +168,7 @@ async function bootstrap() {
   // long before any timer AudioContext is created or resumed (prevents synchronous click race condition).
   configureAmbientAudioSession();
 
-  await dataService.init('./data/sheet-data.json?v=18', './data/enrichments.json?v=18');
+  await dataService.init('./data/sheet-data.json?v=19', './data/enrichments.json?v=19');
   populateWorkoutTypeSelect();
   populateCustomTimerPresetsSelect();
   syncUIFromActiveProfile();
@@ -179,7 +183,7 @@ async function bootstrap() {
       refreshing = true;
       window.location.reload();
     });
-    navigator.serviceWorker.register('./sw.js?v=18', { updateViaCache: 'none' }).then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=19', { updateViaCache: 'none' }).then(reg => {
       reg.update().catch(() => {});
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
@@ -287,11 +291,14 @@ function renderFocusSliderUI(activeDragHandleIndex = null) {
       });
     }
   }
+  if (els.resetFocusBtn) {
+    const atDefault = isDefaultFocusState(weights, enabled);
+    els.resetFocusBtn.classList.toggle('is-default', atDefault);
+  }
 }
 
-function syncUIFromActiveProfile() {
+function updateExcludedCountBadge() {
   const profile = dataService.getActiveProfile();
-
   const excludedCount = (profile.excludedExerciseIds || []).length;
   if (excludedCount > 0) {
     els.excludedCountBadge.textContent = `${excludedCount} Excluded`;
@@ -299,6 +306,11 @@ function syncUIFromActiveProfile() {
   } else {
     els.excludedCountBadge.hidden = true;
   }
+}
+
+function syncUIFromActiveProfile() {
+  const profile = dataService.getActiveProfile();
+  updateExcludedCountBadge();
 
   // Inputs
   const inputs = profile.inputs || {};
@@ -384,6 +396,7 @@ function updateSelectExercisesButtonLabel() {
     getSelectedInputs(),
     profile.activeWorkout?.workout
   );
+  targetCustomWorkout = target.workout;
   targetCustomExerciseCount = target.count;
   els.selectExercisesBtn.textContent = `Select ${target.count} Exercises`;
 }
@@ -415,6 +428,7 @@ function handleGenerateWorkout(showFeedback = true) {
   if (newWorkoutId !== prevWorkoutId || timerState.workoutTypeKey !== newWorkoutId) {
     resetTimerForWorkoutType(newWorkoutId);
   } else {
+    timerState.customStepsOverride = null;
     rebuildTimerSteps(true);
   }
 
@@ -1726,6 +1740,7 @@ function openSelectExercisesModal() {
     profile.activeWorkout?.workout
   );
 
+  targetCustomWorkout = target.workout;
   targetCustomExerciseCount = target.count;
   selectedCustomExerciseIds = [];
   currentSelectShowAll = false;
@@ -1911,8 +1926,23 @@ function weightsDiffer(a, b) {
 function bindFocusSliderEvents() {
   if (!els.focusSliderSection || !els.focusBarTrack) return;
 
+  // 0. Reset Focus button (1/3 Upper Body, 1/3 Core, 1/3 Lower Body — staged until Generate Workout or Select X Exercises)
+  if (els.resetFocusBtn) {
+    els.resetFocusBtn.addEventListener('click', () => {
+      focusState = resetFocusState();
+      renderFocusSliderUI();
+    });
+  }
+
+  // Double-clicking a slider handle also resets Focus to 1/3 each
+  els.focusBarTrack.addEventListener('dblclick', e => {
+    if (!e.target.closest('[data-handle-index]')) return;
+    focusState = resetFocusState();
+    renderFocusSliderUI();
+  });
+
   // 1. Tapping Upper Body, Core, or Lower Body label toggles deselection/reselection
-  //    (updates Focus UI only; workout does not change until user taps Generate Workout)
+  //    (updates Focus UI only; workout does not change until user taps Generate Workout or Select X Exercises)
   els.focusSliderSection.addEventListener('click', e => {
     const labelBtn = e.target.closest('[data-focus-area]');
     if (!labelBtn) return;
@@ -2084,7 +2114,8 @@ function bindEvents() {
 
   bindFocusSliderEvents();
 
-  // Auto-generate & sync when any top menu dropdown changes
+  // Stage top menu dropdown selections without updating the active workout until
+  // the user hits Generate Workout or Select X Exercises
   els.workoutCategorySelect.addEventListener('change', () => {
     const cat = els.workoutCategorySelect.value;
     const curType = els.workoutTypeSelect.value;
@@ -2094,11 +2125,11 @@ function bindEvents() {
         els.workoutTypeSelect.value = 'Random';
       }
     }
-    handleGenerateWorkout(true);
+    updateSelectExercisesButtonLabel();
   });
 
   els.equipmentSelect.addEventListener('change', () => {
-    handleGenerateWorkout(true);
+    updateSelectExercisesButtonLabel();
   });
 
   els.workoutTypeSelect.addEventListener('change', () => {
@@ -2107,12 +2138,9 @@ function bindEvents() {
       const wk = dataService.sheetData.workouts.find(w => w.name === val);
       if (wk) {
         els.workoutCategorySelect.value = wk.workoutCategory;
-        resetTimerForWorkoutType(wk.id);
       }
-    } else {
-      resetTimerForWorkoutType('random');
     }
-    handleGenerateWorkout(true);
+    updateSelectExercisesButtonLabel();
   });
 
   // Select X Exercises Modal
@@ -2172,9 +2200,13 @@ function bindEvents() {
 
   document.getElementById('confirmSelectExercisesBtn').addEventListener('click', () => {
     const inputs = getSelectedInputs();
+    const effectiveWorkoutType =
+      inputs.workoutType === 'Random' && targetCustomWorkout
+        ? targetCustomWorkout.name
+        : inputs.workoutType;
     const workoutState = generateWorkoutFromSelectedExercises(
       dataService.sheetData,
-      inputs,
+      { ...inputs, workoutType: effectiveWorkoutType },
       selectedCustomExerciseIds
     );
     dataService.updateActiveProfile({
@@ -2677,7 +2709,6 @@ function bindEvents() {
       const count = Number(btn.getAttribute('data-options-count'));
       dataService.setOptionsPerSlot(count);
       renderSettingsModalContent();
-      handleGenerateWorkout(false);
       showToast(`${count} option${count > 1 ? 's' : ''} per slot`);
     });
   });
@@ -2689,13 +2720,15 @@ function bindEvents() {
     if (!input) return;
     const exId = input.getAttribute('data-exercise-id');
     dataService.toggleExerciseExclusion(exId);
-    syncUIFromActiveProfile();
+    updateExcludedCountBadge();
+    renderActiveWorkout();
     renderExclusionChecklist();
   });
 
   document.getElementById('clearExclusionsBtn').addEventListener('click', () => {
     dataService.updateActiveProfile({ excludedExerciseIds: [] });
-    syncUIFromActiveProfile();
+    updateExcludedCountBadge();
+    renderActiveWorkout();
     renderExclusionChecklist();
     showToast(`All ${dataService.sheetData.exercises.length} exercises included`);
   });

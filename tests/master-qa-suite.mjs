@@ -471,21 +471,47 @@ async function runBrowserCDPTests(wsUrl) {
           const labelsOrderedLeftCenterRight = uRect.left < cRect.left && cRect.left < lRect.left;
           const initialHandlesCount = document.querySelectorAll('#focusHandlesLayer .focus-slider-thumb').length;
           const zeroTickMarks = document.querySelectorAll('[class*="tick"]').length === 0;
+          const resetFocusBtn = document.getElementById('resetFocusBtn');
+          const hasResetFocusBtn = !!resetFocusBtn && resetFocusBtn.classList.contains('is-default');
 
-          // Switch to Strength Duos so we can inspect 8 slots across 4 Duo rounds
+          // Establish a clean Timed Trios (40/20) baseline first so we can verify that changing
+          // Category, Type, Equipment, AND Focus slider percentages does NOT update the workout until Generate Workout!
+          const catSelect = document.getElementById('workoutCategorySelect');
           const typeSelect = document.getElementById('workoutTypeSelect');
-          typeSelect.value = 'Strength Duos';
+          const equipSelect = document.getElementById('equipmentSelect');
+          typeSelect.value = 'Timed Trios (40/20)';
           typeSelect.dispatchEvent(new Event('change'));
+          document.getElementById('generateWorkoutBtn').click();
 
           const getActiveExerciseTitles = () =>
             Array.from(document.querySelectorAll('.exercise-title-text')).map(el => el.innerText.trim());
-          const titlesBeforeFocusAdjust = getActiveExerciseTitles();
+          const workoutNameBeforeStaging = document.getElementById('workoutNameText').innerText.trim();
+          const titlesBeforeStaging = getActiveExerciseTitles();
+
+          // Stage Category, Equipment, and Type changes WITHOUT hitting Generate Workout
+          catSelect.value = 'Strength';
+          catSelect.dispatchEvent(new Event('change'));
+          const workoutNameAfterCatChange = document.getElementById('workoutNameText').innerText.trim();
+          const titlesAfterCatChange = getActiveExerciseTitles();
+
+          equipSelect.value = 'Nothing';
+          equipSelect.dispatchEvent(new Event('change'));
+          const titlesAfterEquipChange = getActiveExerciseTitles();
+          equipSelect.value = 'Any';
+          equipSelect.dispatchEvent(new Event('change'));
+
+          typeSelect.value = 'Strength Duos';
+          typeSelect.dispatchEvent(new Event('change'));
+          const workoutNameAfterTypeChange = document.getElementById('workoutNameText').innerText.trim();
+          const titlesAfterTypeChange = getActiveExerciseTitles();
+          const stagedSelectXLabel = document.getElementById('selectExercisesBtn').innerText.trim();
 
           // 1) Tap "Core" to deselect -> turns grey, yellow bar hidden, 50%/50% Upper/Lower, 1 handle (workout NOT changed yet!)
           coreBtn.click();
           const coreDeselectedGrey = getComputedStyle(coreBtn).color;
           const coreSegHidden = segCore.hidden === true;
           const handlesAfterDeselectCore = document.querySelectorAll('#focusHandlesLayer .focus-slider-thumb').length;
+          const resetHighlightedWhenModified = !resetFocusBtn.classList.contains('is-default');
           const pctAfterDeselectCore = {
             upper: document.getElementById('focusPctUpper').innerText.trim(),
             core: document.getElementById('focusPctCore').innerText.trim(),
@@ -508,11 +534,19 @@ async function runBrowserCDPTests(wsUrl) {
           };
           const titlesAfterDragBeforeGen = getActiveExerciseTitles();
           const workoutUnchangedBeforeGenerate =
-            JSON.stringify(titlesBeforeFocusAdjust) === JSON.stringify(titlesAfterDeselectBeforeGen) &&
-            JSON.stringify(titlesBeforeFocusAdjust) === JSON.stringify(titlesAfterDragBeforeGen);
+            workoutNameBeforeStaging === 'Timed Trios (40/20)' &&
+            workoutNameAfterCatChange === 'Timed Trios (40/20)' &&
+            workoutNameAfterTypeChange === 'Timed Trios (40/20)' &&
+            stagedSelectXLabel === 'Select 8 Exercises' &&
+            JSON.stringify(titlesBeforeStaging) === JSON.stringify(titlesAfterCatChange) &&
+            JSON.stringify(titlesBeforeStaging) === JSON.stringify(titlesAfterEquipChange) &&
+            JSON.stringify(titlesBeforeStaging) === JSON.stringify(titlesAfterTypeChange) &&
+            JSON.stringify(titlesBeforeStaging) === JSON.stringify(titlesAfterDeselectBeforeGen) &&
+            JSON.stringify(titlesBeforeStaging) === JSON.stringify(titlesAfterDragBeforeGen);
 
-          // Now hit Generate Workout -> applies 75% Upper / 25% Lower -> 6 Upper + 2 Lower, max 1 Lower per Duo round!
+          // Now hit Generate Workout -> applies Strength Duos + 75% Upper / 25% Lower -> 6 Upper + 2 Lower, max 1 Lower per Duo round!
           document.getElementById('generateWorkoutBtn').click();
+          const workoutNameAfterGenerate = document.getElementById('workoutNameText').innerText.trim();
 
           const legMuscles = ['Glutes', 'Quads', 'Hamstrings'];
           const roundLegCounts = Array.from(document.querySelectorAll('.round-card')).map(card => {
@@ -554,29 +588,40 @@ async function runBrowserCDPTests(wsUrl) {
           upperBtn.click(); // Attempt to deselect last remaining active group -> blocked!
           const lastActiveStillEnabled = !upperBtn.classList.contains('is-deselected');
 
-          // 5) Reselect "Lower Body" -> goes to 1/3 (33%) by default, Upper scales to 2/3 (67%)!
+          // 5) Re-add "Lower Body" when ONLY 1 other area ("Upper Body") is selected -> takes up 50% (50% / 50%)!
           lowerBtn.click();
           const pctAfterReselectLower = {
             upper: document.getElementById('focusPctUpper').innerText.trim(),
             lower: document.getElementById('focusPctLower').innerText.trim()
           };
 
-          // 6) Reselect "Core" -> goes to 1/3 (33%) by default, 2 handles reappear! Then restore 1/3 each (33%/33%/33%)
+          // Drag handle to 75% Upper / 25% Lower, then re-add "Core" when 2 other areas are selected -> Core takes up 1/3 (33%)!
+          const thumbBeforeCoreReadd = document.querySelector('#focusHandlesLayer .focus-slider-thumb');
+          thumbBeforeCoreReadd.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: startX, pointerId: 4, button: 0 }));
+          track.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: endX75, pointerId: 4 }));
+          track.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: endX75, pointerId: 4 }));
+
+          // 6) Re-add "Core" when 2 other areas are selected -> Core goes to 1/3 (33%), Upper/Lower scale across 2/3 (50% / 17%), 2 handles reappear!
           coreBtn.click();
-          const pctCoreOnReselect = document.getElementById('focusPctCore').innerText.trim();
+          const pctOnReselectWithTwoOthers = {
+            upper: document.getElementById('focusPctUpper').innerText.trim(),
+            core: document.getElementById('focusPctCore').innerText.trim(),
+            lower: document.getElementById('focusPctLower').innerText.trim()
+          };
           const handlesAfterReselectAll = document.querySelectorAll('#focusHandlesLayer .focus-slider-thumb').length;
 
-          // Snap handle 0 -> 1/3 and handle 1 -> 2/3 to restore balanced 33%/33%/33%
-          const thumbs = document.querySelectorAll('#focusHandlesLayer .focus-slider-thumb');
-          const x33 = trackRect.left + trackRect.width * (1 / 3);
-          const x67 = trackRect.left + trackRect.width * (2 / 3);
-          thumbs[0].dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: x33, pointerId: 2, button: 0 }));
-          track.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: x33, pointerId: 2 }));
-          track.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: x33, pointerId: 2 }));
-          const thumbs2 = document.querySelectorAll('#focusHandlesLayer .focus-slider-thumb');
-          thumbs2[1].dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: x67, pointerId: 3, button: 0 }));
-          track.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: x67, pointerId: 3 }));
-          track.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: x67, pointerId: 3 }));
+          // 7) Click Reset button (#resetFocusBtn) -> resets to 1/3, 1/3, 1/3 (33%/33%/33%) WITHOUT changing active workout until Generate Workout!
+          const titlesBeforeResetBtn = getActiveExerciseTitles();
+          resetFocusBtn.click();
+          const pctAfterResetBtn = {
+            upper: document.getElementById('focusPctUpper').innerText.trim(),
+            core: document.getElementById('focusPctCore').innerText.trim(),
+            lower: document.getElementById('focusPctLower').innerText.trim()
+          };
+          const resetBackToDefaultClass = resetFocusBtn.classList.contains('is-default');
+          const workoutUnchangedOnResetClick =
+            JSON.stringify(titlesBeforeResetBtn) === JSON.stringify(getActiveExerciseTitles());
+
           document.getElementById('generateWorkoutBtn').click();
 
           // Test Swap Modal muscle filter pill ("Hamstrings" and "Legs and Core")
@@ -594,6 +639,8 @@ async function runBrowserCDPTests(wsUrl) {
 
           return {
             noLegacyFocusDropdown,
+            hasResetFocusBtn,
+            resetHighlightedWhenModified,
             colorsMatchSpec:
               upperTextColor === 'rgb(127, 29, 29)' &&
               upperBarColor === 'rgb(254, 202, 202)' &&
@@ -610,6 +657,7 @@ async function runBrowserCDPTests(wsUrl) {
             pctAfterDeselectCore,
             pctAfterDrag75,
             workoutUnchangedBeforeGenerate,
+            workoutNameAfterGenerate,
             totalLower75,
             maxLowerPerRound75,
             bannersOnAuto75,
@@ -620,8 +668,11 @@ async function runBrowserCDPTests(wsUrl) {
             handlesWhenOneActive,
             lastActiveStillEnabled,
             pctAfterReselectLower,
-            pctCoreOnReselect,
+            pctOnReselectWithTwoOthers,
             handlesAfterReselectAll,
+            pctAfterResetBtn,
+            resetBackToDefaultClass,
+            workoutUnchangedOnResetClick,
             hasSwapLegsAndCorePill,
             allExclValid,
             exclCount: exclItems.length,
@@ -631,6 +682,8 @@ async function runBrowserCDPTests(wsUrl) {
         });
         if (
           !filterCheck.noLegacyFocusDropdown ||
+          !filterCheck.hasResetFocusBtn ||
+          !filterCheck.resetHighlightedWhenModified ||
           !filterCheck.colorsMatchSpec ||
           !filterCheck.labelsOrderedLeftCenterRight ||
           filterCheck.initialHandlesCount !== 2 ||
@@ -643,6 +696,7 @@ async function runBrowserCDPTests(wsUrl) {
           filterCheck.pctAfterDrag75.upper !== '75%' ||
           filterCheck.pctAfterDrag75.lower !== '25%' ||
           !filterCheck.workoutUnchangedBeforeGenerate ||
+          filterCheck.workoutNameAfterGenerate !== 'Strength Duos' ||
           filterCheck.totalLower75 !== 2 ||
           filterCheck.maxLowerPerRound75 > 1 ||
           filterCheck.bannersOnAuto75 !== 0 ||
@@ -651,10 +705,17 @@ async function runBrowserCDPTests(wsUrl) {
           filterCheck.bannersAfterFocusAutoBalance !== 0 ||
           filterCheck.handlesWhenOneActive !== 0 ||
           !filterCheck.lastActiveStillEnabled ||
-          filterCheck.pctAfterReselectLower.lower !== '33%' ||
-          filterCheck.pctAfterReselectLower.upper !== '67%' ||
-          filterCheck.pctCoreOnReselect !== '33%' ||
+          filterCheck.pctAfterReselectLower.lower !== '50%' ||
+          filterCheck.pctAfterReselectLower.upper !== '50%' ||
+          filterCheck.pctOnReselectWithTwoOthers.core !== '33%' ||
+          filterCheck.pctOnReselectWithTwoOthers.upper !== '50%' ||
+          filterCheck.pctOnReselectWithTwoOthers.lower !== '17%' ||
           filterCheck.handlesAfterReselectAll !== 2 ||
+          filterCheck.pctAfterResetBtn.upper !== '33%' ||
+          filterCheck.pctAfterResetBtn.core !== '33%' ||
+          filterCheck.pctAfterResetBtn.lower !== '33%' ||
+          !filterCheck.resetBackToDefaultClass ||
+          !filterCheck.workoutUnchangedOnResetClick ||
           !filterCheck.hasSwapLegsAndCorePill ||
           !filterCheck.allExclValid ||
           !filterCheck.allSwapHaveHamstrings
@@ -662,7 +723,7 @@ async function runBrowserCDPTests(wsUrl) {
           throw new Error('Top Menu & 3-Part Focus Slider check failed: ' + JSON.stringify(filterCheck));
         }
         console.log(
-          `  ✅ PASS: Top Menu (1-row @ 375px & 390px) + 3-Part Focus Slider verified (75/25 drag -> 6 Upper + 2 Lower across 4 Duos, +1 manual tolerated, +2 warns "${filterCheck.focusOverloadText}" & resolves in 1 tap, deselect/reselect 1/3)`
+          `  ✅ PASS: Staged Category/Type/Equipment/Focus verified, 50% (1 other) & 1/3 (2 others) re-add verified, and ↺ Reset (33%/33%/33%) verified`
         );
 
         console.log('\n--- 9. Requirement 2 & 3: Dismiss Overload Warning & Replacement Exercises Never Trigger New Warnings ---');
@@ -670,6 +731,7 @@ async function runBrowserCDPTests(wsUrl) {
           const typeSelect = document.getElementById('workoutTypeSelect');
           typeSelect.value = 'Strength Duos';
           typeSelect.dispatchEvent(new Event('change'));
+          document.getElementById('generateWorkoutBtn').click();
 
           // Manually create a Triceps overload in Round 1 (slot 0 = Skull Crushers, slot 1 = Tricep kick backs)
           document.querySelector('.exercise-slot[data-round-index="0"][data-slot-index="0"] .swap-trigger-btn').click();
@@ -731,6 +793,8 @@ async function runBrowserCDPTests(wsUrl) {
           typeSelect.value = 'Timed Duos (40/20)';
           typeSelect.dispatchEvent(new Event('change'));
 
+          // Active workout should STILL be Strength Duos until Select 8 Exercises is confirmed!
+          const workoutNameBeforeSelectXConfirm = document.getElementById('workoutNameText').innerText.trim();
           const btnLabel = document.getElementById('selectExercisesBtn')?.innerText.trim();
           document.getElementById('selectExercisesBtn').click();
 
@@ -758,11 +822,14 @@ async function runBrowserCDPTests(wsUrl) {
 
           confirmBtn.click();
           const modalClosed = modal.hidden;
+          const workoutNameAfterSelectXConfirm = document.getElementById('workoutNameText').innerText.trim();
           const roundCount = document.querySelectorAll('.round-card').length;
           const slotCount = document.querySelectorAll('.exercise-slot').length;
           const overloadBanners = document.querySelectorAll('.overload-banner').length;
 
           return {
+            workoutNameBeforeSelectXConfirm,
+            workoutNameAfterSelectXConfirm,
             btnLabel,
             modalOpen,
             confirmEnabled,
@@ -774,6 +841,8 @@ async function runBrowserCDPTests(wsUrl) {
           };
         });
         if (
+          selectXCheck.workoutNameBeforeSelectXConfirm !== 'Strength Duos' ||
+          selectXCheck.workoutNameAfterSelectXConfirm !== 'Timed Duos (40/20)' ||
           selectXCheck.btnLabel !== 'Select 8 Exercises' ||
           !selectXCheck.modalOpen ||
           !selectXCheck.confirmEnabled ||
@@ -795,12 +864,14 @@ async function runBrowserCDPTests(wsUrl) {
           // Verify untimed Strength workouts have NO timer bar and NO round timers
           typeSelect.value = 'Strength Duos';
           typeSelect.dispatchEvent(new Event('change'));
+          document.getElementById('generateWorkoutBtn').click();
           const strengthTimerBarHidden = document.getElementById('workoutTimerBar').hidden === true;
           const strengthRoundTimersCount = document.querySelectorAll('[data-action="open-round-timer"]').length;
 
           // Switch to Timed HIIT workout
           typeSelect.value = 'Timed Duos (40/20)';
           typeSelect.dispatchEvent(new Event('change'));
+          document.getElementById('generateWorkoutBtn').click();
 
           const timerBarVisible = !document.getElementById('workoutTimerBar').hidden;
           const individualExerciseTimerCount = document.querySelectorAll('.slot-timer-btn, [data-action="open-exercise-timer"]').length;
@@ -885,10 +956,11 @@ async function runBrowserCDPTests(wsUrl) {
           const customStep1Clock = clockEl?.innerText.trim();
           const customStep1Class = stageCard?.className || '';
 
-          // Close timer modal and select a different workout type ("Timed Trios (40/20)") -> verify timer resets!
+          // Close timer modal and select a different workout type ("Timed Trios (40/20)") + Generate Workout -> verify timer resets!
           document.getElementById('closeTimerModalBtn').click();
           typeSelect.value = 'Timed Trios (40/20)';
           typeSelect.dispatchEvent(new Event('change'));
+          document.getElementById('generateWorkoutBtn').click();
 
           document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
           const trioChipsCount = document.querySelectorAll('#timerSequenceTimeline .timer-seq-chip').length;
@@ -897,9 +969,10 @@ async function runBrowserCDPTests(wsUrl) {
           const trioStep1Class = stageCard?.className || '';
           document.getElementById('closeTimerModalBtn').click();
 
-          // Switch to "6 Excercise Pyramid" and verify 10s "Transition" between exercises & 60s "Rest" at end of set
+          // Switch to "6 Excercise Pyramid" + Generate Workout and verify 10s "Transition" between exercises & 60s "Rest" at end of set
           typeSelect.value = '6 Excercise Pyramid';
           typeSelect.dispatchEvent(new Event('change'));
+          document.getElementById('generateWorkoutBtn').click();
           document.getElementById('openWorkoutTimerBtn').click();
           // Step 0 = Countdown (10s), Step 1 = Set 1 Ex 1 (30s), Step 2 = Set 1 Rest (60s), Step 3 = Set 2 Ex 1 (30s), Step 4 = Set 2 Transition (10s)
           document.querySelector('[data-action="jump-timer-step"][data-step-index="2"]').click();
@@ -1052,6 +1125,7 @@ async function runBrowserCDPTests(wsUrl) {
           const typeSelect = document.getElementById('workoutTypeSelect');
           typeSelect.value = 'Timed Trios (40/20)';
           typeSelect.dispatchEvent(new Event('change'));
+          document.getElementById('generateWorkoutBtn').click();
 
           const getRoundExercises = rIdx =>
             Array.from(
