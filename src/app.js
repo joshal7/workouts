@@ -1,4 +1,4 @@
-import { DataService } from './services/dataService.js?v=19';
+import { DataService } from './services/dataService.js?v=20';
 import {
   FOCUS_SNAP_STEPS,
   DEFAULT_FOCUS_WEIGHTS,
@@ -27,12 +27,12 @@ import {
   getRandomEntry,
   getPrimaryMuscle,
   getPrimaryBodyArea
-} from './engine/workoutEngine.js?v=19';
+} from './engine/workoutEngine.js?v=20';
 import {
   analyzeMuscleLoad,
   applyBalancedRecommendation,
   SPECIFIC_MUSCLES
-} from './engine/muscleLoadAnalyzer.js?v=19';
+} from './engine/muscleLoadAnalyzer.js?v=20';
 import {
   TIMER_COLORS,
   CUSTOM_TIMER_PRESETS,
@@ -46,7 +46,7 @@ import {
   finalizeWithCountdown,
   getStepStartSoundType,
   shouldPlaySteadyTransitionPulse
-} from './engine/timerEngine.js?v=19';
+} from './engine/timerEngine.js?v=20';
 
 const dataService = new DataService();
 
@@ -168,7 +168,7 @@ async function bootstrap() {
   // long before any timer AudioContext is created or resumed (prevents synchronous click race condition).
   configureAmbientAudioSession();
 
-  await dataService.init('./data/sheet-data.json?v=19', './data/enrichments.json?v=19');
+  await dataService.init('./data/sheet-data.json?v=20', './data/enrichments.json?v=20');
   populateWorkoutTypeSelect();
   populateCustomTimerPresetsSelect();
   syncUIFromActiveProfile();
@@ -183,7 +183,7 @@ async function bootstrap() {
       refreshing = true;
       window.location.reload();
     });
-    navigator.serviceWorker.register('./sw.js?v=19', { updateViaCache: 'none' }).then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=20', { updateViaCache: 'none' }).then(reg => {
       reg.update().catch(() => {});
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
