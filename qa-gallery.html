@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>90 Exercises &amp; Diagrams — Fact-Check &amp; QA Gallery</title>
-  <link rel="stylesheet" href="./src/styles.css" />
+  <link rel="stylesheet" href="./src/styles.css?v=14" />
   <style>
     .qa-shell {
       max-width: 1180px;
@@ -99,8 +99,27 @@
     import { SPECIFIC_MUSCLES } from './src/engine/muscleLoadAnalyzer.js';
     import { filterExercisesByMuscleAndQuery } from './src/engine/workoutEngine.js';
 
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+      const hadController = !!navigator.serviceWorker.controller;
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!hadController || refreshing) return;
+        refreshing = true;
+        window.location.reload();
+      });
+      navigator.serviceWorker.register('./sw.js?v=15', { updateViaCache: 'none' }).then(reg => reg.update()).catch(() => {});
+    }
+
     const ds = new DataService();
-    await ds.init('./data/sheet-data.json', './data/enrichments.json');
+    await ds.init('./data/sheet-data.json?v=15', './data/enrichments.json?v=15');
+
+    const totalExCount = ds.sheetData.exercises.length;
+    const totalWkCount = ds.sheetData.workouts.length;
+    document.title = `${totalExCount} Exercises & Diagrams — Fact-Check & QA Gallery`;
+    const h1El = document.querySelector('.qa-header h1');
+    if (h1El) h1El.textContent = `All ${totalExCount} Exercises & ${totalWkCount} Workout Formats`;
+    const allFilterBtn = document.querySelector('.qa-filter-bar [data-filter="all"]');
+    if (allFilterBtn) allFilterBtn.textContent = `All (${totalExCount})`;
 
     let activeFilter = 'all';
     const grid = document.getElementById('qaExerciseGrid');

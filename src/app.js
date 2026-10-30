@@ -134,15 +134,22 @@ const els = {
 };
 
 async function bootstrap() {
-  await dataService.init('./data/sheet-data.json', './data/enrichments.json');
+  await dataService.init('./data/sheet-data.json?v=15', './data/enrichments.json?v=15');
   populateWorkoutTypeSelect();
   populateCustomTimerPresetsSelect();
   syncUIFromActiveProfile();
   bindEvents();
 
-  // Register offline Service Worker if supported and check for updates
+  // Register offline Service Worker if supported and auto-reload when an existing SW updates
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./sw.js').then(reg => {
+    const hadController = !!navigator.serviceWorker.controller;
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+    navigator.serviceWorker.register('./sw.js?v=15', { updateViaCache: 'none' }).then(reg => {
       reg.update().catch(() => {});
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {

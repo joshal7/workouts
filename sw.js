@@ -1,4 +1,4 @@
-const CACHE_NAME = 'joshal-workout-pwa-v14';
+const CACHE_NAME = 'joshal-workout-pwa-v15';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -17,7 +17,13 @@ const CORE_ASSETS = [
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS))
+    caches.open(CACHE_NAME).then(cache =>
+      Promise.all(
+        CORE_ASSETS.map(url =>
+          fetch(url, { cache: 'no-cache' }).then(res => (res.ok ? cache.put(url, res) : null))
+        )
+      )
+    )
   );
   self.skipWaiting();
 });
@@ -31,11 +37,11 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Network-first strategy with offline cache fallback so updates appear immediately
+// Network-first strategy bypassing HTTP disk cache so updates appear immediately
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: 'no-cache' })
       .then(response => {
         if (response && response.status === 200) {
           const clone = response.clone();
@@ -44,7 +50,7 @@ self.addEventListener('fetch', event => {
         return response;
       })
       .catch(async () => {
-        const cached = await caches.match(event.request);
+        const cached = await caches.match(event.request, { ignoreSearch: true });
         return cached || Response.error();
       })
   );

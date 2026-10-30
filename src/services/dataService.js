@@ -42,10 +42,10 @@ export class DataService {
   /**
    * Load static JSON files (Option A) and merge enrichments with sheet rows.
    */
-  async init(sheetUrl = './data/sheet-data.json', enrichmentsUrl = './data/enrichments.json') {
+  async init(sheetUrl = './data/sheet-data.json?v=14', enrichmentsUrl = './data/enrichments.json?v=14') {
     const [sheetRes, enrichRes] = await Promise.all([
-      fetch(sheetUrl),
-      fetch(enrichmentsUrl)
+      fetch(sheetUrl, { cache: 'no-cache' }),
+      fetch(enrichmentsUrl, { cache: 'no-cache' })
     ]);
 
     if (!sheetRes.ok) throw new Error(`Failed to load sheet data: ${sheetRes.status}`);
