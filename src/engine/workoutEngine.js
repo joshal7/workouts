@@ -668,6 +668,25 @@ export function generateWorkout(sheetData, inputs = {}, rng = Math.random) {
             );
           }
 
+          // Tier 4b: If narrow filter pool exhausted a muscle group (e.g. only 1 Glutes in Strength+Legs+Weights),
+          // expand to non-excluded exercises in the same body area / equipment that are safe for the round
+          if (altCandidates.length === 0) {
+            const nonExcludedAll = sheetData.exercises.filter(
+              ex =>
+                !excludedExerciseIds.includes(ex.id) &&
+                !excludedExerciseIds.includes(ex.name) &&
+                !roundExerciseIds.has(ex.id) &&
+                !slot.options.some(o => o.id === ex.id) &&
+                isSafeForRound(ex)
+            );
+            altCandidates = nonExcludedAll.filter(
+              ex => targetArea === 'All' || ex.bodyCategories[targetArea] === 'Pri'
+            );
+            if (altCandidates.length === 0) {
+              altCandidates = nonExcludedAll;
+            }
+          }
+
           // Tier 5: Pick from candidates not in current round with minimum primary muscle count in other slots
           if (altCandidates.length === 0) {
             let fallbackPool = basePool.filter(
@@ -1296,4 +1315,148 @@ export function getValidReplacementCandidates({
   if (sameAreaWarningFree.length > 0) return sameAreaWarningFree;
   if (warningFree.length > 0) return warningFree;
   return eligible;
+}
+
+/**
+ * Reorder rounds by moving a round from `fromRoundIndex` to `toRoundIndex`,
+ * and renumbering all rounds sequentially (1, 2, 3...).
+ */
+export function reorderRounds(workoutState, fromRoundIndex, toRoundIndex) {
+  if (!workoutState || !Array.isArray(workoutState.rounds)) return workoutState;
+  const n = workoutState.rounds.length;
+  if (
+    fromRoundIndex < 0 ||
+    fromRoundIndex >= n ||
+    toRoundIndex < 0 ||
+    toRoundIndex >= n ||
+    fromRoundIndex === toRoundIndex
+  ) {
+    return workoutState;
+  }
+
+  const nextState = structuredClone(workoutState);
+  const oldIndexOrder = nextState.rounds.map((_, idx) => idx);
+  const [movedOldIdx] = oldIndexOrder.splice(fromRoundIndex, 1);
+  oldIndexOrder.splice(toRoundIndex, 0, movedOldIdx);
+
+  const [movedRound] = nextState.rounds.splice(fromRoundIndex, 1);
+  nextState.rounds.splice(toRoundIndex, 0, movedRound);
+  nextState.rounds.forEach((r, idx) => {
+    r.roundNumber = idx + 1;
+  });
+
+  // Remap any dismissed warning IDs to follow their reordered round indices
+  if (Array.isArray(nextState.dismissedWarnings) && nextState.dismissedWarnings.length > 0) {
+    const oldToNewIdx = new Map();
+    oldIndexOrder.forEach((oldIdx, newIdx) => {
+      oldToNewIdx.set(oldIdx, newIdx);
+    });
+    nextState.dismissedWarnings = nextState.dismissedWarnings.map(id => {
+      const warnMatch = /^warn-r(\d+)-(.+)$/.exec(id);
+      if (warnMatch) {
+        const oldIdx = Number(warnMatch[1]) - 1;
+        if (oldToNewIdx.has(oldIdx)) {
+          return `warn-r${oldToNewIdx.get(oldIdx) + 1}-${warnMatch[2]}`;
+        }
+      }
+      const roundMatch = /^round-(\d+)$/.exec(id);
+      if (roundMatch) {
+        const oldIdx = Number(roundMatch[1]);
+        if (oldToNewIdx.has(oldIdx)) {
+          return `round-${oldToNewIdx.get(oldIdx)}`;
+        }
+      }
+      return id;
+    });
+  }
+
+  nextState.exercisesText = formatExercisesText(nextState);
+  nextState.summaryText = formatWorkoutSummary(nextState);
+  return nextState;
+}
+
+/**
+ * Reorder an exercise slot up or down within the same round.
+ */
+export function reorderExerciseInRound(workoutState, roundIndex, fromSlotIndex, toSlotIndex) {
+  if (!workoutState || !Array.isArray(workoutState.rounds)) return workoutState;
+  const round = workoutState.rounds[roundIndex];
+  if (!round || !Array.isArray(round.slots)) return workoutState;
+  const m = round.slots.length;
+  if (
+    fromSlotIndex < 0 ||
+    fromSlotIndex >= m ||
+    toSlotIndex < 0 ||
+    toSlotIndex >= m ||
+    fromSlotIndex === toSlotIndex
+  ) {
+    return workoutState;
+  }
+
+  const nextState = structuredClone(workoutState);
+  const targetRound = nextState.rounds[roundIndex];
+  const [movedSlot] = targetRound.slots.splice(fromSlotIndex, 1);
+  targetRound.slots.splice(toSlotIndex, 0, movedSlot);
+  targetRound.slots.forEach((s, idx) => {
+    s.slotIndex = idx;
+  });
+
+  nextState.exercisesText = formatExercisesText(nextState);
+  nextState.summaryText = formatWorkoutSummary(nextState);
+  return nextState;
+}
+
+/**
+ * Swap an exercise slot from one round with an exercise slot in another round
+ * (or reorder within the same round if `fromRoundIndex === toRoundIndex`).
+ */
+export function swapExercisesAcrossRounds(
+  workoutState,
+  fromRoundIndex,
+  fromSlotIndex,
+  toRoundIndex,
+  toSlotIndex
+) {
+  if (!workoutState || !Array.isArray(workoutState.rounds)) return workoutState;
+  if (fromRoundIndex === toRoundIndex) {
+    return reorderExerciseInRound(workoutState, fromRoundIndex, fromSlotIndex, toSlotIndex);
+  }
+
+  const fromRound = workoutState.rounds[fromRoundIndex];
+  const toRound = workoutState.rounds[toRoundIndex];
+  if (
+    !fromRound ||
+    !toRound ||
+    !fromRound.slots?.[fromSlotIndex] ||
+    !toRound.slots?.[toSlotIndex]
+  ) {
+    return workoutState;
+  }
+
+  const nextState = structuredClone(workoutState);
+  const slotA = nextState.rounds[fromRoundIndex].slots[fromSlotIndex];
+  const slotB = nextState.rounds[toRoundIndex].slots[toSlotIndex];
+
+  slotA.slotIndex = toSlotIndex;
+  slotB.slotIndex = fromSlotIndex;
+
+  nextState.rounds[fromRoundIndex].slots[fromSlotIndex] = slotB;
+  nextState.rounds[toRoundIndex].slots[toSlotIndex] = slotA;
+
+  // Clear dismissed warnings for both affected rounds so new pairings are evaluated fresh
+  if (Array.isArray(nextState.dismissedWarnings)) {
+    const p1 = `warn-r${fromRoundIndex + 1}-`;
+    const p2 = `warn-r${toRoundIndex + 1}-`;
+    nextState.dismissedWarnings = nextState.dismissedWarnings.filter(
+      id =>
+        !id.startsWith(p1) &&
+        !id.startsWith(p2) &&
+        id !== `round-${fromRoundIndex}` &&
+        id !== `round-${toRoundIndex}`
+    );
+  }
+
+  nextState.exercisesText = formatExercisesText(nextState);
+  nextState.summaryText = formatWorkoutSummary(nextState);
+  return nextState;
 }

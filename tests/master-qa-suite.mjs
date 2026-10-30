@@ -746,7 +746,100 @@ async function runBrowserCDPTests(wsUrl) {
           `  ✅ PASS: HIIT Timer verified ("Count Down" dark yellow -> "[Exercise]" dark green -> "Rest" dark blue, sliding fill ${timerCheck.runningFillPct.toFixed(1)}% over grey)`
         );
 
-        console.log('\n--- 12. Mobile Viewport Screenshot Capture ---');
+        console.log('\n--- 12. Drag-and-Drop Rounds, Intra-Round Reorder & Cross-Round Exercise Swap ---');
+        const dragDropCheck = await evalInPage(() => {
+          const typeSelect = document.getElementById('workoutTypeSelect');
+          typeSelect.value = 'Timed Trios (40/20)';
+          typeSelect.dispatchEvent(new Event('change'));
+
+          const getRoundExercises = rIdx =>
+            Array.from(
+              document.querySelectorAll(`.exercise-slot[data-round-index="${rIdx}"] .exercise-title-text`)
+            ).map(el => el.innerText.trim());
+
+          const roundHandleCount = document.querySelectorAll('.round-drag-handle').length;
+          const slotHandleCount = document.querySelectorAll('.slot-drag-handle').length;
+
+          const r1Before = getRoundExercises(0);
+          const r2Before = getRoundExercises(1);
+
+          // 1) Drag Round 1 (index 0) onto Round 2 (index 1)
+          const round0Header = document.querySelector('.round-card[data-round-index="0"] .round-header');
+          const round1Card = document.querySelector('.round-card[data-round-index="1"]');
+          round0Header.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true }));
+          round1Card.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true }));
+          const roundHighlightActive = round1Card.classList.contains('drag-over-round');
+          round1Card.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true }));
+          round0Header.dispatchEvent(new DragEvent('dragend', { bubbles: true, cancelable: true }));
+
+          const r1AfterRoundDrag = getRoundExercises(0);
+          const r2AfterRoundDrag = getRoundExercises(1);
+          const roundTitles = Array.from(document.querySelectorAll('.round-title')).map(el =>
+            el.textContent.trim()
+          );
+
+          // 2) Drag Exercise 0 down to Exercise 2 within Round 1 (index 0)
+          const r1BeforeSlotReorder = getRoundExercises(0);
+          const r1Slot0 = document.querySelector('.exercise-slot[data-round-index="0"][data-slot-index="0"]');
+          const r1Slot2 = document.querySelector('.exercise-slot[data-round-index="0"][data-slot-index="2"]');
+          r1Slot0.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true }));
+          r1Slot2.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true }));
+          const slotReorderHighlightActive = r1Slot2.classList.contains('drag-over-slot-reorder');
+          r1Slot2.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true }));
+          r1Slot0.dispatchEvent(new DragEvent('dragend', { bubbles: true, cancelable: true }));
+
+          const r1AfterSlotReorder = getRoundExercises(0);
+
+          // 3) Drag Exercise from Round 1 Slot 1 onto Round 2 Slot 0 (cross-round swap)
+          const r1BeforeCrossSwap = getRoundExercises(0);
+          const r2BeforeCrossSwap = getRoundExercises(1);
+          const fromSlot = document.querySelector('.exercise-slot[data-round-index="0"][data-slot-index="1"]');
+          const toSlot = document.querySelector('.exercise-slot[data-round-index="1"][data-slot-index="0"]');
+          fromSlot.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true }));
+          toSlot.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true }));
+          const slotSwapHighlightActive = toSlot.classList.contains('drag-over-slot-swap');
+          toSlot.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true }));
+          fromSlot.dispatchEvent(new DragEvent('dragend', { bubbles: true, cancelable: true }));
+
+          const r1AfterCrossSwap = getRoundExercises(0);
+          const r2AfterCrossSwap = getRoundExercises(1);
+
+          return {
+            roundHandleCount,
+            slotHandleCount,
+            roundHighlightActive,
+            roundTitles,
+            roundSwapSuccess:
+              JSON.stringify(r1AfterRoundDrag) === JSON.stringify(r2Before) &&
+              JSON.stringify(r2AfterRoundDrag) === JSON.stringify(r1Before),
+            slotReorderHighlightActive,
+            intraRoundReorderSuccess:
+              JSON.stringify(r1AfterSlotReorder) ===
+              JSON.stringify([r1BeforeSlotReorder[1], r1BeforeSlotReorder[2], r1BeforeSlotReorder[0]]),
+            slotSwapHighlightActive,
+            crossRoundSwapSuccess:
+              r1AfterCrossSwap[1] === r2BeforeCrossSwap[0] &&
+              r2AfterCrossSwap[0] === r1BeforeCrossSwap[1]
+          };
+        });
+        if (
+          dragDropCheck.roundHandleCount !== 3 ||
+          dragDropCheck.slotHandleCount !== 9 ||
+          !dragDropCheck.roundHighlightActive ||
+          JSON.stringify(dragDropCheck.roundTitles) !== JSON.stringify(['Round 1', 'Round 2', 'Round 3']) ||
+          !dragDropCheck.roundSwapSuccess ||
+          !dragDropCheck.slotReorderHighlightActive ||
+          !dragDropCheck.intraRoundReorderSuccess ||
+          !dragDropCheck.slotSwapHighlightActive ||
+          !dragDropCheck.crossRoundSwapSuccess
+        ) {
+          throw new Error('Drag-and-drop check failed: ' + JSON.stringify(dragDropCheck));
+        }
+        console.log(
+          '  ✅ PASS: Drag-and-drop verified for Round 1 <-> Round 2 reorder, intra-round exercise reorder, and cross-round exercise swap'
+        );
+
+        console.log('\n--- 13. Mobile Viewport Screenshot Capture ---');
         const screenshotData = await send('Page.captureScreenshot', { format: 'png' });
         fs.writeFileSync('/tmp/workout-mobile-screenshot.png', Buffer.from(screenshotData.data, 'base64'));
         // Also capture the full-screen executed HIIT timer view

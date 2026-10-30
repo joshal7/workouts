@@ -7,11 +7,14 @@ import {
   filterExercisesByMuscleAndQuery,
   getActiveSlotExercise,
   swapExerciseInSlot,
+  reorderRounds,
+  reorderExerciseInRound,
+  swapExercisesAcrossRounds,
   getValidReplacementCandidates,
   getWorkoutCheckMode,
   getConsolidatedWorkoutSubtitle,
   getRandomEntry,
-   getPrimaryMuscle,
+  getPrimaryMuscle,
   getPrimaryBodyArea
 } from './engine/workoutEngine.js';
 import {
@@ -308,6 +311,10 @@ function renderActiveWorkout() {
   wkState.rounds.forEach((round, roundIndex) => {
     const roundCard = document.createElement('div');
     roundCard.className = `round-card ${round.completed ? 'round-completed' : ''}`;
+    roundCard.dataset.roundIndex = String(roundIndex);
+    if (wkState.rounds.length > 1) {
+      roundCard.draggable = true;
+    }
 
     const roundWarnings = currentAnalysis.warnings.filter(w => w.roundIndex === roundIndex);
 
@@ -403,10 +410,18 @@ function renderActiveWorkout() {
         }
 
         return `
-          <div class="exercise-slot ${isSlotAllDone ? 'completed' : ''}" data-round-index="${roundIndex}" data-slot-index="${slotIndex}">
+          <div class="exercise-slot ${isSlotAllDone ? 'completed' : ''}" draggable="true" data-round-index="${roundIndex}" data-slot-index="${slotIndex}">
             ${multiTabsHtml}
             <div class="slot-main-row">
               <div class="slot-left">
+                <span
+                  class="drag-handle slot-drag-handle"
+                  data-drag-handle="slot"
+                  data-round-index="${roundIndex}"
+                  data-slot-index="${slotIndex}"
+                  title="Drag to reorder or swap exercise"
+                  aria-label="Drag ${activeEx.name}"
+                >⠿</span>
                 ${checkboxesHtml}
                 <button
                   type="button"
@@ -450,6 +465,17 @@ function renderActiveWorkout() {
           >${round.completed ? '✓' : ''}</button>`
         : '';
 
+    const roundDragHandleHtml =
+      wkState.rounds.length > 1
+        ? `<span
+            class="drag-handle round-drag-handle"
+            data-drag-handle="round"
+            data-round-index="${roundIndex}"
+            title="Drag to reorder Round ${round.roundNumber}"
+            aria-label="Drag Round ${round.roundNumber}"
+          >⠿</span>`
+        : '';
+
     const roundTimerBtnHtml = showTimedHiitControls
       ? `<button
           type="button"
@@ -468,6 +494,7 @@ function renderActiveWorkout() {
         showRoundHeader
           ? `<div class="round-header">
               <div class="round-header-left">
+                ${roundDragHandleHtml}
                 ${roundCheckHtml}
                 <span class="round-title">Round ${round.roundNumber}</span>
               </div>
@@ -2131,6 +2158,266 @@ function bindEvents() {
     renderExclusionChecklist();
     showToast('All 68 exercises included');
   });
+
+  bindDragAndDropEvents();
+}
+
+// ============================================================================
+// Drag and Drop (Rounds & Exercise Slots — HTML5 DnD + Touch/Pointer Handle)
+// ============================================================================
+let activeDragState = null;
+
+function clearDragHighlights() {
+  els.roundsContainer
+    .querySelectorAll(
+      '.is-dragging, .drag-over-round, .drag-over-slot-reorder, .drag-over-slot-swap'
+    )
+    .forEach(el => {
+      el.classList.remove(
+        'is-dragging',
+        'drag-over-round',
+        'drag-over-slot-reorder',
+        'drag-over-slot-swap'
+      );
+    });
+}
+
+function updateDropTargetHighlight(dragState, targetEl) {
+  els.roundsContainer
+    .querySelectorAll('.drag-over-round, .drag-over-slot-reorder, .drag-over-slot-swap')
+    .forEach(el => {
+      el.classList.remove('drag-over-round', 'drag-over-slot-reorder', 'drag-over-slot-swap');
+    });
+  if (!dragState || !targetEl) return;
+
+  if (dragState.type === 'round') {
+    const roundCard = targetEl.closest('.round-card');
+    if (roundCard && Number(roundCard.dataset.roundIndex) !== dragState.fromRoundIndex) {
+      roundCard.classList.add('drag-over-round');
+    }
+  } else if (dragState.type === 'slot') {
+    const slotEl = targetEl.closest('.exercise-slot');
+    if (!slotEl) return;
+    const toRoundIndex = Number(slotEl.dataset.roundIndex);
+    const toSlotIndex = Number(slotEl.dataset.slotIndex);
+    if (toRoundIndex === dragState.fromRoundIndex && toSlotIndex !== dragState.fromSlotIndex) {
+      slotEl.classList.add('drag-over-slot-reorder');
+    } else if (toRoundIndex !== dragState.fromRoundIndex) {
+      slotEl.classList.add('drag-over-slot-swap');
+    }
+  }
+}
+
+function applyRoundReorder(fromRoundIndex, toRoundIndex) {
+  const profile = dataService.getActiveProfile();
+  if (!profile.activeWorkout) return;
+  if (fromRoundIndex === toRoundIndex) return;
+
+  profile.activeWorkout = reorderRounds(profile.activeWorkout, fromRoundIndex, toRoundIndex);
+  dataService.saveProfilesToStorage();
+  rebuildTimerSteps(false);
+  renderActiveWorkout();
+  showToast(`Moved Round ${fromRoundIndex + 1} → Round ${toRoundIndex + 1}`);
+}
+
+function applyIntraRoundReorder(roundIndex, fromSlotIndex, toSlotIndex) {
+  const profile = dataService.getActiveProfile();
+  if (!profile.activeWorkout) return;
+  if (fromSlotIndex === toSlotIndex) return;
+
+  profile.activeWorkout = reorderExerciseInRound(
+    profile.activeWorkout,
+    roundIndex,
+    fromSlotIndex,
+    toSlotIndex
+  );
+  dataService.saveProfilesToStorage();
+  rebuildTimerSteps(false);
+  renderActiveWorkout();
+  showToast(`Reordered Round ${roundIndex + 1} exercises`);
+}
+
+function applyCrossRoundSwap(fromRoundIndex, fromSlotIndex, toRoundIndex, toSlotIndex) {
+  const profile = dataService.getActiveProfile();
+  if (!profile.activeWorkout) return;
+
+  const fromSlot = profile.activeWorkout.rounds?.[fromRoundIndex]?.slots?.[fromSlotIndex];
+  const toSlot = profile.activeWorkout.rounds?.[toRoundIndex]?.slots?.[toSlotIndex];
+  const exA = getActiveSlotExercise(fromSlot)?.name || 'Exercise';
+  const exB = getActiveSlotExercise(toSlot)?.name || 'Exercise';
+
+  profile.activeWorkout = swapExercisesAcrossRounds(
+    profile.activeWorkout,
+    fromRoundIndex,
+    fromSlotIndex,
+    toRoundIndex,
+    toSlotIndex
+  );
+  dataService.saveProfilesToStorage();
+  rebuildTimerSteps(false);
+  renderActiveWorkout();
+  showToast(`Swapped ${exA} ⇄ ${exB}`);
+}
+
+function executeDropAction(dragState, targetEl) {
+  if (!dragState || !targetEl) return;
+
+  if (dragState.type === 'round') {
+    const roundCard = targetEl.closest('.round-card');
+    if (!roundCard) return;
+    const toRoundIndex = Number(roundCard.dataset.roundIndex);
+    if (!Number.isNaN(toRoundIndex) && toRoundIndex !== dragState.fromRoundIndex) {
+      applyRoundReorder(dragState.fromRoundIndex, toRoundIndex);
+    }
+  } else if (dragState.type === 'slot') {
+    const slotEl = targetEl.closest('.exercise-slot');
+    if (!slotEl) return;
+    const toRoundIndex = Number(slotEl.dataset.roundIndex);
+    const toSlotIndex = Number(slotEl.dataset.slotIndex);
+    if (Number.isNaN(toRoundIndex) || Number.isNaN(toSlotIndex)) return;
+
+    if (toRoundIndex === dragState.fromRoundIndex) {
+      if (toSlotIndex !== dragState.fromSlotIndex) {
+        applyIntraRoundReorder(toRoundIndex, dragState.fromSlotIndex, toSlotIndex);
+      }
+    } else {
+      applyCrossRoundSwap(
+        dragState.fromRoundIndex,
+        dragState.fromSlotIndex,
+        toRoundIndex,
+        toSlotIndex
+      );
+    }
+  }
+}
+
+function bindDragAndDropEvents() {
+  // 1. HTML5 Drag-and-Drop (Desktop Mouse & Keyboard/Assistive Drag)
+  els.roundsContainer.addEventListener('dragstart', e => {
+    const slotEl = e.target.closest('.exercise-slot');
+    if (slotEl) {
+      const fromRoundIndex = Number(slotEl.dataset.roundIndex);
+      const fromSlotIndex = Number(slotEl.dataset.slotIndex);
+      activeDragState = {
+        type: 'slot',
+        fromRoundIndex,
+        fromSlotIndex
+      };
+      slotEl.classList.add('is-dragging');
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        try {
+          e.dataTransfer.setData('text/plain', JSON.stringify(activeDragState));
+        } catch {}
+      }
+      return;
+    }
+
+    const roundCard = e.target.closest('.round-card');
+    if (roundCard && roundCard.draggable) {
+      const fromRoundIndex = Number(roundCard.dataset.roundIndex);
+      activeDragState = {
+        type: 'round',
+        fromRoundIndex
+      };
+      roundCard.classList.add('is-dragging');
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        try {
+          e.dataTransfer.setData('text/plain', JSON.stringify(activeDragState));
+        } catch {}
+      }
+    }
+  });
+
+  els.roundsContainer.addEventListener('dragover', e => {
+    if (!activeDragState) return;
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move';
+    }
+    updateDropTargetHighlight(activeDragState, e.target);
+  });
+
+  els.roundsContainer.addEventListener('drop', e => {
+    let state = activeDragState;
+    if (!state && e.dataTransfer) {
+      try {
+        state = JSON.parse(e.dataTransfer.getData('text/plain'));
+      } catch {}
+    }
+    if (!state) return;
+    e.preventDefault();
+    clearDragHighlights();
+    activeDragState = null;
+    executeDropAction(state, e.target);
+  });
+
+  els.roundsContainer.addEventListener('dragend', () => {
+    clearDragHighlights();
+    activeDragState = null;
+  });
+
+  // 2. Touch / Pointer Drag on .drag-handle (for mobile touch devices where HTML5 DnD isn't used)
+  let pointerDragState = null;
+
+  els.roundsContainer.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse') return; // Mouse uses native HTML5 dragstart/drop
+    const handle = e.target.closest('[data-drag-handle]');
+    if (!handle) return;
+
+    const dragKind = handle.getAttribute('data-drag-handle');
+    const fromRoundIndex = Number(handle.getAttribute('data-round-index'));
+    if (dragKind === 'round') {
+      const roundCard = handle.closest('.round-card');
+      if (!roundCard) return;
+      pointerDragState = {
+        type: 'round',
+        fromRoundIndex,
+        pointerId: e.pointerId
+      };
+      roundCard.classList.add('is-dragging');
+    } else if (dragKind === 'slot') {
+      const slotEl = handle.closest('.exercise-slot');
+      if (!slotEl) return;
+      const fromSlotIndex = Number(handle.getAttribute('data-slot-index'));
+      pointerDragState = {
+        type: 'slot',
+        fromRoundIndex,
+        fromSlotIndex,
+        pointerId: e.pointerId
+      };
+      slotEl.classList.add('is-dragging');
+    }
+
+    if (pointerDragState) {
+      e.preventDefault();
+      try {
+        handle.setPointerCapture(e.pointerId);
+      } catch {}
+    }
+  });
+
+  els.roundsContainer.addEventListener('pointermove', e => {
+    if (!pointerDragState || e.pointerId !== pointerDragState.pointerId) return;
+    e.preventDefault();
+    const targetEl = document.elementFromPoint(e.clientX, e.clientY);
+    updateDropTargetHighlight(pointerDragState, targetEl);
+  });
+
+  const finishPointerDrag = (e, shouldCommit) => {
+    if (!pointerDragState || e.pointerId !== pointerDragState.pointerId) return;
+    const state = pointerDragState;
+    pointerDragState = null;
+    const targetEl = shouldCommit ? document.elementFromPoint(e.clientX, e.clientY) : null;
+    clearDragHighlights();
+    if (shouldCommit && targetEl) {
+      executeDropAction(state, targetEl);
+    }
+  };
+
+  els.roundsContainer.addEventListener('pointerup', e => finishPointerDrag(e, true));
+  els.roundsContainer.addEventListener('pointercancel', e => finishPointerDrag(e, false));
 }
 
 function performSlotSwap(roundIndex, slotIndex, newExercise, isManual = true) {

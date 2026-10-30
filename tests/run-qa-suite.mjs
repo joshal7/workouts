@@ -10,6 +10,9 @@ import {
   filterExercisesByMuscleAndQuery,
   getActiveSlotExercise,
   swapExerciseInSlot,
+  reorderRounds,
+  reorderExerciseInRound,
+  swapExercisesAcrossRounds,
   getValidReplacementCandidates,
   getWorkoutCheckMode,
   getConsolidatedWorkoutSubtitle,
@@ -992,6 +995,99 @@ test('Custom Timer presets and per-exercise timer configs customize durations, c
     const summary = getTimerSequenceSummary(pSeq);
     assert.ok(summary.includes('10s Yellow'));
   }
+});
+
+// ----------------------------------------------------------------------------
+// 11. DRAG-AND-DROP ROUND REORDERING, INTRA-ROUND EXERCISE REORDERING & CROSS-ROUND SWAPPING
+// ----------------------------------------------------------------------------
+console.log('\n11. Drag-and-Drop Round Reordering, Intra-Round Reordering & Cross-Round Swapping');
+
+test('reorderRounds moves Round 1 below Round 2 so Round 2 becomes Round 1 and Round 1 becomes Round 2', () => {
+  const wk = generateWorkout(sheetData, {
+    workoutCategory: 'HIIT',
+    bodyCategory: 'All',
+    equipment: 'Any',
+    workoutType: 'Timed Trios (40/20)'
+  });
+  const r1Before = wk.rounds[0].slots.map(s => getActiveSlotExercise(s).id);
+  const r2Before = wk.rounds[1].slots.map(s => getActiveSlotExercise(s).id);
+  const r3Before = wk.rounds[2].slots.map(s => getActiveSlotExercise(s).id);
+
+  // Move Round 1 (index 0) below Round 2 (index 1)
+  const reordered = reorderRounds(wk, 0, 1);
+
+  assert.equal(reordered.rounds[0].roundNumber, 1);
+  assert.equal(reordered.rounds[1].roundNumber, 2);
+  assert.equal(reordered.rounds[2].roundNumber, 3);
+
+  assert.deepEqual(
+    reordered.rounds[0].slots.map(s => getActiveSlotExercise(s).id),
+    r2Before,
+    'Old Round 2 should now be Round 1'
+  );
+  assert.deepEqual(
+    reordered.rounds[1].slots.map(s => getActiveSlotExercise(s).id),
+    r1Before,
+    'Old Round 1 should now be Round 2'
+  );
+  assert.deepEqual(
+    reordered.rounds[2].slots.map(s => getActiveSlotExercise(s).id),
+    r3Before,
+    'Round 3 should remain in place'
+  );
+});
+
+test('reorderExerciseInRound moves an exercise up or down within a round and updates slotIndex', () => {
+  const wk = generateWorkout(sheetData, {
+    workoutCategory: 'HIIT',
+    bodyCategory: 'All',
+    equipment: 'Any',
+    workoutType: 'Timed Trios (40/20)'
+  });
+  const [ex0, ex1, ex2] = wk.rounds[0].slots.map(s => getActiveSlotExercise(s).id);
+
+  // Drag slot 0 down to slot 2
+  const afterDown = reorderExerciseInRound(wk, 0, 0, 2);
+  assert.deepEqual(
+    afterDown.rounds[0].slots.map(s => getActiveSlotExercise(s).id),
+    [ex1, ex2, ex0]
+  );
+  assert.deepEqual(
+    afterDown.rounds[0].slots.map(s => s.slotIndex),
+    [0, 1, 2]
+  );
+
+  // Drag slot 2 back up to slot 0
+  const afterUp = reorderExerciseInRound(afterDown, 0, 2, 0);
+  assert.deepEqual(
+    afterUp.rounds[0].slots.map(s => getActiveSlotExercise(s).id),
+    [ex0, ex1, ex2]
+  );
+});
+
+test('swapExercisesAcrossRounds swaps an exercise from one round onto an exercise in another round', () => {
+  const wk = generateWorkout(sheetData, {
+    workoutCategory: 'HIIT',
+    bodyCategory: 'All',
+    equipment: 'Any',
+    workoutType: 'Timed Trios (40/20)'
+  });
+  const r1s0Before = getActiveSlotExercise(wk.rounds[0].slots[0]).id;
+  const r2s2Before = getActiveSlotExercise(wk.rounds[1].slots[2]).id;
+
+  const swapped = swapExercisesAcrossRounds(wk, 0, 0, 1, 2);
+  assert.equal(
+    getActiveSlotExercise(swapped.rounds[0].slots[0]).id,
+    r2s2Before,
+    'Round 1 Slot 0 should now contain old Round 2 Slot 2 exercise'
+  );
+  assert.equal(
+    getActiveSlotExercise(swapped.rounds[1].slots[2]).id,
+    r1s0Before,
+    'Round 2 Slot 2 should now contain old Round 1 Slot 0 exercise'
+  );
+  assert.equal(swapped.rounds[0].slots[0].slotIndex, 0);
+  assert.equal(swapped.rounds[1].slots[2].slotIndex, 2);
 });
 
 console.log(`\n🎉 ALL ${passed} QA TEST SUITES PASSED SUCCESSFULLY!`);

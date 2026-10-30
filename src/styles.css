@@ -390,6 +390,53 @@ html, body {
   color: #1e40af;
 }
 
+/* Drag Handles & Drop Target Highlights */
+.drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px 3px;
+  border-radius: 4px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  flex-shrink: 0;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.drag-handle:hover {
+  color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.round-card.is-dragging,
+.exercise-slot.is-dragging {
+  opacity: 0.55;
+  outline: 1.5px dashed #3b82f6;
+}
+
+.round-card.drag-over-round {
+  outline: 2px solid #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+
+.exercise-slot.drag-over-slot-reorder {
+  background: #eff6ff;
+  box-shadow: inset 0 2px 0 #2563eb, inset 0 -2px 0 #2563eb;
+}
+
+.exercise-slot.drag-over-slot-swap {
+  background: #ecfdf5;
+  box-shadow: inset 0 0 0 2px #10b981;
+}
+
 /* Single-Line Combined Overload Warning Banner */
 .overload-banner {
   background: var(--accent-amber-bg);
