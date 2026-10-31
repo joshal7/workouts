@@ -1772,4 +1772,33 @@ test('Calf Stretch Timer builds 3 passes (6 min = 360s, no 10s countdown) of gas
   assert.ok(indexHtml.includes('Calf Stretch Timer'));
 });
 
+// ----------------------------------------------------------------------------
+// 18. AUTO-COLLAPSE WORKOUT GENERATOR SETTINGS & RE-EXPAND CONTROL
+// ----------------------------------------------------------------------------
+console.log('\n18. Auto-Collapse Workout Generator Settings & Re-Expand Control');
+
+test('Collapsible wrapper encloses Category, Type, Equipment & Focus while leaving Generate Workout, Select X Exercises & toggle visible', () => {
+  const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
+  const stylesCss = fs.readFileSync(path.join(rootDir, 'src', 'styles.css'), 'utf8');
+  const appJs = fs.readFileSync(path.join(rootDir, 'src', 'app.js'), 'utf8');
+
+  const collapsibleStart = indexHtml.indexOf('id="generatorSettingsCollapsible"');
+  const topMenuPos = indexHtml.indexOf('class="top-menu-row"');
+  const focusPos = indexHtml.indexOf('id="focusSliderSection"');
+  const btnRowPos = indexHtml.indexOf('class="generate-btn-row"');
+  const genBtnPos = indexHtml.indexOf('id="generateWorkoutBtn"');
+  const selBtnPos = indexHtml.indexOf('id="selectExercisesBtn"');
+  const toggleBtnPos = indexHtml.indexOf('id="toggleInputsCollapseBtn"');
+
+  assert.ok(collapsibleStart > 0, 'Missing #generatorSettingsCollapsible wrapper in index.html');
+  assert.ok(topMenuPos > collapsibleStart && focusPos > topMenuPos, 'Category/Type/Equipment and Focus must be inside #generatorSettingsCollapsible');
+  assert.ok(btnRowPos > focusPos, '.generate-btn-row must appear after #focusSliderSection');
+  assert.ok(genBtnPos > btnRowPos && selBtnPos > genBtnPos && toggleBtnPos > selBtnPos, 'Generate Workout, Select X Exercises, and toggle button must be inside .generate-btn-row');
+  assert.ok(indexHtml.includes('aria-controls="generatorSettingsCollapsible"'));
+
+  assert.ok(stylesCss.includes('.inputs-card.is-collapsed'));
+  assert.ok(stylesCss.includes('.toggle-inputs-btn'));
+  assert.ok(appJs.includes('setGeneratorSettingsCollapsed(true)'));
+});
+
 console.log(`\n🎉 ALL ${passed} QA TEST SUITES PASSED SUCCESSFULLY!`);

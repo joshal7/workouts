@@ -1,4 +1,4 @@
-import { DataService } from './services/dataService.js?v=22';
+import { DataService } from './services/dataService.js?v=23';
 import {
   FOCUS_SNAP_STEPS,
   DEFAULT_FOCUS_WEIGHTS,
@@ -27,12 +27,12 @@ import {
   getRandomEntry,
   getPrimaryMuscle,
   getPrimaryBodyArea
-} from './engine/workoutEngine.js?v=22';
+} from './engine/workoutEngine.js?v=23';
 import {
   analyzeMuscleLoad,
   applyBalancedRecommendation,
   SPECIFIC_MUSCLES
-} from './engine/muscleLoadAnalyzer.js?v=22';
+} from './engine/muscleLoadAnalyzer.js?v=23';
 import {
   TIMER_COLORS,
   CUSTOM_TIMER_PRESETS,
@@ -47,7 +47,7 @@ import {
   finalizeWithCountdown,
   getStepStartSoundType,
   shouldPlaySteadyTransitionPulse
-} from './engine/timerEngine.js?v=22';
+} from './engine/timerEngine.js?v=23';
 
 const dataService = new DataService();
 
@@ -114,6 +114,8 @@ let focusState = {
   enabled: { ...DEFAULT_FOCUS_ENABLED }
 };
 
+let isGeneratorSettingsCollapsed = false;
+
 if (typeof window !== 'undefined') {
   window.__workoutTimerState = timerState;
 }
@@ -122,6 +124,10 @@ if (typeof window !== 'undefined') {
 const els = {
   settingsBtn: document.getElementById('settingsBtn'),
   excludedCountBadge: document.getElementById('excludedCountBadge'),
+
+  inputsCard: document.getElementById('inputsCard'),
+  generatorSettingsCollapsible: document.getElementById('generatorSettingsCollapsible'),
+  toggleInputsCollapseBtn: document.getElementById('toggleInputsCollapseBtn'),
 
   workoutCategorySelect: document.getElementById('workoutCategorySelect'),
   equipmentSelect: document.getElementById('equipmentSelect'),
@@ -169,7 +175,7 @@ async function bootstrap() {
   // long before any timer AudioContext is created or resumed (prevents synchronous click race condition).
   configureAmbientAudioSession();
 
-  await dataService.init('./data/sheet-data.json?v=22', './data/enrichments.json?v=22');
+  await dataService.init('./data/sheet-data.json?v=23', './data/enrichments.json?v=23');
   populateWorkoutTypeSelect();
   populateCustomTimerPresetsSelect();
   syncUIFromActiveProfile();
@@ -184,7 +190,7 @@ async function bootstrap() {
       refreshing = true;
       window.location.reload();
     });
-    navigator.serviceWorker.register('./sw.js?v=22', { updateViaCache: 'none' }).then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=23', { updateViaCache: 'none' }).then(reg => {
       reg.update().catch(() => {});
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
@@ -400,6 +406,27 @@ function updateSelectExercisesButtonLabel() {
   targetCustomWorkout = target.workout;
   targetCustomExerciseCount = target.count;
   els.selectExercisesBtn.textContent = `Select ${target.count} Exercises`;
+}
+
+function setGeneratorSettingsCollapsed(collapsed) {
+  isGeneratorSettingsCollapsed = !!collapsed;
+  if (els.inputsCard) {
+    els.inputsCard.classList.toggle('is-collapsed', isGeneratorSettingsCollapsed);
+  }
+  if (els.generatorSettingsCollapsible) {
+    els.generatorSettingsCollapsible.hidden = isGeneratorSettingsCollapsed;
+  }
+  if (els.toggleInputsCollapseBtn) {
+    els.toggleInputsCollapseBtn.setAttribute(
+      'aria-expanded',
+      String(!isGeneratorSettingsCollapsed)
+    );
+    const label = isGeneratorSettingsCollapsed
+      ? 'Expand workout generator settings'
+      : 'Collapse workout generator settings';
+    els.toggleInputsCollapseBtn.setAttribute('aria-label', label);
+    els.toggleInputsCollapseBtn.title = label;
+  }
 }
 
 function handleGenerateWorkout(showFeedback = true) {
@@ -2178,7 +2205,16 @@ function bindFocusSliderEvents() {
 // Event Listeners
 // ============================================================================
 function bindEvents() {
-  els.generateWorkoutBtn.addEventListener('click', () => handleGenerateWorkout(true));
+  els.generateWorkoutBtn.addEventListener('click', () => {
+    handleGenerateWorkout(true);
+    setGeneratorSettingsCollapsed(true);
+  });
+
+  if (els.toggleInputsCollapseBtn) {
+    els.toggleInputsCollapseBtn.addEventListener('click', () => {
+      setGeneratorSettingsCollapsed(!isGeneratorSettingsCollapsed);
+    });
+  }
 
   bindFocusSliderEvents();
 
@@ -2212,7 +2248,10 @@ function bindEvents() {
   });
 
   // Select X Exercises Modal
-  els.selectExercisesBtn.addEventListener('click', openSelectExercisesModal);
+  els.selectExercisesBtn.addEventListener('click', () => {
+    openSelectExercisesModal();
+    setGeneratorSettingsCollapsed(true);
+  });
 
   document.getElementById('selectExercisesSearchInput').addEventListener('input', () => {
     renderSelectExercisesModalContent();
@@ -2291,6 +2330,7 @@ function bindEvents() {
     els.workoutCategorySelect.value = workoutState.inputs.effectiveWorkoutCategory;
     els.workoutTypeSelect.value = workoutState.workout.name;
     resetTimerForWorkoutType(workoutState.workout.id);
+    setGeneratorSettingsCollapsed(true);
     closeAllModals();
     renderActiveWorkout();
     showToast(`Auto-slotted ${targetCustomExerciseCount} exercises`);

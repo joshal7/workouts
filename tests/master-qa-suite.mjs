@@ -385,6 +385,12 @@ async function runBrowserCDPTests(wsUrl) {
           mobile: true
         });
         const narrow375MenuCheck = await evalInPage(() => {
+          const collapsible = document.getElementById('generatorSettingsCollapsible');
+          const toggleBtn = document.getElementById('toggleInputsCollapseBtn');
+          const wasAutoCollapsedFromPrevGenerate = !!(collapsible && collapsible.hidden);
+          if (wasAutoCollapsedFromPrevGenerate && toggleBtn) {
+            toggleBtn.click();
+          }
           const cells = Array.from(document.querySelectorAll('.top-menu-row .top-menu-cell'));
           const rects = cells.map(c => c.getBoundingClientRect());
           const labels = cells.map(c => c.querySelector('label')?.getBoundingClientRect());
@@ -392,6 +398,8 @@ async function runBrowserCDPTests(wsUrl) {
           const focusRect = document.getElementById('focusSliderSection')?.getBoundingClientRect();
           const rowRect = document.querySelector('.top-menu-row')?.getBoundingClientRect();
           return {
+            wasAutoCollapsedFromPrevGenerate,
+            reExpandedCleanly: !!(collapsible && !collapsible.hidden),
             cellCount: cells.length,
             sameRow:
               rects.length === 3 &&
@@ -412,6 +420,8 @@ async function runBrowserCDPTests(wsUrl) {
           };
         });
         if (
+          !narrow375MenuCheck.wasAutoCollapsedFromPrevGenerate ||
+          !narrow375MenuCheck.reExpandedCleanly ||
           narrow375MenuCheck.cellCount !== 3 ||
           !narrow375MenuCheck.sameRow ||
           !narrow375MenuCheck.nonOverlapping ||
@@ -482,6 +492,10 @@ async function runBrowserCDPTests(wsUrl) {
           typeSelect.value = 'Timed Trios (40/20)';
           typeSelect.dispatchEvent(new Event('change'));
           document.getElementById('generateWorkoutBtn').click();
+          // Re-expand generator settings so staging & Focus slider drag can be interacted with
+          if (document.getElementById('generatorSettingsCollapsible')?.hidden) {
+            document.getElementById('toggleInputsCollapseBtn')?.click();
+          }
 
           const getActiveExerciseTitles = () =>
             Array.from(document.querySelectorAll('.exercise-title-text')).map(el => el.innerText.trim());
@@ -583,6 +597,9 @@ async function runBrowserCDPTests(wsUrl) {
           const bannersAfterFocusAutoBalance = document.querySelectorAll('.overload-banner').length;
 
           // 4) Tap "Lower Body" to deselect -> 0 handles, 100% Upper Body; tapping "Upper Body" blocked as last active group
+          if (document.getElementById('generatorSettingsCollapsible')?.hidden) {
+            document.getElementById('toggleInputsCollapseBtn')?.click();
+          }
           lowerBtn.click();
           const handlesWhenOneActive = document.querySelectorAll('#focusHandlesLayer .focus-slider-thumb').length;
           upperBtn.click(); // Attempt to deselect last remaining active group -> blocked!
@@ -855,6 +872,120 @@ async function runBrowserCDPTests(wsUrl) {
         }
         console.log(
           `  ✅ PASS: "${selectXCheck.btnLabel}" modal selected 8 exercises and auto-slotted them across 4 Duo rounds with 0 overload warnings`
+        );
+
+        console.log('\n--- 10b. Auto-Collapse & Re-Expand Workout Generator Settings Check ---');
+        const autoCollapseCheck = await evalInPage(() => {
+          const inputsCard = document.getElementById('inputsCard');
+          const collapsible = document.getElementById('generatorSettingsCollapsible');
+          const toggleBtn = document.getElementById('toggleInputsCollapseBtn');
+          const genBtn = document.getElementById('generateWorkoutBtn');
+          const selBtn = document.getElementById('selectExercisesBtn');
+          const topMenu = document.querySelector('.top-menu-row');
+          const focusSection = document.getElementById('focusSliderSection');
+
+          // 1) After Select 8 Exercises in Step 10, settings should ALREADY be auto-collapsed!
+          const collapsedAfterSelectX =
+            collapsible.hidden === true &&
+            inputsCard.classList.contains('is-collapsed') &&
+            toggleBtn.getAttribute('aria-expanded') === 'false';
+          const collapsedCardHeight = inputsCard.getBoundingClientRect().height;
+          const buttonsVisibleWhileCollapsed =
+            genBtn.getBoundingClientRect().height > 20 &&
+            selBtn.getBoundingClientRect().height > 20 &&
+            toggleBtn.getBoundingClientRect().height > 20;
+          const filtersHiddenWhileCollapsed =
+            topMenu.getBoundingClientRect().height === 0 &&
+            focusSection.getBoundingClientRect().height === 0;
+
+          // 2) Click toggle button to re-expand Category, Type, Equipment & Focus, then click up-arrow to manually collapse, then re-expand again
+          toggleBtn.click();
+          const expandedCardHeight = inputsCard.getBoundingClientRect().height;
+          const reExpandedState =
+            collapsible.hidden === false &&
+            !inputsCard.classList.contains('is-collapsed') &&
+            toggleBtn.getAttribute('aria-expanded') === 'true' &&
+            topMenu.getBoundingClientRect().height > 30 &&
+            focusSection.getBoundingClientRect().height > 30;
+
+          toggleBtn.click();
+          const manualCollapseState =
+            collapsible.hidden === true &&
+            inputsCard.classList.contains('is-collapsed') &&
+            toggleBtn.getAttribute('aria-expanded') === 'false' &&
+            topMenu.getBoundingClientRect().height === 0 &&
+            focusSection.getBoundingClientRect().height === 0;
+
+          toggleBtn.click();
+          const reExpandedAfterManualCollapse =
+            collapsible.hidden === false &&
+            !inputsCard.classList.contains('is-collapsed') &&
+            toggleBtn.getAttribute('aria-expanded') === 'true';
+
+          // 3) Click Generate Workout -> auto-collapses again while keeping Generate & Select X visible
+          genBtn.click();
+          const collapsedAfterGenerate =
+            collapsible.hidden === true &&
+            inputsCard.classList.contains('is-collapsed') &&
+            toggleBtn.getAttribute('aria-expanded') === 'false' &&
+            genBtn.getBoundingClientRect().height > 20 &&
+            selBtn.getBoundingClientRect().height > 20 &&
+            topMenu.getBoundingClientRect().height === 0 &&
+            focusSection.getBoundingClientRect().height === 0;
+
+          // 4) Re-expand, then click Select X Exercises -> auto-collapses immediately and stays collapsed on close/confirm
+          toggleBtn.click();
+          const expandedBeforeSelectClick = collapsible.hidden === false;
+          selBtn.click();
+          const collapsedImmediatelyOnSelectClick =
+            collapsible.hidden === true && inputsCard.classList.contains('is-collapsed');
+          document.getElementById('autoFillRemainingBtn').click();
+          document.getElementById('confirmSelectExercisesBtn').click();
+          const collapsedAfterSelectConfirm =
+            collapsible.hidden === true &&
+            inputsCard.classList.contains('is-collapsed') &&
+            genBtn.getBoundingClientRect().height > 20 &&
+            selBtn.getBoundingClientRect().height > 20;
+
+          const noHorizontalOverflow =
+            document.documentElement.scrollWidth <= window.innerWidth &&
+            document.body.scrollWidth <= window.innerWidth;
+
+          return {
+            collapsedAfterSelectX,
+            collapsedCardHeight,
+            expandedCardHeight,
+            heightSavedPx: Math.round(expandedCardHeight - collapsedCardHeight),
+            buttonsVisibleWhileCollapsed,
+            filtersHiddenWhileCollapsed,
+            reExpandedState,
+            manualCollapseState,
+            reExpandedAfterManualCollapse,
+            collapsedAfterGenerate,
+            expandedBeforeSelectClick,
+            collapsedImmediatelyOnSelectClick,
+            collapsedAfterSelectConfirm,
+            noHorizontalOverflow
+          };
+        });
+        if (
+          !autoCollapseCheck.collapsedAfterSelectX ||
+          !autoCollapseCheck.buttonsVisibleWhileCollapsed ||
+          !autoCollapseCheck.filtersHiddenWhileCollapsed ||
+          !autoCollapseCheck.reExpandedState ||
+          !autoCollapseCheck.manualCollapseState ||
+          !autoCollapseCheck.reExpandedAfterManualCollapse ||
+          !autoCollapseCheck.collapsedAfterGenerate ||
+          !autoCollapseCheck.expandedBeforeSelectClick ||
+          !autoCollapseCheck.collapsedImmediatelyOnSelectClick ||
+          !autoCollapseCheck.collapsedAfterSelectConfirm ||
+          autoCollapseCheck.heightSavedPx < 80 ||
+          !autoCollapseCheck.noHorizontalOverflow
+        ) {
+          throw new Error('Auto-collapse generator settings check failed: ' + JSON.stringify(autoCollapseCheck));
+        }
+        console.log(
+          `  ✅ PASS: Generator settings auto-collapse after Generate Workout & Select X Exercises (saving ${autoCollapseCheck.heightSavedPx}px vertical space) and re-expand cleanly`
         );
 
         console.log('\n--- 11. Requirement 5: Timed HIIT Exercise Timer, 10s Yellow Countdown, Sliding Fill, Bottom Labels & Reset ---');
