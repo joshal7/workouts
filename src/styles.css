@@ -1319,6 +1319,31 @@ html, body {
   width: 100%;
 }
 
+.easter-egg-row {
+  display: flex;
+  justify-content: center;
+  margin-top: -2px;
+}
+
+.easter-egg-btn {
+  background: #f7fee7;
+  color: #3f6212;
+  border: 1px solid #bef264;
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.easter-egg-btn:hover,
+.easter-egg-btn:active {
+  background: #ecfccb;
+  color: #365314;
+  border-color: #84cc16;
+}
+
 /* Dismiss Warning Button on Overload Banner */
 .dismiss-warning-btn {
   background: transparent;
@@ -1587,6 +1612,32 @@ html, body {
   color: #14532d;
 }
 
+.timer-stage-card.timer-color-yellow-green {
+  border-color: #65a30d;
+  color: #365314;
+}
+
+.timer-stage-card.timer-color-yellow-green .timer-stage-fill {
+  background: #d9f99d;
+}
+
+.timer-stage-card.timer-color-yellow-green .timer-bottom-label {
+  color: #365314;
+}
+
+.timer-stage-card.timer-color-blue-green {
+  border-color: #0d9488;
+  color: #134e4a;
+}
+
+.timer-stage-card.timer-color-blue-green .timer-stage-fill {
+  background: #99f6e4;
+}
+
+.timer-stage-card.timer-color-blue-green .timer-bottom-label {
+  color: #134e4a;
+}
+
 .timer-stage-card.timer-color-blue {
   border-color: #2563eb;
   color: #1e3a8a;
@@ -1732,6 +1783,14 @@ html, body {
 .timer-seq-chip.chip-green {
   background: #bbf7d0;
   color: #14532d;
+}
+.timer-seq-chip.chip-yellow-green {
+  background: #d9f99d;
+  color: #365314;
+}
+.timer-seq-chip.chip-blue-green {
+  background: #99f6e4;
+  color: #134e4a;
 }
 .timer-seq-chip.chip-blue {
   background: #bfdbfe;

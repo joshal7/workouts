@@ -1214,6 +1214,132 @@ async function runBrowserCDPTests(wsUrl) {
           '  ✅ PASS: Drag-and-drop verified for Round 1 <-> Round 2 reorder, intra-round exercise reorder, and cross-round exercise swap'
         );
 
+        console.log('\n--- 12b. Settings Easter Egg: Calf Stretch Timer End-to-End Check ---');
+        const calfStretchCheck = await evalInPage(async () => {
+          document.getElementById('settingsBtn').click();
+          const settingsModal = document.getElementById('settingsModal');
+          const qaLink = settingsModal.querySelector('.qa-link-block a');
+          const calfBtn = document.getElementById('openCalfStretchTimerBtn');
+          const qaRect = qaLink.getBoundingClientRect();
+          const calfRect = calfBtn.getBoundingClientRect();
+          const buttonBelowQaLink = calfRect.top >= qaRect.bottom - 2;
+          const buttonText = calfBtn.innerText.trim();
+
+          // Click Calf Stretch Timer button
+          calfBtn.click();
+          const settingsClosed = settingsModal.hidden === true;
+          const timerModal = document.getElementById('timerModal');
+          const timerOpen = !timerModal.hidden;
+          const modalTitle = document.getElementById('timerModalTitle').innerText.trim();
+          const chipsCount = document.querySelectorAll('#timerSequenceTimeline .timer-seq-chip').length;
+
+          const stageCard = document.getElementById('timerStageCard');
+          const stageFill = document.getElementById('timerStageFill');
+          const bottomLabelEl = document.getElementById('timerActiveExerciseName');
+          const clockEl = document.getElementById('timerClockDisplay');
+
+          // Step 0: 10s yellow prep countdown
+          const step0Clock = clockEl.innerText.trim();
+          const step0Label = bottomLabelEl.innerText.trim();
+
+          // Advance to Step 1: 30s Right calf, straight leg (gastrox) (yellow-green)
+          document.getElementById('timerNextStepBtn').click();
+          const step1Clock = clockEl.innerText.trim();
+          const step1Label = bottomLabelEl.innerText.trim();
+          const step1Class = stageCard.className;
+          const step1FillBg = getComputedStyle(stageFill).backgroundColor;
+          const noOverflowStep1 = document.documentElement.scrollWidth <= window.innerWidth;
+
+          // Verify fill fades toward grey while running & dings on transition to Step 2 (blue-green)
+          const ts = window.__workoutTimerState;
+          ts.soundLog = [];
+          ts.remainingSeconds = 1;
+          ts.remainingMs = 120;
+          document.getElementById('timerStartPauseBtn').click();
+          await new Promise(r => setTimeout(r, 40));
+          const midDrainPct = parseFloat(stageFill.style.height);
+          await new Promise(r => setTimeout(r, 180));
+          document.getElementById('timerStartPauseBtn').click(); // Pause on Step 2
+
+          const step2Clock = clockEl.innerText.trim();
+          const step2Label = bottomLabelEl.innerText.trim();
+          const step2Class = stageCard.className;
+          const step2FillBg = getComputedStyle(stageFill).backgroundColor;
+          const dingedOnTransition = ts.soundLog.some(s => s.cueType === 'work-start' && s.stepIndex === 2);
+
+          // Step 3 & Step 4 labels/colors
+          document.getElementById('timerNextStepBtn').click();
+          const step3Label = bottomLabelEl.innerText.trim();
+          const step3Class = stageCard.className;
+          document.getElementById('timerNextStepBtn').click();
+          const step4Label = bottomLabelEl.innerText.trim();
+          const step4Class = stageCard.className;
+
+          document.getElementById('closeTimerModalBtn').click();
+
+          // Verify opening the regular HIIT workout timer afterward still restores the workout timer cleanly
+          document.querySelector('[data-action="open-round-timer"][data-round-index="0"]')?.click();
+          const restoredWorkoutTitle = document.getElementById('timerModalTitle').innerText.trim();
+          document.getElementById('closeTimerModalBtn').click();
+
+          return {
+            buttonBelowQaLink,
+            buttonText,
+            settingsClosed,
+            timerOpen,
+            modalTitle,
+            chipsCount,
+            step0Clock,
+            step0Label,
+            step1Clock,
+            step1Label,
+            step1IsYellowGreen: step1Class.includes('timer-color-yellow-green'),
+            step1FillBg,
+            noOverflowStep1,
+            midDrainPct,
+            step2Clock,
+            step2Label,
+            step2IsBlueGreen: step2Class.includes('timer-color-blue-green'),
+            step2FillBg,
+            dingedOnTransition,
+            step3Label,
+            step3IsYellowGreen: step3Class.includes('timer-color-yellow-green'),
+            step4Label,
+            step4IsBlueGreen: step4Class.includes('timer-color-blue-green'),
+            restoredWorkoutTitle
+          };
+        });
+        if (
+          !calfStretchCheck.buttonBelowQaLink ||
+          calfStretchCheck.buttonText !== 'Calf Stretch Timer' ||
+          !calfStretchCheck.settingsClosed ||
+          !calfStretchCheck.timerOpen ||
+          calfStretchCheck.modalTitle !== 'Calf Stretch Timer' ||
+          calfStretchCheck.chipsCount !== 13 ||
+          calfStretchCheck.step0Clock !== '00:10' ||
+          calfStretchCheck.step0Label !== 'Count Down' ||
+          calfStretchCheck.step1Clock !== '00:30' ||
+          calfStretchCheck.step1Label !== 'Right calf, straight leg (gastrox)' ||
+          !calfStretchCheck.step1IsYellowGreen ||
+          calfStretchCheck.step1FillBg !== 'rgb(217, 249, 157)' ||
+          !calfStretchCheck.noOverflowStep1 ||
+          !(calfStretchCheck.midDrainPct < 20) ||
+          calfStretchCheck.step2Label !== 'Left calf, straight leg (gastrox)' ||
+          !calfStretchCheck.step2IsBlueGreen ||
+          calfStretchCheck.step2FillBg !== 'rgb(153, 246, 228)' ||
+          !calfStretchCheck.dingedOnTransition ||
+          calfStretchCheck.step3Label !== 'Right calf, bent leg (soleus)' ||
+          !calfStretchCheck.step3IsYellowGreen ||
+          calfStretchCheck.step4Label !== 'Left calf, bent leg (soleus)' ||
+          !calfStretchCheck.step4IsBlueGreen ||
+          calfStretchCheck.restoredWorkoutTitle !== 'Timed Trios (40/20)'
+        ) {
+          throw new Error('Calf Stretch Timer E2E check failed: ' + JSON.stringify(calfStretchCheck));
+        }
+        console.log(
+          '  ✅ PASS: Calf Stretch Timer easter egg verified (Settings button below 90 Diagrams -> 6-min 12x30s yellow-green/blue-green sequence with dings & grey drain)'
+        );
+
         console.log('\n--- 13. Mobile Viewport Screenshot Capture ---');
         await evalInPage(() => {
           document.getElementById('generateWorkoutBtn')?.click();

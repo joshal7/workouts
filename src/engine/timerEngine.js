@@ -31,6 +31,28 @@ export const TIMER_COLORS = {
     pillBg: '#15803d',
     pillText: '#ffffff'
   },
+  'yellow-green': {
+    id: 'yellow-green',
+    label: 'Yellow-Green',
+    hex: '#65a30d',
+    bg: '#d9f99d',
+    cardBg: '#ecfccb',
+    border: '#84cc16',
+    text: '#365314',
+    pillBg: '#4d7c0f',
+    pillText: '#ffffff'
+  },
+  'blue-green': {
+    id: 'blue-green',
+    label: 'Blue-Green',
+    hex: '#0d9488',
+    bg: '#99f6e4',
+    cardBg: '#ccfbf1',
+    border: '#14b8a6',
+    text: '#134e4a',
+    pillBg: '#0f766e',
+    pillText: '#ffffff'
+  },
   blue: {
     id: 'blue',
     label: 'Blue',
@@ -754,6 +776,69 @@ export function buildCustomPresetTimerSequence(
       }
     }
   });
+
+  return finalizeWithCountdown(steps, countdownDuration);
+}
+
+export const CALF_STRETCH_CYCLE = [
+  {
+    id: 'calf-right-gastrox',
+    label: 'Right calf, straight leg (gastrox)',
+    shortLabel: 'R Gastrox',
+    duration: 30,
+    color: 'yellow-green'
+  },
+  {
+    id: 'calf-left-gastrox',
+    label: 'Left calf, straight leg (gastrox)',
+    shortLabel: 'L Gastrox',
+    duration: 30,
+    color: 'blue-green'
+  },
+  {
+    id: 'calf-right-soleus',
+    label: 'Right calf, bent leg (soleus)',
+    shortLabel: 'R Soleus',
+    duration: 30,
+    color: 'yellow-green'
+  },
+  {
+    id: 'calf-left-soleus',
+    label: 'Left calf, bent leg (soleus)',
+    shortLabel: 'L Soleus',
+    duration: 30,
+    color: 'blue-green'
+  }
+];
+
+/**
+ * Build the 6-minute Calf Stretch Timer sequence:
+ * 3 passes (initial pass + repeat two times) of the 4 x 30s calf stretches = 12 x 30s (360s),
+ * preceded by the standard 10s yellow prep countdown.
+ */
+export function buildCalfStretchTimerSequence({ countdownDuration = 10 } = {}) {
+  const totalSets = 3;
+  const steps = [];
+
+  for (let setIdx = 0; setIdx < totalSets; setIdx++) {
+    const setNum = setIdx + 1;
+    CALF_STRETCH_CYCLE.forEach((item, stretchIdx) => {
+      steps.push({
+        id: `step-${steps.length + 1}`,
+        type: 'work',
+        phaseLabel: `Set ${setNum}/${totalSets} · Stretch ${stretchIdx + 1}/4`,
+        exerciseId: item.id,
+        exerciseName: item.label,
+        shortLabel: item.shortLabel,
+        roundNumber: setNum,
+        setNumber: setNum,
+        totalSets,
+        pairIndex: steps.length + 1,
+        duration: item.duration,
+        color: item.color
+      });
+    });
+  }
 
   return finalizeWithCountdown(steps, countdownDuration);
 }

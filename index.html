@@ -15,7 +15,7 @@
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/svg+xml" href="./diagrams/app-icon.svg" />
   <link rel="apple-touch-icon" href="./diagrams/app-icon.svg" />
-  <link rel="stylesheet" href="./src/styles.css?v=20" />
+  <link rel="stylesheet" href="./src/styles.css?v=21" />
 </head>
 <body>
   <div class="app-shell">
@@ -326,6 +326,12 @@
             View All 90 Exercise Diagrams →
           </a>
         </div>
+
+        <div class="easter-egg-row">
+          <button id="openCalfStretchTimerBtn" class="easter-egg-btn" type="button">
+            Calf Stretch Timer
+          </button>
+        </div>
       </div>
     </div>
 
@@ -457,6 +463,8 @@
               <input id="newIntervalDurationInput" type="number" min="1" max="3600" value="30" class="timer-num-input" aria-label="New interval duration in seconds" />
               <select id="newIntervalColorSelect" class="timer-color-select" aria-label="New interval color">
                 <option value="green">Green</option>
+                <option value="yellow-green">Yellow-Green</option>
+                <option value="blue-green">Blue-Green</option>
                 <option value="blue">Blue</option>
                 <option value="yellow">Yellow</option>
                 <option value="red">Red</option>
@@ -481,6 +489,6 @@
     <div id="toast" class="toast" hidden>Updated</div>
   </div>
 
-  <script type="module" src="./src/app.js?v=20"></script>
+  <script type="module" src="./src/app.js?v=21"></script>
 </body>
 </html>

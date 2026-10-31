@@ -1,4 +1,4 @@
-import { DataService } from './services/dataService.js?v=20';
+import { DataService } from './services/dataService.js?v=21';
 import {
   FOCUS_SNAP_STEPS,
   DEFAULT_FOCUS_WEIGHTS,
@@ -27,12 +27,12 @@ import {
   getRandomEntry,
   getPrimaryMuscle,
   getPrimaryBodyArea
-} from './engine/workoutEngine.js?v=20';
+} from './engine/workoutEngine.js?v=21';
 import {
   analyzeMuscleLoad,
   applyBalancedRecommendation,
   SPECIFIC_MUSCLES
-} from './engine/muscleLoadAnalyzer.js?v=20';
+} from './engine/muscleLoadAnalyzer.js?v=21';
 import {
   TIMER_COLORS,
   CUSTOM_TIMER_PRESETS,
@@ -43,10 +43,11 @@ import {
   getDefaultExerciseTimerConfig,
   buildStockTimerSequence,
   buildCustomPresetTimerSequence,
+  buildCalfStretchTimerSequence,
   finalizeWithCountdown,
   getStepStartSoundType,
   shouldPlaySteadyTransitionPulse
-} from './engine/timerEngine.js?v=20';
+} from './engine/timerEngine.js?v=21';
 
 const dataService = new DataService();
 
@@ -168,7 +169,7 @@ async function bootstrap() {
   // long before any timer AudioContext is created or resumed (prevents synchronous click race condition).
   configureAmbientAudioSession();
 
-  await dataService.init('./data/sheet-data.json?v=20', './data/enrichments.json?v=20');
+  await dataService.init('./data/sheet-data.json?v=21', './data/enrichments.json?v=21');
   populateWorkoutTypeSelect();
   populateCustomTimerPresetsSelect();
   syncUIFromActiveProfile();
@@ -183,7 +184,7 @@ async function bootstrap() {
       refreshing = true;
       window.location.reload();
     });
-    navigator.serviceWorker.register('./sw.js?v=20', { updateViaCache: 'none' }).then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=21', { updateViaCache: 'none' }).then(reg => {
       reg.update().catch(() => {});
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
@@ -731,7 +732,7 @@ function resetTimerForWorkoutType(workoutTypeKey) {
 
 function rebuildTimerSteps(resetCursor = true) {
   const wkState = dataService.getActiveProfile().activeWorkout;
-  if (!wkState) return;
+  if (!wkState && timerState.mode !== 'calf-stretch') return;
 
   if (timerState.customStepsOverride && timerState.customStepsOverride.length > 0) {
     const cdOverride = timerState.customStepsOverride.find(s => s.type === 'countdown');
@@ -740,6 +741,10 @@ function rebuildTimerSteps(resetCursor = true) {
       timerState.countdownDuration,
       cdOverride?.customLabel || null
     );
+  } else if (timerState.mode === 'calf-stretch') {
+    timerState.steps = buildCalfStretchTimerSequence({
+      countdownDuration: timerState.countdownDuration
+    });
   } else if (timerState.mode === 'custom-preset') {
     timerState.steps = buildCustomPresetTimerSequence(timerState.presetId, wkState, {
       roundIndex: timerState.roundIndex,
@@ -778,15 +783,27 @@ function updateWorkoutTimerBarUI(wkState) {
 
   els.workoutTimerBar.hidden = false;
 
-  // Always rebuild steps if empty or out of sync with active exercises
-  if (!timerState.steps || timerState.steps.length === 0) {
-    rebuildTimerSteps(true);
-  } else if (!timerState.isRunning && !timerState.customStepsOverride) {
-    rebuildTimerSteps(false);
+  const isStandaloneEasterEgg = timerState.mode === 'calf-stretch';
+
+  // Always rebuild steps if empty or out of sync with active exercises (unless in standalone Calf Stretch mode)
+  if (!isStandaloneEasterEgg) {
+    if (!timerState.steps || timerState.steps.length === 0) {
+      rebuildTimerSteps(true);
+    } else if (!timerState.isRunning && !timerState.customStepsOverride) {
+      rebuildTimerSteps(false);
+    }
   }
 
   // Top workout timer button always reflects the full workout sequence
-  const fullWorkoutSteps = timerState.customStepsOverride
+  const fullWorkoutSteps = isStandaloneEasterEgg
+    ? buildStockTimerSequence(wkState, {
+        roundIndex: 0,
+        slotIndex: null,
+        includeAllRounds: true,
+        exerciseConfigs: {},
+        countdownDuration: 10
+      })
+    : timerState.customStepsOverride
     ? timerState.steps
     : timerState.mode === 'custom-preset'
     ? buildCustomPresetTimerSequence(timerState.presetId, wkState, {
@@ -855,6 +872,24 @@ function openTimerModal({
   els.timerModal.hidden = false;
 }
 
+function openCalfStretchTimer() {
+  closeAllModals();
+  stopTimerLoop();
+  timerState.workoutTypeKey = 'calf-stretch-timer';
+  timerState.mode = 'calf-stretch';
+  timerState.roundIndex = 0;
+  timerState.slotIndex = null;
+  timerState.includeAllRounds = true;
+  timerState.countdownDuration = 10;
+  timerState.exerciseConfigs = {};
+  timerState.customStepsOverride = null;
+  timerState.customizerOpen = false;
+  rebuildTimerSteps(true);
+  configureAmbientAudioSession();
+  renderTimerModal();
+  els.timerModal.hidden = false;
+}
+
 function closeTimerModal() {
   stopTimerLoop();
   els.timerModal.hidden = true;
@@ -862,15 +897,21 @@ function closeTimerModal() {
 
 function renderTimerModal() {
   const wkState = dataService.getActiveProfile().activeWorkout;
-  if (!wkState) return;
+  const isCalfStretch = timerState.mode === 'calf-stretch';
+  if (!wkState && !isCalfStretch) return;
 
-  const wk = wkState.workout || {};
-  const scopeTag = timerState.includeAllRounds
-    ? 'FULL WORKOUT TIMER'
-    : `ROUND ${timerState.roundIndex + 1} TIMER`;
-  document.getElementById('timerModalEyebrow').textContent =
-    timerState.mode === 'custom-preset' ? `CUSTOM TIMER · ${scopeTag}` : `TUNED HIIT · ${scopeTag}`;
-  document.getElementById('timerModalTitle').textContent = wk.name || 'Workout Timer';
+  if (isCalfStretch) {
+    document.getElementById('timerModalEyebrow').textContent = 'EASTER EGG · 6-MIN MOBILITY';
+    document.getElementById('timerModalTitle').textContent = 'Calf Stretch Timer';
+  } else {
+    const wk = wkState.workout || {};
+    const scopeTag = timerState.includeAllRounds
+      ? 'FULL WORKOUT TIMER'
+      : `ROUND ${timerState.roundIndex + 1} TIMER`;
+    document.getElementById('timerModalEyebrow').textContent =
+      timerState.mode === 'custom-preset' ? `CUSTOM TIMER · ${scopeTag}` : `TUNED HIIT · ${scopeTag}`;
+    document.getElementById('timerModalTitle').textContent = wk.name || 'Workout Timer';
+  }
 
   const toggleBtn = document.getElementById('toggleTimerCustomizerBtn');
   toggleBtn.textContent = timerState.customizerOpen ? '← Back to Timer' : 'Customize';
@@ -890,6 +931,12 @@ function renderTimerModal() {
 function renderTimerScopePills(wkState) {
   const container = document.getElementById('timerScopePills');
   if (!container) return;
+
+  if (timerState.mode === 'calf-stretch' || !wkState) {
+    container.innerHTML = '';
+    container.hidden = true;
+    return;
+  }
 
   const wkId = wkState.workout?.id || '';
   const pills = [];
@@ -942,6 +989,7 @@ function renderTimerScopePills(wkState) {
   }
 
   container.innerHTML = pills.join('');
+  container.hidden = pills.length === 0;
 }
 
 function renderTimerExecutionView() {
@@ -995,7 +1043,7 @@ function renderTimerExecutionView() {
           ? 'Transition'
           : s.type === 'rest'
           ? 'Rest'
-          : (s.exerciseName || 'Work').slice(0, 14);
+          : s.shortLabel || (s.exerciseName || 'Work').slice(0, 14);
       return `
         <button
           type="button"
@@ -1032,15 +1080,17 @@ function renderTimerCustomizerView(wkState) {
   // Per-Exercise Durations & Colors List
   const uniqueExercises = [];
   const seenIds = new Set();
-  wkState.rounds.forEach(r => {
-    r.slots.forEach(s => {
-      const ex = getActiveSlotExercise(s);
-      if (ex && !seenIds.has(ex.id)) {
-        seenIds.add(ex.id);
-        uniqueExercises.push(ex);
-      }
+  if (wkState && Array.isArray(wkState.rounds) && timerState.mode !== 'calf-stretch') {
+    wkState.rounds.forEach(r => {
+      r.slots.forEach(s => {
+        const ex = getActiveSlotExercise(s);
+        if (ex && !seenIds.has(ex.id)) {
+          seenIds.add(ex.id);
+          uniqueExercises.push(ex);
+        }
+      });
     });
-  });
+  }
 
   const colorOptionsHtml = selectedColor =>
     Object.values(TIMER_COLORS)
@@ -1050,8 +1100,11 @@ function renderTimerCustomizerView(wkState) {
       )
       .join('');
 
-  const defaults = getDefaultExerciseTimerConfig(wkState.workout);
+  const defaults = getDefaultExerciseTimerConfig(wkState?.workout);
   const perExContainer = document.getElementById('perExerciseTimerList');
+  if (perExContainer?.parentElement) {
+    perExContainer.parentElement.hidden = timerState.mode === 'calf-stretch';
+  }
   perExContainer.innerHTML = uniqueExercises
     .map(ex => {
       const cfg = timerState.exerciseConfigs[ex.id] || {};
@@ -2483,6 +2536,17 @@ function bindEvents() {
   });
 
   document.getElementById('resetStockTimerBtn').addEventListener('click', () => {
+    if (timerState.workoutTypeKey === 'calf-stretch-timer') {
+      stopTimerLoop();
+      timerState.mode = 'calf-stretch';
+      timerState.countdownDuration = 10;
+      timerState.customStepsOverride = null;
+      rebuildTimerSteps(true);
+      timerState.customizerOpen = true;
+      renderTimerModal();
+      showToast('Reset to Calf Stretch timer');
+      return;
+    }
     const wkId = dataService.getActiveProfile().activeWorkout?.workout?.id || 'timed-duos-40-20';
     resetTimerForWorkoutType(wkId);
     timerState.customizerOpen = true;
@@ -2499,6 +2563,11 @@ function bindEvents() {
   });
 
   els.settingsBtn.addEventListener('click', openSettingsModal);
+
+  const calfStretchBtn = document.getElementById('openCalfStretchTimerBtn');
+  if (calfStretchBtn) {
+    calfStretchBtn.addEventListener('click', openCalfStretchTimer);
+  }
 
   els.modalBackdrop.addEventListener('click', closeAllModals);
   document.querySelectorAll('[data-close-modal]').forEach(btn => {

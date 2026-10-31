@@ -49,6 +49,8 @@ import {
   getDefaultExerciseTimerConfig,
   buildStockTimerSequence,
   buildCustomPresetTimerSequence,
+  buildCalfStretchTimerSequence,
+  CALF_STRETCH_CYCLE,
   finalizeWithCountdown,
   getTimerSequenceSummary,
   getStepStartSoundType,
@@ -1723,6 +1725,59 @@ test('index.html, styles.css, app.js & qa-gallery.html satisfy Top Menu, Focus S
     stylesCss.includes('clamp(33px, 9vw, 48px)'),
     'Expected .timer-bottom-label font-size to be increased by 50% to clamp(33px, 9vw, 48px)'
   );
+});
+
+// ----------------------------------------------------------------------------
+// 17. SETTINGS EASTER EGG: 6-MINUTE CALF STRETCH TIMER
+// ----------------------------------------------------------------------------
+console.log('\n17. Settings Easter Egg: 6-Minute Calf Stretch Timer');
+
+test('Calf Stretch Timer builds 10s yellow countdown + 3 passes (6 min = 360s) of gastrox/soleus stretches with yellow-green & blue-green colors and dings', () => {
+  assert.equal(CALF_STRETCH_CYCLE.length, 4);
+  const seq = buildCalfStretchTimerSequence();
+  // 1 countdown + 12 stretch steps (4 stretches * 3 sets) = 13 steps
+  assert.equal(seq.length, 13, `Expected 13 steps (1 countdown + 12 x 30s stretches), got ${seq.length}`);
+
+  // Step 0: 10s yellow prep countdown
+  assert.equal(seq[0].type, 'countdown');
+  assert.equal(seq[0].duration, 10);
+  assert.equal(seq[0].color, 'yellow');
+  assert.equal(getTimerBottomLabel(seq[0]), 'Count Down');
+
+  const workSteps = seq.slice(1);
+  assert.equal(workSteps.length, 12);
+  const totalStretchSeconds = workSteps.reduce((sum, s) => sum + s.duration, 0);
+  assert.equal(totalStretchSeconds, 360, 'Expected exactly 360 seconds (6 minutes) of calf stretching');
+
+  const expectedCycle = [
+    { label: 'Right calf, straight leg (gastrox)', color: 'yellow-green' },
+    { label: 'Left calf, straight leg (gastrox)', color: 'blue-green' },
+    { label: 'Right calf, bent leg (soleus)', color: 'yellow-green' },
+    { label: 'Left calf, bent leg (soleus)', color: 'blue-green' }
+  ];
+
+  for (let pass = 0; pass < 3; pass++) {
+    for (let i = 0; i < 4; i++) {
+      const step = workSteps[pass * 4 + i];
+      assert.equal(step.type, 'work');
+      assert.equal(step.duration, 30);
+      assert.equal(step.exerciseName, expectedCycle[i].label);
+      assert.equal(getTimerBottomLabel(step), expectedCycle[i].label);
+      assert.equal(step.color, expectedCycle[i].color);
+      assert.equal(getStepStartSoundType(step), 'work-start');
+    }
+  }
+
+  // Verify yellow-green and blue-green colors exist in TIMER_COLORS
+  assert.ok(TIMER_COLORS['yellow-green'], 'Missing yellow-green in TIMER_COLORS');
+  assert.ok(TIMER_COLORS['blue-green'], 'Missing blue-green in TIMER_COLORS');
+
+  // Verify button placement in index.html right below View All 90 Exercise Diagrams
+  const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
+  const qaLinkPos = indexHtml.indexOf('View All 90 Exercise Diagrams');
+  const calfBtnPos = indexHtml.indexOf('id="openCalfStretchTimerBtn"');
+  assert.ok(qaLinkPos > 0 && calfBtnPos > qaLinkPos, 'Calf Stretch Timer button must appear below View All 90 Exercise Diagrams in Settings');
+  assert.ok(indexHtml.includes('Calf Stretch Timer'));
 });
 
 console.log(`\n🎉 ALL ${passed} QA TEST SUITES PASSED SUCCESSFULLY!`);
