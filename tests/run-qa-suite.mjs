@@ -3,9 +3,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { DataService } from '../src/services/dataService.js';
+import { DataService, DEFAULT_INPUTS } from '../src/services/dataService.js';
 import {
   FOCUS_SNAP_STEPS,
+  DEFAULT_FOCUS_WEIGHTS,
+  DEFAULT_FOCUS_ENABLED,
   AUTO_FOCUS_ERROR_BAR,
   MANUAL_FOCUS_ERROR_BAR,
   snapToFocusStep,
@@ -55,8 +57,18 @@ import {
   getTimerSequenceSummary,
   getStepStartSoundType,
   shouldPlaySteadyTransitionPulse,
+  formatExerciseNameForSpeech,
+  estimateSpeechDurationMs,
+  computePreTransitionSpeechLeadMs,
+  getTransitionPulseGainScale,
+  buildStepSpeechPlan,
+  isRemainingMsInDuckWindow,
   synthesizeCueWavDataUri,
-  buildRemainingTimelineCues
+  synthesizeCuePcmInt16,
+  buildRemainingTimelineCues,
+  buildRemainingAudioEvents,
+  buildMasterTimelineWavBytes,
+  encodeWavBytesToDataUri
 } from '../src/engine/timerEngine.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1225,6 +1237,54 @@ function getExArea(ex) {
   return 'Legs';
 }
 
+test('Default focus distribution is strictly 1/3, 1/3, 1/3 across engine, defaults, and UI (not 20%, 30%, 50%)', () => {
+  // 1) Engine constants
+  assert.equal(DEFAULT_FOCUS_ENABLED['Upper Body'], true);
+  assert.equal(DEFAULT_FOCUS_ENABLED['Core'], true);
+  assert.equal(DEFAULT_FOCUS_ENABLED['Legs'], true);
+
+  assert.ok(Math.abs(DEFAULT_FOCUS_WEIGHTS['Upper Body'] - 1 / 3) < 1e-9);
+  assert.ok(Math.abs(DEFAULT_FOCUS_WEIGHTS['Core'] - 1 / 3) < 1e-9);
+  assert.ok(Math.abs(DEFAULT_FOCUS_WEIGHTS['Legs'] - 1 / 3) < 1e-9);
+
+  // Explicitly verify it is NOT 20%, 30%, 50%
+  const nonDefaultPermutations = [
+    { 'Upper Body': 0.2, 'Core': 0.3, 'Legs': 0.5 },
+    { 'Upper Body': 0.5, 'Core': 0.3, 'Legs': 0.2 },
+    { 'Upper Body': 0.3, 'Core': 0.2, 'Legs': 0.5 }
+  ];
+  for (const p of nonDefaultPermutations) {
+    assert.notEqual(DEFAULT_FOCUS_WEIGHTS['Upper Body'], p['Upper Body']);
+    assert.notEqual(DEFAULT_FOCUS_WEIGHTS['Core'], p['Core']);
+    assert.notEqual(DEFAULT_FOCUS_WEIGHTS['Legs'], p['Legs']);
+    assert.equal(isDefaultFocusState(p, DEFAULT_FOCUS_ENABLED), false);
+  }
+
+  // 2) resetFocusState helper
+  const reset = resetFocusState();
+  assert.ok(Math.abs(reset.weights['Upper Body'] - 1 / 3) < 1e-9);
+  assert.ok(Math.abs(reset.weights['Core'] - 1 / 3) < 1e-9);
+  assert.ok(Math.abs(reset.weights['Legs'] - 1 / 3) < 1e-9);
+  assert.equal(isDefaultFocusState(reset.weights, reset.enabled), true);
+
+  // 3) DataService DEFAULT_INPUTS
+  assert.ok(Math.abs(DEFAULT_INPUTS.focusWeights['Upper Body'] - 1 / 3) < 1e-9);
+  assert.ok(Math.abs(DEFAULT_INPUTS.focusWeights['Core'] - 1 / 3) < 1e-9);
+  assert.ok(Math.abs(DEFAULT_INPUTS.focusWeights['Legs'] - 1 / 3) < 1e-9);
+  assert.equal(DEFAULT_INPUTS.focusEnabled['Upper Body'], true);
+  assert.equal(DEFAULT_INPUTS.focusEnabled['Core'], true);
+  assert.equal(DEFAULT_INPUTS.focusEnabled['Legs'], true);
+
+  // 4) normalizeFocusWeights fallback on empty inputs
+  const normEmpty = normalizeFocusWeights({});
+  assert.ok(Math.abs(normEmpty.weights['Upper Body'] - 1 / 3) < 1e-9);
+  assert.ok(Math.abs(normEmpty.weights['Core'] - 1 / 3) < 1e-9);
+  assert.ok(Math.abs(normEmpty.weights['Legs'] - 1 / 3) < 1e-9);
+  assert.equal(normEmpty.enabled['Upper Body'], true);
+  assert.equal(normEmpty.enabled['Core'], true);
+  assert.equal(normEmpty.enabled['Legs'], true);
+});
+
 test('snapToFocusStep snaps accurately to all 13 requested stops (0%, 10%, 20%, 25%, 1/3, 40%, 50%, 60%, 2/3, 75%, 80%, 90%, 100%)', () => {
   const expectedStops = [0, 0.1, 0.2, 0.25, 1 / 3, 0.4, 0.5, 0.6, 2 / 3, 0.75, 0.8, 0.9, 1];
   assert.equal(FOCUS_SNAP_STEPS.length, 13);
@@ -1799,6 +1859,359 @@ test('Collapsible wrapper encloses Category, Type, Equipment & Focus while leavi
   assert.ok(stylesCss.includes('.inputs-card.is-collapsed'));
   assert.ok(stylesCss.includes('.toggle-inputs-btn'));
   assert.ok(appJs.includes('setGeneratorSettingsCollapsed(true)'));
+});
+
+// ----------------------------------------------------------------------------
+// 19. SPOKEN EXERCISE NAMES SETTING, DYNAMIC LEAD TIMING & 10s TRANSITION DUCKING
+// ----------------------------------------------------------------------------
+console.log('\n19. Spoken Exercise Names Setting, Dynamic Lead Timing & 10s Transition Ducking');
+
+test('DataService defaults spokenExerciseNames to true, persists toggle Off/On, and backfills legacy profiles', () => {
+  const localDs = new DataService().initFromObjects(rawSheet, rawEnrich);
+  assert.equal(localDs.isSpokenExerciseNamesEnabled(), true, 'Default profile must enable spokenExerciseNames');
+
+  const added = localDs.addProfile('Athlete 2');
+  assert.equal(added.spokenExerciseNames, true, 'Newly added profile must default spokenExerciseNames to true');
+
+  localDs.setSpokenExerciseNames(false);
+  assert.equal(localDs.isSpokenExerciseNamesEnabled(), false);
+  localDs.setSpokenExerciseNames(true);
+  assert.equal(localDs.isSpokenExerciseNamesEnabled(), true);
+
+  // Simulate legacy saved storage without spokenExerciseNames field
+  const mem = new Map();
+  globalThis.__testLocalStorage = {
+    getItem: k => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v))
+  };
+  try {
+    mem.set(
+      'joshal_workout_profiles_v1',
+      JSON.stringify([
+        {
+          id: 'legacy-1',
+          name: 'Legacy User',
+          optionsPerSlot: 2,
+          excludedExerciseIds: [],
+          activeWorkout: null
+        }
+      ])
+    );
+    mem.set('joshal_workout_active_profile_v1', 'legacy-1');
+    const migratedDs = new DataService().initFromObjects(rawSheet, rawEnrich);
+    migratedDs.loadProfilesFromStorage();
+    assert.equal(migratedDs.getActiveProfile().id, 'legacy-1');
+    assert.equal(migratedDs.getActiveProfile().optionsPerSlot, 2);
+    assert.equal(
+      migratedDs.isSpokenExerciseNamesEnabled(),
+      true,
+      'Legacy saved profile without spokenExerciseNames must backfill to true'
+    );
+    migratedDs.setSpokenExerciseNames(false);
+    const reloadedDs = new DataService().initFromObjects(rawSheet, rawEnrich);
+    reloadedDs.loadProfilesFromStorage();
+    assert.equal(
+      reloadedDs.isSpokenExerciseNamesEnabled(),
+      false,
+      'Saved spokenExerciseNames=false must persist across reloads'
+    );
+  } finally {
+    delete globalThis.__testLocalStorage;
+  }
+});
+
+test('Dynamic speech lead time scales with exercise name duration ("[Exercise] in 3, 2, 1")', () => {
+  assert.equal(
+    formatExerciseNameForSpeech('Alternating glute bridge ↔ butterflies w/ band'),
+    'Alternating glute bridge and butterflies with band'
+  );
+  assert.equal(formatExerciseNameForSpeech('DB Bent Over Rows'), 'Dumbbell Bent Over Rows');
+
+  const curlsLead = computePreTransitionSpeechLeadMs('Curls');
+  const benchLead = computePreTransitionSpeechLeadMs('Bench Press');
+  const longLead = computePreTransitionSpeechLeadMs('Alternating glute bridge ↔ butterflies w/ band');
+
+  assert.equal(curlsLead, 3000 + estimateSpeechDurationMs('Curls in'));
+  assert.equal(benchLead, 3000 + estimateSpeechDurationMs('Bench Press in'));
+  assert.equal(longLead, 3000 + estimateSpeechDurationMs('Alternating glute bridge and butterflies with band in'));
+
+  assert.ok(curlsLead > 3500 && curlsLead < benchLead, `Expected Curls lead (${curlsLead}ms) < Bench Press lead (${benchLead}ms)`);
+  assert.ok(longLead > benchLead + 1200, `Expected long exercise lead (${longLead}ms) >> Bench Press lead (${benchLead}ms)`);
+});
+
+test('Standard Rest->Work & Work->Work announce "[Exercise] in 3, 2, 1" while Work->Rest stays silent', () => {
+  const wkDuos = generateWorkout(sheetData, { workoutType: 'Timed Duos (40/20)', equipment: 'Any' });
+  const duosSeq = buildStockTimerSequence(wkDuos, { roundIndex: 0 });
+  // Step 0 = 10s Countdown, Step 1 = 40s Ex1 (Work), Step 2 = 20s Rest, Step 3 = 40s Ex2 (Work)
+  const workToRestPlan = buildStepSpeechPlan(duosSeq, 1, { spokenExerciseNames: true });
+  assert.equal(workToRestPlan.hasSpeech, false, 'Work -> Rest must NOT announce "Rest in 3, 2, 1"');
+
+  const restToWorkPlan = buildStepSpeechPlan(duosSeq, 2, { spokenExerciseNames: true });
+  const ex2Spoken = formatExerciseNameForSpeech(duosSeq[3].exerciseName);
+  assert.equal(restToWorkPlan.hasSpeech, true);
+  assert.equal(restToWorkPlan.mode, 'pre-transition-lead');
+  assert.deepEqual(
+    restToWorkPlan.cues.map(c => c.text),
+    [`${ex2Spoken} in`, '3', '2', '1']
+  );
+  assert.equal(restToWorkPlan.cues[0].triggerRemainingMs, computePreTransitionSpeechLeadMs(duosSeq[3].exerciseName));
+  assert.equal(restToWorkPlan.cues[1].triggerRemainingMs, 3000);
+  assert.equal(restToWorkPlan.cues[2].triggerRemainingMs, 2000);
+  assert.equal(restToWorkPlan.cues[3].triggerRemainingMs, 1000);
+
+  // Calf Stretch Timer (Work -> Work directly with no Rest): announces next stretch in 3, 2, 1
+  const calfSeq = buildCalfStretchTimerSequence();
+  const calfPlan0 = buildStepSpeechPlan(calfSeq, 0, { spokenExerciseNames: true });
+  assert.equal(calfPlan0.hasSpeech, true);
+  assert.equal(calfPlan0.mode, 'pre-transition-lead');
+  assert.deepEqual(
+    calfPlan0.cues.map(c => c.text),
+    ['Left calf, straight leg (gastrox) in', '3', '2', '1']
+  );
+
+  // Blue 10s Rest in 30-20-10-10-20-30 has no repeated dings -> uses standard "[Exercise] in 3, 2, 1"
+  const wk302010 = generateWorkout(sheetData, { workoutType: '30-20-10-10-20-30', equipment: 'Any' });
+  const seq302010 = buildStockTimerSequence(wk302010, { roundIndex: 0 });
+  const tenSecBlueRestIdx = seq302010.findIndex(
+    (s, idx) => s.type === 'rest' && s.duration === 10 && seq302010[idx + 1]?.type === 'work'
+  );
+  assert.ok(tenSecBlueRestIdx > 0, 'Expected a 10s blue Rest step in 30-20-10-10-20-30');
+  assert.equal(shouldPlaySteadyTransitionPulse(seq302010[tenSecBlueRestIdx]), false);
+  const blueRestPlan = buildStepSpeechPlan(seq302010, tenSecBlueRestIdx, { spokenExerciseNames: true });
+  assert.equal(blueRestPlan.mode, 'pre-transition-lead');
+});
+
+test('10s Transition sequence (Curls -> 10s Transition -> Bench Press) skips Curls end counter and ducks repeated dings around name & 3, 2, 1', () => {
+  const wkPyr = generateWorkout(sheetData, { workoutType: '6 Excercise Pyramid', equipment: 'Any' });
+  const pyrSeq = buildStockTimerSequence(wkPyr, { roundIndex: 0 });
+  // Step 0 = 10s Countdown, Step 1 = Set 1 Ex1, Step 2 = 60s Rest, Step 3 = Set 2 Ex1 (30s), Step 4 = 10s Transition, Step 5 = Set 2 Ex2 (30s)
+  pyrSeq[1].exerciseName = 'Curls';
+  pyrSeq[3].exerciseName = 'Curls';
+  pyrSeq[5].exerciseName = 'Bench Press';
+
+  // 1) Finishing Curls (Step 3 -> Step 4 10s Transition): NO "Bench Press in 3, 2, 1" before Curls ends!
+  const curlsBeforeTransPlan = buildStepSpeechPlan(pyrSeq, 3, { spokenExerciseNames: true });
+  assert.equal(
+    curlsBeforeTransPlan.hasSpeech,
+    false,
+    'Exercise preceding a 10s Transition must NOT play "[Exercise] in 3, 2, 1"'
+  );
+
+  // 2) Initial 10s Prep Countdown (Step 0 -> Curls) & Set 2 10s Transition (Step 4 -> Bench Press) both use transition-ducked
+  const prepPlan = buildStepSpeechPlan(pyrSeq, 0, { spokenExerciseNames: true });
+  assert.equal(prepPlan.mode, 'transition-ducked');
+  assert.deepEqual(prepPlan.cues.map(c => c.text), ['Curls', '3', '2', '1']);
+
+  const transPlan = buildStepSpeechPlan(pyrSeq, 4, { spokenExerciseNames: true });
+  assert.equal(transPlan.mode, 'transition-ducked');
+  assert.deepEqual(transPlan.cues.map(c => c.text), ['Bench Press', '3', '2', '1']);
+
+  // 3) Verify exact ding volume envelope across the 10s Transition -> Bench Press start
+  const timeline = buildRemainingTimelineCues(pyrSeq, 4, 10000, { spokenExerciseNames: true });
+  const transPulses = timeline.filter(c => c.stepIndex === 4 && c.cueType === 'transition-pulse');
+  assert.equal(transPulses.length, 10, '10s Transition should emit 10 transition-pulse dings (offsets 0..9s)');
+
+  // Offset 0s (10s remaining): 1st ding from transition sound at FULL regular volume
+  assert.equal(transPulses[0].offsetSec, 0);
+  assert.equal(transPulses[0].gainScale, 1.0);
+  assert.equal(transPulses[0].ducked, false);
+
+  // Offset 1s (9s remaining): repeated transition ding fades to low background while saying "Bench Press"
+  assert.equal(transPulses[1].offsetSec, 1);
+  assert.equal(transPulses[1].ducked, true);
+  assert.ok(transPulses[1].gainScale < 0.3, `Expected ducked gain < 0.3 during "Bench Press", got ${transPulses[1].gainScale}`);
+
+  // Middle transition dings (e.g. offsets 3..6s = 7s..4s remaining): resume at regular volume (1.0)
+  for (const midOffset of [3, 4, 5, 6]) {
+    const p = transPulses.find(c => c.offsetSec === midOffset);
+    assert.equal(p.gainScale, 1.0, `Expected regular volume 1.0 at offset ${midOffset}s, got ${p.gainScale}`);
+    assert.equal(p.ducked, false);
+  }
+
+  // Final 3 seconds before transition ends (offsets 7, 8, 9s = 3s, 2s, 1s remaining): fade to low background for "3, 2, 1"
+  for (const endOffset of [7, 8, 9]) {
+    const p = transPulses.find(c => c.offsetSec === endOffset);
+    assert.equal(p.ducked, true, `Expected ducked pulse at offset ${endOffset}s ("3, 2, 1")`);
+    assert.ok(p.gainScale <= 0.26 && p.gainScale >= 0.15);
+  }
+
+  // Offset 10s (start of Bench Press, Step 5): normal full-volume start-of-exercise ding
+  const benchStartCue = timeline.find(c => c.stepIndex === 5 && c.cueType === 'work-start');
+  assert.ok(benchStartCue, 'Expected work-start ding at start of Bench Press');
+  assert.equal(benchStartCue.offsetSec, 10);
+  assert.equal(benchStartCue.gainScale, 1.0);
+  assert.equal(benchStartCue.ducked, false);
+
+  // 4) When spokenExerciseNames is false, no speech plan is created and backward-compatible 3-arg calls are unchanged
+  const offPlan = buildStepSpeechPlan(pyrSeq, 4, { spokenExerciseNames: false });
+  assert.equal(offPlan.hasSpeech, false);
+  const legacyCues = buildRemainingTimelineCues(pyrSeq, 4, 10000);
+  assert.equal('gainScale' in legacyCues[0], false, 'Legacy 3-arg buildRemainingTimelineCues keeps clean cue shape');
+});
+
+// ----------------------------------------------------------------------------
+// 20. BACKGROUND APP-SWITCH CONTINUITY, SILENT-SWITCH BYPASS & SPEECH PACK MIXER
+// ----------------------------------------------------------------------------
+console.log('\n20. Background App-Switch Continuity, Silent-Switch Bypass & Speech Pack Mixer');
+
+test('Pre-rendered Samantha speech-pack.json & speech-pack.m4a cover all 90 exercises, all 4 Calf Stretches, and countdown words', () => {
+  const packJsonPath = path.join(rootDir, 'data', 'speech-pack.json');
+  const packM4aPath = path.join(rootDir, 'data', 'speech-pack.m4a');
+  assert.ok(fs.existsSync(packJsonPath), 'Missing data/speech-pack.json');
+  assert.ok(fs.existsSync(packM4aPath), 'Missing data/speech-pack.m4a');
+
+  const m4aStat = fs.statSync(packM4aPath);
+  assert.ok(m4aStat.size > 100_000, `Expected non-empty speech-pack.m4a, got ${m4aStat.size} bytes`);
+
+  const pack = JSON.parse(fs.readFileSync(packJsonPath, 'utf8'));
+  assert.equal(pack.sampleRate, 16000);
+  for (const requiredKey of ['3', '2', '1', 'in']) {
+    assert.ok(pack.clips[requiredKey]?.durationMs > 150, `Missing countdown word "${requiredKey}" in speech-pack.json`);
+  }
+
+  for (const ex of sheetData.exercises) {
+    const spoken = formatExerciseNameForSpeech(ex.name);
+    assert.ok(pack.clips[spoken], `Missing spoken clip for exercise "${ex.name}" (${spoken})`);
+    assert.ok(pack.clips[`${spoken} in`], `Missing intro clip "${spoken} in" for exercise "${ex.name}"`);
+  }
+
+  for (const stretch of CALF_STRETCH_CYCLE) {
+    const spoken = formatExerciseNameForSpeech(stretch.label);
+    assert.ok(pack.clips[spoken], `Missing spoken clip for calf stretch "${spoken}"`);
+    assert.ok(pack.clips[`${spoken} in`], `Missing intro clip "${spoken} in"`);
+  }
+});
+
+test('buildRemainingAudioEvents & buildMasterTimelineWavBytes mix dings + spoken words into continuous Silent/Background PCM WAV', () => {
+  const wkPyr = generateWorkout(sheetData, { workoutType: '6 Excercise Pyramid', equipment: 'Any' });
+  const pyrSeq = buildStockTimerSequence(wkPyr, { roundIndex: 0 });
+  pyrSeq[3].exerciseName = 'Curls';
+  pyrSeq[5].exerciseName = 'Bench Press';
+
+  // Synthetic 16kHz voice buffers with strong amplitude (12000) to verify exact sample mixing
+  const mockVoice = (durationMs, amp = 12000) => {
+    const n = Math.round((durationMs / 1000) * 16000);
+    const arr = new Int16Array(n);
+    for (let i = 0; i < n; i++) arr[i] = i % 2 === 0 ? amp : -amp;
+    return arr;
+  };
+  const mockSpeechMap = new Map([
+    ['Bench Press', mockVoice(720)],
+    ['Bench Press in', mockVoice(830)],
+    ['Curls', mockVoice(470)],
+    ['Curls in', mockVoice(580)],
+    ['3', mockVoice(360)],
+    ['2', mockVoice(320)],
+    ['1', mockVoice(360)],
+    ['in', mockVoice(310)]
+  ]);
+
+  // Slice just Step 4 (10s Transition) -> Step 5 (30s Bench Press) so totalDurationSec = 40s
+  const twoStepSeq = [pyrSeq[4], pyrSeq[5]];
+  const timeline = buildRemainingAudioEvents(twoStepSeq, 0, 10000, {
+    spokenExerciseNames: true,
+    durationLookupFn: text => (text === 'Bench Press' ? 720 : null)
+  });
+
+  const built = buildMasterTimelineWavBytes({
+    totalDurationSec: timeline.totalDurationSec,
+    events: timeline.events,
+    startOffsetSec: 0,
+    maxWindowSec: 120,
+    speechPcmMap: mockSpeechMap,
+    sampleRate: 16000
+  });
+
+  // 1) Valid RIFF WAVE header
+  const headerAscii = Buffer.from(built.wavBytes.buffer, 0, 12).toString('ascii');
+  assert.ok(headerAscii.startsWith('RIFF') && headerAscii.endsWith('WAVE'));
+  assert.equal(built.bakedSpeechKeys.size, 4, 'Expected "Bench Press", "3", "2", "1" baked into Master WAV');
+
+  const pcm = new Int16Array(
+    built.wavBytes.buffer,
+    built.wavBytes.byteOffset + 44,
+    (built.wavBytes.byteLength - 44) / 2
+  );
+
+  const maxAbsInWindow = (startSec, endSec) => {
+    const i0 = Math.floor(startSec * 16000);
+    const i1 = Math.min(pcm.length, Math.ceil(endSec * 16000));
+    let maxAbs = 0;
+    for (let i = i0; i < i1; i++) {
+      const a = Math.abs(pcm[i]);
+      if (a > maxAbs) maxAbs = a;
+    }
+    return maxAbs;
+  };
+
+  // 2) Spoken "Bench Press" at ~0.65s..1.35s has strong voice signal (>= 11000)
+  assert.ok(maxAbsInWindow(0.7, 1.2) >= 11000, 'Expected baked "Bench Press" voice audio in Master WAV');
+  // 3) Quiet silent stretch mid-exercise (e.g. 20.0s..21.0s) has +-1 LSB anti-sleep carrier (never digital zero, <= 2)
+  const silentStretchPeak = maxAbsInWindow(20.0, 21.0);
+  assert.equal(silentStretchPeak, 1, 'Expected +-1 LSB (-90dBFS) anti-sleep carrier during silent exercise stretch');
+  // 4) Spoken "3", "2", "1" at 7.0s, 8.0s, 9.0s and full-volume work-start ding at 10.0s
+  assert.ok(maxAbsInWindow(7.05, 7.25) >= 11000, 'Expected baked "3" countdown audio at 7.0s');
+  assert.ok(maxAbsInWindow(8.05, 8.25) >= 11000, 'Expected baked "2" countdown audio at 8.0s');
+  assert.ok(maxAbsInWindow(9.05, 9.25) >= 11000, 'Expected baked "1" countdown audio at 9.0s');
+  assert.ok(maxAbsInWindow(10.0, 10.35) >= 8000, 'Expected full-volume work-start ding at 10.0s');
+});
+
+test('iPhone Safari Shortcut & Mobile Chrome (CriOS): full 36-min workout synthesizes as 1 uninterrupted WAV in <100ms + data-URI & Private-mode fallbacks', () => {
+  // Longest workout format in app: 30-20-10-10-20-30 (~2,170s = 36+ minutes)
+  const wkLongest = generateWorkout(sheetData, { workoutType: '30-20-10-10-20-30', equipment: 'Any' });
+  const fullSeq = buildStockTimerSequence(wkLongest, { includeAllRounds: true });
+  const timeline = buildRemainingAudioEvents(fullSeq, 0, fullSeq[0].duration * 1000, {
+    spokenExerciseNames: true
+  });
+  assert.ok(timeline.totalDurationSec > 2000, `Expected >2000s full workout, got ${timeline.totalDurationSec}s`);
+
+  const t0 = performance.now();
+  const fullBuilt = buildMasterTimelineWavBytes({
+    totalDurationSec: timeline.totalDurationSec,
+    events: timeline.events,
+    startOffsetSec: 0,
+    sampleRate: 16000
+  });
+  const elapsedMs = performance.now() - t0;
+
+  assert.equal(
+    fullBuilt.hasMoreSegments,
+    false,
+    'Entire 36-min workout must fit in a single uninterrupted <audio> segment (zero background src swaps)'
+  );
+  assert.ok(
+    elapsedMs < 150,
+    `Expected fast synchronous user-gesture WAV synthesis (<150ms), took ${elapsedMs.toFixed(1)}ms`
+  );
+
+  // Verify CriOS WKWebView data:audio/wav;base64 fallback encoding
+  const shortBuilt = buildMasterTimelineWavBytes({
+    totalDurationSec: 5,
+    events: [{ offsetSec: 0, kind: 'sound', cueType: 'work-start', stepIndex: 0, gainScale: 1.0 }],
+    startOffsetSec: 0,
+    maxWindowSec: 10,
+    sampleRate: 16000
+  });
+  const dataUri = encodeWavBytesToDataUri(shortBuilt.wavBytes);
+  assert.ok(dataUri.startsWith('data:audio/wav;base64,UklGR'), 'Expected valid RIFF WAVE base64 data URI');
+
+  // Verify Safari/Chrome iOS Private/Incognito mode localStorage SecurityError resilience
+  const prevWin = globalThis.window;
+  try {
+    globalThis.window = {
+      get localStorage() {
+        throw new Error('SecurityError: The operation is insecure.');
+      }
+    };
+    const privateDs = new DataService();
+    privateDs.initFromObjects(rawSheet, rawEnrich);
+    privateDs.loadProfilesFromStorage();
+    privateDs.setSpokenExerciseNames(false);
+    assert.equal(privateDs.isSpokenExerciseNamesEnabled(), false);
+  } finally {
+    if (prevWin === undefined) delete globalThis.window;
+    else globalThis.window = prevWin;
+  }
 });
 
 console.log(`\n🎉 ALL ${passed} QA TEST SUITES PASSED SUCCESSFULLY!`);

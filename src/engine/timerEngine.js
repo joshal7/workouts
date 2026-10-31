@@ -967,10 +967,344 @@ export function shouldPlaySteadyTransitionPulse(step) {
 }
 
 /**
+ * Normalize an exercise or activity label so Web Speech synthesis pronounces symbols
+ * and workout abbreviations naturally and predictably.
+ */
+export function formatExerciseNameForSpeech(rawName) {
+  if (!rawName) return '';
+  return String(rawName)
+    .replace(/↔/g, ' and ')
+    .replace(/&/g, ' and ')
+    .replace(/\+/g, ' plus ')
+    .replace(/\bw\/o\b/gi, 'without')
+    .replace(/\bw\/\s*/gi, 'with ')
+    .replace(/\s*\/\s*/g, ' or ')
+    .replace(/\bDB\b/g, 'Dumbbell')
+    .replace(/\bOpt\b/gi, 'Optional')
+    .replace(/\bFwd\b/gi, 'Forward')
+    .replace(/\bRev\b/gi, 'Reverse')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Estimate the spoken syllable count of a phrase (accounting for workout acronyms like TRX/RDL,
+ * numeric tokens like 180s or 1.5, compound hyphenated words, and silent trailing -e).
+ */
+export function countSpokenSyllables(text) {
+  const cleaned = formatExerciseNameForSpeech(text);
+  if (!cleaned) return 0;
+
+  const rawTokens = cleaned
+    .replace(/[(),;:!?"]/g, ' ')
+    .split(/[\s-]+/)
+    .map(t => t.trim())
+    .filter(Boolean);
+
+  let total = 0;
+  for (const token of rawTokens) {
+    if (/^\d+\.\d+$/.test(token)) {
+      // e.g. "1.5" -> "one point five"
+      const parts = token.split('.');
+      total += 1 + parts.length;
+      continue;
+    }
+    if (/^180s?$/i.test(token)) {
+      total += 3; // "one eighties"
+      continue;
+    }
+    if (/^\d+s?$/i.test(token)) {
+      const n = parseInt(token, 10);
+      if (n === 7) total += 2;
+      else if (n >= 11 && n <= 19) total += n === 11 || n === 17 ? 3 : 2;
+      else if (n >= 20 && n < 100) total += n % 10 === 0 ? 2 : 3;
+      else if (n >= 100) total += 3;
+      else total += 1;
+      continue;
+    }
+    // Single letter or letter + plural 's' (e.g. "I", "Y", "Ts", "V")
+    if (/^[A-Za-z]s?$/.test(token)) {
+      total += 1;
+      continue;
+    }
+    // All-caps vowelless or initialism acronym (e.g. "TRX", "RDL")
+    if (/^[A-Z]{2,4}$/.test(token) && !/^[AEIOUY]+$/.test(token) && !/[AEIOU]/.test(token)) {
+      total += token.length;
+      continue;
+    }
+
+    const word = token.toLowerCase().replace(/[^a-z]/g, '');
+    if (!word) continue;
+    if (word.length <= 3) {
+      total += 1;
+      continue;
+    }
+
+    let adjusted = word;
+    // Strip silent trailing 'e' (unless consonant + 'le', e.g. "single", "bicycle")
+    if (adjusted.endsWith('e') && !adjusted.endsWith('ee') && !/[^aeiouy]le$/.test(adjusted)) {
+      adjusted = adjusted.slice(0, -1);
+    }
+    // Handle '-ed' suffix when silent (not preceded by 't' or 'd')
+    if (adjusted.endsWith('ed') && adjusted.length > 4 && !/[td]ed$/.test(adjusted)) {
+      adjusted = adjusted.slice(0, -2);
+    }
+
+    const groups = adjusted.match(/[aeiouy]+/g);
+    total += Math.max(1, groups ? groups.length : 1);
+  }
+
+  return Math.max(1, total);
+}
+
+/**
+ * Estimate how many milliseconds it takes Web Speech synthesis to speak `text`.
+ * Calibrated against empirical Apple/WebKit TTS durations across short and long exercise names,
+ * with optional runtime voice `calibration` and `rate` scaling.
+ */
+export function estimateSpeechDurationMs(
+  text,
+  { rate = 1.0, calibration = 1.0, durationLookupFn = null } = {}
+) {
+  const spoken = formatExerciseNameForSpeech(text);
+  if (!spoken) return 0;
+
+  if (typeof durationLookupFn === 'function') {
+    const exactMs = durationLookupFn(spoken);
+    if (typeof exactMs === 'number' && exactMs > 0) {
+      // Add a tiny 60ms natural breath margin so "... in" finishes cleanly right before "3"
+      return Math.max(250, Math.round(exactMs + 60));
+    }
+  }
+
+  const syllables = countSpokenSyllables(spoken);
+  const words = spoken.split(/\s+/).filter(Boolean).length;
+  const pauses = (spoken.match(/[,;:()]/g) || []).length;
+
+  const safeRate = Math.max(0.5, Math.min(2.0, Number(rate) || 1.0));
+  const safeCal = Math.max(0.75, Math.min(1.45, Number(calibration) || 1.0));
+
+  // Empirical model (~165ms/syllable + ~95ms/word boundary + ~140ms/clause pause + startup/breath margin)
+  const baseMs = 280 + syllables * 165 + words * 95 + pauses * 140;
+  const scaledMs = Math.round((baseMs * safeCal) / safeRate);
+  return Math.max(500, Math.min(6500, scaledMs));
+}
+
+/**
+ * Calculate the pre-transition speech start lead time in milliseconds:
+ * 3 seconds (for "3, 2, 1") + the time required to speak "[Exercise Name] in".
+ */
+export function computePreTransitionSpeechLeadMs(exerciseName, options = {}) {
+  const spokenName = formatExerciseNameForSpeech(exerciseName);
+  if (!spokenName) return 3000;
+  return 3000 + estimateSpeechDurationMs(`${spokenName} in`, options);
+}
+
+/**
+ * Compute the gain multiplier for steady repeated transition dings:
+ * - Regular volume (1.0) normally
+ * - Fades smoothly to a quiet low background sound (0.26 -> 0.18) while voice speaks over transition dings
+ */
+export function getTransitionPulseGainScale({ isDucked = false, consecutiveDuckedCount = 1 } = {}) {
+  if (!isDucked) return 1.0;
+  return consecutiveDuckedCount <= 1 ? 0.26 : 0.18;
+}
+
+/**
+ * Build the speech & transition-ducking plan for `steps[stepIndex]`:
+ * - Returns `hasSpeech: false` if `spokenExerciseNames` is disabled, there is no next step,
+ *   or `nextStep.type !== 'work'` (so an exercise before Rest or before a 10s Transition does NOT count down).
+ * - Mode `'transition-ducked'`: For 10s yellow Transitions / Prep Countdowns (`shouldPlaySteadyTransitionPulse(step)`):
+ *   1) First transition ding plays at full regular volume (at `duration * 1000` ms remaining)
+ *   2) Repeated transition dings fade to low background sound while "[Exercise Name]" is spoken
+ *   3) Repeated transition dings resume at regular volume
+ *   4) At 3, 2, 1 seconds before transition ends, repeated transition dings fade to low background sound for "3, 2, 1"
+ *   5) Next exercise starts with its normal full-volume 'work-start' ding
+ * - Mode `'pre-transition-lead'`: For standard steps preceding an exercise (e.g. Rest -> Work, or Work -> Work):
+ *   Starts at `3s + duration("[Exercise Name] in")` before the transition, saying "[Exercise Name] in",
+ *   then "3" (at 3s), "2" (at 2s), "1" (at 1s), followed by the existing 'work-start' ding.
+ */
+export function buildStepSpeechPlan(
+  steps,
+  stepIndex,
+  { spokenExerciseNames = true, rate = 1.0, calibration = 1.0, durationLookupFn = null } = {}
+) {
+  const emptyPlan = {
+    hasSpeech: false,
+    mode: 'none',
+    spokenExerciseName: '',
+    leadTimeMs: 0,
+    cues: [],
+    duckWindowsMs: []
+  };
+
+  if (!spokenExerciseNames || !Array.isArray(steps)) return emptyPlan;
+  const step = steps[stepIndex];
+  const nextStep = steps[stepIndex + 1];
+  if (!step || !nextStep || nextStep.type !== 'work') {
+    return emptyPlan;
+  }
+
+  const spokenName = formatExerciseNameForSpeech(nextStep.exerciseName || 'Work');
+  if (!spokenName) return emptyPlan;
+
+  const stepDurationMs = Math.max(1, Number(step.duration) || 1) * 1000;
+  const isPulseTransition = shouldPlaySteadyTransitionPulse(step);
+
+  if (isPulseTransition && stepDurationMs >= 6000) {
+    const nameDurationMs = estimateSpeechDurationMs(spokenName, {
+      rate,
+      calibration,
+      durationLookupFn
+    });
+    // Trigger 650ms after step start so the 1st transition ding at offset 0s rings at full regular volume,
+    // and ducking covers the 2nd transition ding (at 1.0s elapsed) while speaking "[Exercise Name]".
+    // Clamp end to >= 4200ms so at least the middle transition ding(s) resume regular volume before "3, 2, 1".
+    const nameTriggerRemainingMs = stepDurationMs - 650;
+    const nameDuckEndRemainingMs = Math.max(4200, nameTriggerRemainingMs - nameDurationMs - 120);
+
+    return {
+      hasSpeech: true,
+      mode: 'transition-ducked',
+      spokenExerciseName: spokenName,
+      leadTimeMs: 3000,
+      cues: [
+        {
+          id: 'transition-exercise-name',
+          kind: 'exercise-name',
+          text: spokenName,
+          triggerRemainingMs: nameTriggerRemainingMs,
+          minRemainingMs: 3400,
+          estimatedDurationMs: nameDurationMs
+        },
+        {
+          id: 'count-3',
+          kind: 'countdown-digit',
+          text: '3',
+          triggerRemainingMs: 3000,
+          minRemainingMs: 2150,
+          estimatedDurationMs: 420
+        },
+        {
+          id: 'count-2',
+          kind: 'countdown-digit',
+          text: '2',
+          triggerRemainingMs: 2000,
+          minRemainingMs: 1150,
+          estimatedDurationMs: 420
+        },
+        {
+          id: 'count-1',
+          kind: 'countdown-digit',
+          text: '1',
+          triggerRemainingMs: 1000,
+          minRemainingMs: 150,
+          estimatedDurationMs: 420
+        }
+      ],
+      duckWindowsMs: [
+        {
+          startRemainingMs: nameTriggerRemainingMs + 50,
+          endRemainingMs: nameDuckEndRemainingMs,
+          reason: 'exercise-name'
+        },
+        {
+          startRemainingMs: 3050,
+          endRemainingMs: 100,
+          reason: 'countdown-321'
+        }
+      ]
+    };
+  }
+
+  // Standard pre-transition lead mode ("[Exercise Name] in 3, 2, 1" -> [Ding])
+  const introPhrase = `${spokenName} in`;
+  const introDurationMs = estimateSpeechDurationMs(introPhrase, {
+    rate,
+    calibration,
+    durationLookupFn
+  });
+  const rawLeadMs = 3000 + introDurationMs;
+  const effectiveLeadMs = Math.min(Math.max(3150, stepDurationMs - 100), rawLeadMs);
+
+  const cues = [];
+  if (stepDurationMs >= 4000) {
+    cues.push({
+      id: 'pre-exercise-intro',
+      kind: 'exercise-intro',
+      text: introPhrase,
+      triggerRemainingMs: effectiveLeadMs,
+      minRemainingMs: 3050,
+      estimatedDurationMs: introDurationMs
+    });
+  }
+  if (stepDurationMs >= 3000) {
+    cues.push({
+      id: 'count-3',
+      kind: 'countdown-digit',
+      text: '3',
+      triggerRemainingMs: 3000,
+      minRemainingMs: 2150,
+      estimatedDurationMs: 420
+    });
+  }
+  if (stepDurationMs >= 2000) {
+    cues.push({
+      id: 'count-2',
+      kind: 'countdown-digit',
+      text: '2',
+      triggerRemainingMs: 2000,
+      minRemainingMs: 1150,
+      estimatedDurationMs: 420
+    });
+  }
+  if (stepDurationMs >= 1000) {
+    cues.push({
+      id: 'count-1',
+      kind: 'countdown-digit',
+      text: '1',
+      triggerRemainingMs: 1000,
+      minRemainingMs: 150,
+      estimatedDurationMs: 420
+    });
+  }
+
+  const duckWindowsMs = isPulseTransition
+    ? [{ startRemainingMs: 3050, endRemainingMs: 100, reason: 'countdown-321' }]
+    : [];
+
+  return {
+    hasSpeech: cues.length > 0,
+    mode: 'pre-transition-lead',
+    spokenExerciseName: spokenName,
+    leadTimeMs: rawLeadMs,
+    cues,
+    duckWindowsMs
+  };
+}
+
+/**
+ * Check whether a given `remainingMs` within a step falls inside a speech ducking window.
+ */
+export function isRemainingMsInDuckWindow(speechPlan, remainingMs) {
+  if (!speechPlan || !Array.isArray(speechPlan.duckWindowsMs) || speechPlan.duckWindowsMs.length === 0) {
+    return false;
+  }
+  return speechPlan.duckWindowsMs.some(
+    w => remainingMs <= w.startRemainingMs && remainingMs >= w.endRemainingMs
+  );
+}
+
+/**
  * Build the complete schedule of upcoming audio cues ({ offsetSec, cueType, stepIndex })
  * from the current step and remainingMs through the end of the timer sequence.
  */
-export function buildRemainingTimelineCues(steps, currentStepIndex = 0, remainingMs = null) {
+export function buildRemainingTimelineCues(
+  steps,
+  currentStepIndex = 0,
+  remainingMs = null,
+  { spokenExerciseNames = false } = {}
+) {
   if (!Array.isArray(steps) || steps.length === 0 || currentStepIndex >= steps.length) {
     return [];
   }
@@ -980,27 +1314,46 @@ export function buildRemainingTimelineCues(steps, currentStepIndex = 0, remainin
   const fullFirstStepMs = Math.max(1, Number(firstStep?.duration) || 1) * 1000;
   const startRemainingMs =
     typeof remainingMs === 'number' && remainingMs > 0 ? remainingMs : fullFirstStepMs;
+  const firstPlan = spokenExerciseNames
+    ? buildStepSpeechPlan(steps, currentStepIndex, { spokenExerciseNames: true })
+    : null;
 
-  // If starting right at the beginning of the current step, emit its start cue at offset 0
+  // If starting right at the beginning of the current step, emit its start cue at offset 0 (always regular volume)
   if (Math.abs(startRemainingMs - fullFirstStepMs) < 50) {
-    cues.push({
+    const startEntry = {
       offsetSec: 0,
       cueType: getStepStartSoundType(firstStep),
       stepIndex: currentStepIndex
-    });
+    };
+    if (spokenExerciseNames) {
+      startEntry.gainScale = 1.0;
+      startEntry.ducked = false;
+    }
+    cues.push(startEntry);
   }
 
   // If the current step is a transition/countdown block, emit steady 1-second pulses for remaining whole seconds
   if (shouldPlaySteadyTransitionPulse(firstStep)) {
     const maxWholeSec = Math.floor((startRemainingMs - 50) / 1000);
+    let duckRun = 0;
     for (let s = maxWholeSec; s >= 1; s--) {
       const offsetSec = (startRemainingMs - s * 1000) / 1000;
       if (offsetSec >= 0.05) {
-        cues.push({
+        const entry = {
           offsetSec: Number(offsetSec.toFixed(3)),
           cueType: 'transition-pulse',
           stepIndex: currentStepIndex
-        });
+        };
+        if (spokenExerciseNames) {
+          const isDucked = isRemainingMsInDuckWindow(firstPlan, s * 1000);
+          duckRun = isDucked ? duckRun + 1 : 0;
+          entry.gainScale = getTransitionPulseGainScale({
+            isDucked,
+            consecutiveDuckedCount: duckRun
+          });
+          entry.ducked = isDucked;
+        }
+        cues.push(entry);
       }
     }
   }
@@ -1010,33 +1363,58 @@ export function buildRemainingTimelineCues(steps, currentStepIndex = 0, remainin
   for (let idx = currentStepIndex + 1; idx < steps.length; idx++) {
     const step = steps[idx];
     const dur = Math.max(1, Number(step?.duration) || 1);
+    const stepPlan = spokenExerciseNames
+      ? buildStepSpeechPlan(steps, idx, { spokenExerciseNames: true })
+      : null;
 
-    // Start of block sound ('work-start', 'rest-start', or 'transition-pulse')
-    cues.push({
+    // Start of block sound ('work-start', 'rest-start', or 'transition-pulse') — always regular volume
+    const startCue = {
       offsetSec: Number(cursorSec.toFixed(3)),
       cueType: getStepStartSoundType(step),
       stepIndex: idx
-    });
+    };
+    if (spokenExerciseNames) {
+      startCue.gainScale = 1.0;
+      startCue.ducked = false;
+    }
+    cues.push(startCue);
 
     // Steady light noise every second during a short transition / countdown block
     if (shouldPlaySteadyTransitionPulse(step)) {
+      let duckRun = 0;
       for (let secElapsed = 1; secElapsed < dur; secElapsed++) {
-        cues.push({
+        const remSec = dur - secElapsed;
+        const pulseEntry = {
           offsetSec: Number((cursorSec + secElapsed).toFixed(3)),
           cueType: 'transition-pulse',
           stepIndex: idx
-        });
+        };
+        if (spokenExerciseNames) {
+          const isDucked = isRemainingMsInDuckWindow(stepPlan, remSec * 1000);
+          duckRun = isDucked ? duckRun + 1 : 0;
+          pulseEntry.gainScale = getTransitionPulseGainScale({
+            isDucked,
+            consecutiveDuckedCount: duckRun
+          });
+          pulseEntry.ducked = isDucked;
+        }
+        cues.push(pulseEntry);
       }
     }
 
     cursorSec += dur;
   }
 
-  cues.push({
+  const endCue = {
     offsetSec: Number(cursorSec.toFixed(3)),
     cueType: 'workout-complete',
     stepIndex: steps.length - 1
-  });
+  };
+  if (spokenExerciseNames) {
+    endCue.gainScale = 1.0;
+    endCue.ducked = false;
+  }
+  cues.push(endCue);
 
   return cues;
 }
@@ -1123,7 +1501,311 @@ export function synthesizeCueWavDataUri(cueType = 'work-start') {
     view.setInt16(44 + i * 2, Math.round(clamped * 32767), true);
   }
 
-  const uri = `data:audio/wav;base64,${encodeUint8ToBase64(new Uint8Array(buffer))}`;
+    const uri = `data:audio/wav;base64,${encodeUint8ToBase64(new Uint8Array(buffer))}`;
   wavUriCache.set(cueType, uri);
   return uri;
+}
+
+const cuePcmCache = new Map();
+
+/**
+ * Synthesize raw 16-bit mono PCM samples (`Int16Array`) for a timer ding/chime profile at `sampleRate`.
+ */
+export function synthesizeCuePcmInt16(cueType = 'work-start', sampleRate = 16000) {
+  const cacheKey = `${cueType}@${sampleRate}`;
+  if (cuePcmCache.has(cacheKey)) {
+    return cuePcmCache.get(cacheKey);
+  }
+
+  const profile = TIMER_SOUND_PROFILES[cueType] || TIMER_SOUND_PROFILES['transition-pulse'];
+  const numSamples = Math.max(1, Math.floor(sampleRate * profile.durationSec));
+  const pcm = new Int16Array(numSamples);
+
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    let sample = 0;
+    for (const note of profile.notes) {
+      if (t >= note.startSec && t <= note.startSec + note.durationSec) {
+        const localT = t - note.startSec;
+        const progress = localT / note.durationSec;
+        const attack = Math.min(1, localT / 0.004);
+        const decay = Math.exp(-3.8 * progress);
+        const env = attack * decay * note.gain;
+        const fundamental = Math.sin(2 * Math.PI * note.freq * localT);
+        const overtone = note.overtoneFreq
+          ? 0.28 * Math.sin(2 * Math.PI * note.overtoneFreq * localT)
+          : 0;
+        sample += env * (fundamental + overtone);
+      }
+    }
+    const clamped = Math.max(-1, Math.min(1, sample));
+    pcm[i] = Math.round(clamped * 32767);
+  }
+
+  cuePcmCache.set(cacheKey, pcm);
+  return pcm;
+}
+
+/**
+ * Build the complete chronological timeline of BOTH sound dings AND spoken exercise cues
+ * from `(currentStepIndex, remainingMs)` through the end of `steps`.
+ */
+export function buildRemainingAudioEvents(
+  steps,
+  currentStepIndex = 0,
+  remainingMs = null,
+  { spokenExerciseNames = true, durationLookupFn = null, rate = 1.0, calibration = 1.0 } = {}
+) {
+  if (!Array.isArray(steps) || steps.length === 0 || currentStepIndex >= steps.length) {
+    return { totalDurationSec: 0, events: [] };
+  }
+
+  const firstStep = steps[currentStepIndex];
+  const fullFirstStepMs = Math.max(1, Number(firstStep?.duration) || 1) * 1000;
+  const startRemainingMs =
+    typeof remainingMs === 'number' && remainingMs > 0 ? remainingMs : fullFirstStepMs;
+
+  const events = [];
+  const speechOpts = { spokenExerciseNames, durationLookupFn, rate, calibration };
+
+  // 1) Sound cues (start chimes, transition pulses with ducking, workout-complete fanfare)
+  const firstPlan = spokenExerciseNames ? buildStepSpeechPlan(steps, currentStepIndex, speechOpts) : null;
+
+  if (Math.abs(startRemainingMs - fullFirstStepMs) < 50) {
+    events.push({
+      offsetSec: 0,
+      kind: 'sound',
+      cueType: getStepStartSoundType(firstStep),
+      stepIndex: currentStepIndex,
+      gainScale: 1.0,
+      ducked: false
+    });
+  }
+
+  if (shouldPlaySteadyTransitionPulse(firstStep)) {
+    const maxWholeSec = Math.floor((startRemainingMs - 50) / 1000);
+    let duckRun = 0;
+    for (let s = maxWholeSec; s >= 1; s--) {
+      const offsetSec = (startRemainingMs - s * 1000) / 1000;
+      if (offsetSec >= 0.05) {
+        const isDucked = spokenExerciseNames ? isRemainingMsInDuckWindow(firstPlan, s * 1000) : false;
+        duckRun = isDucked ? duckRun + 1 : 0;
+        events.push({
+          offsetSec: Number(offsetSec.toFixed(3)),
+          kind: 'sound',
+          cueType: 'transition-pulse',
+          stepIndex: currentStepIndex,
+          gainScale: getTransitionPulseGainScale({ isDucked, consecutiveDuckedCount: duckRun }),
+          ducked: isDucked
+        });
+      }
+    }
+  }
+
+  if (firstPlan && firstPlan.hasSpeech) {
+    for (const cue of firstPlan.cues) {
+      if (startRemainingMs >= cue.minRemainingMs) {
+        const rawOffsetSec = (startRemainingMs - cue.triggerRemainingMs) / 1000;
+        if (rawOffsetSec >= -0.05) {
+          events.push({
+            offsetSec: Number(Math.max(0, rawOffsetSec).toFixed(3)),
+            kind: 'speech',
+            id: cue.id,
+            speechKind: cue.kind,
+            text: cue.text,
+            stepIndex: currentStepIndex,
+            estimatedDurationMs: cue.estimatedDurationMs
+          });
+        }
+      }
+    }
+  }
+
+  let cursorSec = startRemainingMs / 1000;
+
+  for (let idx = currentStepIndex + 1; idx < steps.length; idx++) {
+    const step = steps[idx];
+    const dur = Math.max(1, Number(step?.duration) || 1);
+    const stepPlan = spokenExerciseNames ? buildStepSpeechPlan(steps, idx, speechOpts) : null;
+
+    events.push({
+      offsetSec: Number(cursorSec.toFixed(3)),
+      kind: 'sound',
+      cueType: getStepStartSoundType(step),
+      stepIndex: idx,
+      gainScale: 1.0,
+      ducked: false
+    });
+
+    if (shouldPlaySteadyTransitionPulse(step)) {
+      let duckRun = 0;
+      for (let secElapsed = 1; secElapsed < dur; secElapsed++) {
+        const remSec = dur - secElapsed;
+        const isDucked = spokenExerciseNames ? isRemainingMsInDuckWindow(stepPlan, remSec * 1000) : false;
+        duckRun = isDucked ? duckRun + 1 : 0;
+        events.push({
+          offsetSec: Number((cursorSec + secElapsed).toFixed(3)),
+          kind: 'sound',
+          cueType: 'transition-pulse',
+          stepIndex: idx,
+          gainScale: getTransitionPulseGainScale({ isDucked, consecutiveDuckedCount: duckRun }),
+          ducked: isDucked
+        });
+      }
+    }
+
+    if (stepPlan && stepPlan.hasSpeech) {
+      for (const cue of stepPlan.cues) {
+        const cueOffsetSec = cursorSec + (dur * 1000 - cue.triggerRemainingMs) / 1000;
+        events.push({
+          offsetSec: Number(Math.max(cursorSec, cueOffsetSec).toFixed(3)),
+          kind: 'speech',
+          id: cue.id,
+          speechKind: cue.kind,
+          text: cue.text,
+          stepIndex: idx,
+          estimatedDurationMs: cue.estimatedDurationMs
+        });
+      }
+    }
+
+    cursorSec += dur;
+  }
+
+  events.push({
+    offsetSec: Number(cursorSec.toFixed(3)),
+    kind: 'sound',
+    cueType: 'workout-complete',
+    stepIndex: steps.length - 1,
+    gainScale: 1.0,
+    ducked: false
+  });
+
+  events.sort((a, b) => a.offsetSec - b.offsetSec);
+  return {
+    totalDurationSec: Number(cursorSec.toFixed(3)),
+    events
+  };
+}
+
+function resolveSpeechPcmSamples(text, speechPcmMap, sampleRate) {
+  if (!speechPcmMap || typeof speechPcmMap.get !== 'function') return null;
+  const formatted = formatExerciseNameForSpeech(text);
+  if (speechPcmMap.has(formatted)) {
+    return speechPcmMap.get(formatted);
+  }
+  if (formatted.endsWith(' in')) {
+    const baseName = formatted.slice(0, -3).trim();
+    const basePcm = speechPcmMap.get(baseName);
+    const inPcm = speechPcmMap.get('in');
+    if (basePcm && inPcm) {
+      const gap = Math.round(sampleRate * 0.045);
+      const combined = new Int16Array(basePcm.length + gap + inPcm.length);
+      combined.set(basePcm, 0);
+      combined.set(inPcm, basePcm.length + gap);
+      return combined;
+    }
+  }
+  return null;
+}
+
+export function encodeWavBytesToDataUri(wavBytes) {
+  return `data:audio/wav;base64,${encodeUint8ToBase64(wavBytes)}`;
+}
+
+/**
+ * Mix upcoming timer dings AND pre-decoded spoken exercise clips into a single continuous
+ * 16-bit mono PCM WAV byte buffer (`Uint8Array`) for HTML5 `<audio>` Media Playback.
+ * Playing a single `<audio>` track on `playback` guarantees:
+ * 1) Timer audio never pauses when switching to another app on iOS/Android
+ * 2) Both dings and spoken words play even when JS timers are throttled/suspended in background
+ * 3) Both dings and spoken words bypass the phone's hardware Silent switch
+ */
+export function buildMasterTimelineWavBytes({
+  totalDurationSec,
+  events = [],
+  startOffsetSec = 0,
+  maxWindowSec = 3600,
+  speechPcmMap = null,
+  sampleRate = 16000
+} = {}) {
+  const tailPadSec = 0.85;
+  const remainingTotalSec = Math.max(0.5, totalDurationSec + tailPadSec - startOffsetSec);
+  const segmentDurationSec = Math.min(maxWindowSec, remainingTotalSec);
+  const hasMoreSegments = remainingTotalSec > segmentDurationSec + 0.05;
+
+  const numSamples = Math.max(1, Math.ceil(segmentDurationSec * sampleRate));
+  const totalBytes = 44 + numSamples * 2;
+  const buffer = new ArrayBuffer(totalBytes);
+  const view = new DataView(buffer);
+
+  const writeStr = (offset, str) => {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset + i, str.charCodeAt(i));
+    }
+  };
+
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + numSamples * 2, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // Mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, 'data');
+  view.setUint32(40, numSamples * 2, true);
+
+  // Little-endian Int16 view over the PCM payload right after the 44-byte WAV header.
+  // Fill -90 dBFS +-1 LSB anti-sleep dither via O(log N) native memmove (`copyWithin`)
+  // so even a 36-minute full workout mixes in ~2ms inside an iPhone user-gesture tap.
+  const pcm = new Int16Array(buffer, 44, numSamples);
+  if (numSamples >= 1) pcm[0] = 1;
+  if (numSamples >= 2) pcm[1] = -1;
+  for (let filled = 2; filled < numSamples; filled *= 2) {
+    const chunk = Math.min(filled, numSamples - filled);
+    pcm.copyWithin(filled, 0, chunk);
+  }
+
+  const windowEndSec = startOffsetSec + segmentDurationSec;
+  const bakedSpeechKeys = new Set();
+
+  for (const ev of events) {
+    if (ev.offsetSec < startOffsetSec - 0.02 || ev.offsetSec >= windowEndSec) {
+      continue;
+    }
+    const localStartSample = Math.max(0, Math.round((ev.offsetSec - startOffsetSec) * sampleRate));
+    if (localStartSample >= numSamples) continue;
+
+    if (ev.kind === 'sound') {
+      const dingPcm = synthesizeCuePcmInt16(ev.cueType, sampleRate);
+      const scale = Math.max(0.05, Math.min(1.5, Number(ev.gainScale) || 1.0));
+      const copyLen = Math.min(dingPcm.length, numSamples - localStartSample);
+      for (let i = 0; i < copyLen; i++) {
+        const mixed = pcm[localStartSample + i] + Math.round(dingPcm[i] * scale);
+        pcm[localStartSample + i] = mixed > 32767 ? 32767 : mixed < -32768 ? -32768 : mixed;
+      }
+    } else if (ev.kind === 'speech') {
+      const voicePcm = resolveSpeechPcmSamples(ev.text, speechPcmMap, sampleRate);
+      if (voicePcm) {
+        bakedSpeechKeys.add(`${ev.stepIndex}:${ev.id}`);
+        const copyLen = Math.min(voicePcm.length, numSamples - localStartSample);
+        for (let i = 0; i < copyLen; i++) {
+          const mixed = pcm[localStartSample + i] + voicePcm[i];
+          pcm[localStartSample + i] = mixed > 32767 ? 32767 : mixed < -32768 ? -32768 : mixed;
+        }
+      }
+    }
+  }
+
+  return {
+    wavBytes: new Uint8Array(buffer),
+    segmentStartOffsetSec: startOffsetSec,
+    segmentDurationSec,
+    hasMoreSegments,
+    bakedSpeechKeys
+  };
 }

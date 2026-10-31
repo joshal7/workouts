@@ -43,13 +43,12 @@ html, body {
   max-width: 480px;
   margin: 0 auto;
   min-height: 100dvh;
-  padding-top: var(--safe-top);
   padding-bottom: calc(var(--safe-bottom) + 12px);
   display: flex;
   flex-direction: column;
 }
 
-/* Compact Light Top Navigation */
+/* Compact Light Top Navigation (safe-area-inset-top keeps sticky header below iPhone Dynamic Island in Safari Shortcut standalone mode) */
 .top-nav {
   position: sticky;
   top: 0;
@@ -57,7 +56,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 12px;
+  padding: calc(var(--safe-top) + 6px) 12px 6px;
   background: rgba(240, 246, 252, 0.94);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -1260,6 +1259,53 @@ html, body {
   line-height: 1.35;
 }
 
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-toggle-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ios-toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #cbd5e1;
+  padding: 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.ios-toggle-switch.is-on {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.ios-toggle-thumb {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.22);
+  transform: translateX(0);
+  transition: transform 0.18s ease;
+}
+
+.ios-toggle-switch.is-on .ios-toggle-thumb {
+  transform: translateX(18px);
+}
+
 .text-link-btn {
   background: none;
   border: none;
@@ -1896,6 +1942,25 @@ html, body {
   cursor: pointer;
   flex: 1.5;
   box-shadow: 0 3px 10px rgba(37, 99, 235, 0.3);
+}
+
+/* Compact vertical fit for Mobile Chrome on iPhone (CriOS) when URL + bottom toolbars reduce visible viewport height */
+@media (max-height: 740px) {
+  .timer-modal-inner {
+    padding: 8px 12px 12px;
+    gap: 8px;
+  }
+  .timer-execution-view {
+    gap: 8px;
+  }
+  .timer-stage-card {
+    min-height: 224px;
+    padding: 14px 14px;
+  }
+  .timer-ctrl-btn,
+  .timer-play-btn {
+    padding: 10px 10px;
+  }
 }
 
 /* Timer Customizer View */

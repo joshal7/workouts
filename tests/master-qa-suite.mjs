@@ -14,7 +14,10 @@ function startLocalStaticServer(port = 8080) {
     '.js': 'application/javascript',
     '.css': 'text/css',
     '.json': 'application/json',
-    '.svg': 'image/svg+xml'
+    '.webmanifest': 'application/manifest+json',
+    '.svg': 'image/svg+xml',
+    '.m4a': 'audio/mp4',
+    '.wav': 'audio/wav'
   };
   return new Promise((resolve, reject) => {
     const server = http.createServer((req, res) => {
@@ -26,8 +29,31 @@ function startLocalStaticServer(port = 8080) {
         res.end('Not found');
         return;
       }
-      res.writeHead(200, { 'Content-Type': mime[path.extname(fullPath)] || 'text/plain' });
-      res.end(fs.readFileSync(fullPath));
+      const contentType = mime[path.extname(fullPath)] || 'application/octet-stream';
+      const buf = fs.readFileSync(fullPath);
+      const range = req.headers.range;
+      if (range && /^bytes=\d*-\d*$/.test(range)) {
+        const [startStr, endStr] = range.replace('bytes=', '').split('-');
+        const start = startStr ? parseInt(startStr, 10) : 0;
+        const end = endStr ? Math.min(buf.length - 1, parseInt(endStr, 10)) : buf.length - 1;
+        if (start >= 0 && start <= end && end < buf.length) {
+          const slice = buf.subarray(start, end + 1);
+          res.writeHead(206, {
+            'Content-Type': contentType,
+            'Accept-Ranges': 'bytes',
+            'Content-Range': `bytes ${start}-${end}/${buf.length}`,
+            'Content-Length': slice.length
+          });
+          res.end(slice);
+          return;
+        }
+      }
+      res.writeHead(200, {
+        'Content-Type': contentType,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': buf.length
+      });
+      res.end(buf);
     });
     server.on('error', reject);
     server.listen(port, '127.0.0.1', () => resolve(server));
@@ -1130,18 +1156,16 @@ async function runBrowserCDPTests(wsUrl) {
           ts.remainingSeconds = 1;
           ts.remainingMs = 60;
           await new Promise(r => setTimeout(r, 150));
-          const activeDuringBeep = ts.getAudioContextState() === 'running';
-          // Wait ~650ms while timer is STILL running during silent Rest so 'rest-start' chime finishes and auto-suspends
-          await new Promise(r => setTimeout(r, 650));
-          const autoSuspendedWhileSilentRunning =
-            activeDuringBeep && ts.isRunning === true && ts.getAudioContextState() === 'suspended';
+          const activeDuringBeep = ts.getAudioContextState() === 'running' || ts.isMasterAudioPlaying();
+          await new Promise(r => setTimeout(r, 150));
+          const stillRunningCleanly = activeDuringBeep && ts.isRunning === true;
           document.getElementById('timerStartPauseBtn').click(); // Pause
 
           const loggedCueTypes = ts.soundLog.map(s => s.cueType);
           const hasTransitionPulseCue = loggedCueTypes.includes('transition-pulse');
           const hasWorkStartCue = loggedCueTypes.includes('work-start');
           const hasRestStartCue = loggedCueTypes.includes('rest-start');
-          const audioSessionConfigured = String(ts.audioSessionType || '').startsWith('ambient');
+          const audioSessionConfigured = String(ts.audioSessionType || '').startsWith('playback');
           const mediaSessionUntouched = !navigator.mediaSession?.metadata;
 
           document.getElementById('closeTimerModalBtn').click();
@@ -1193,7 +1217,7 @@ async function runBrowserCDPTests(wsUrl) {
             hasRestStartCue,
             audioSessionConfigured,
             mediaSessionUntouched,
-            autoSuspendedWhileSilentRunning,
+            stillRunningCleanly,
             loggedCueTypes
           };
         });
@@ -1243,12 +1267,710 @@ async function runBrowserCDPTests(wsUrl) {
           !timerCheck.hasRestStartCue ||
           !timerCheck.audioSessionConfigured ||
           !timerCheck.mediaSessionUntouched ||
-          !timerCheck.autoSuspendedWhileSilentRunning
+          !timerCheck.stillRunningCleanly
         ) {
           throw new Error('HIIT Timer & Customizer check failed: ' + JSON.stringify(timerCheck));
         }
         console.log(
           `  ✅ PASS: HIIT Timer verified ("Count Down" dark yellow -> "[Exercise]" dark green -> "Rest" dark blue, sliding fill ${timerCheck.runningFillPct.toFixed(1)}% over grey)`
+        );
+
+        console.log('\n--- 11b. Spoken Exercise Names Setting, Dynamic Lead Time & 10s Transition Ducking E2E ---');
+        const speechCheck = await evalInPage(async () => {
+          // 1) Verify Spoken Exercise Names toggle in Settings defaults to ON
+          document.getElementById('settingsBtn').click();
+          const toggleBtn = document.getElementById('spokenExerciseNamesToggle');
+          const defaultToggleChecked = toggleBtn?.getAttribute('aria-checked') === 'true';
+          const defaultToggleIsOn = Boolean(toggleBtn?.classList.contains('is-on'));
+          const zeroTickClassesStillHold = document.querySelectorAll('[class*="tick"]').length === 0;
+          document.querySelector('[data-close-modal="settingsModal"]').click();
+
+          // 2) Verify 10s Transition flow in "6 Excercise Pyramid": Curls (30s) -> 10s Transition -> Bench Press (30s)
+          const typeSelect = document.getElementById('workoutTypeSelect');
+          typeSelect.value = '6 Excercise Pyramid';
+          typeSelect.dispatchEvent(new Event('change'));
+          document.getElementById('generateWorkoutBtn').click();
+          document.getElementById('openWorkoutTimerBtn').click();
+
+          const ts = window.__workoutTimerState;
+          // Step 3 = Set 2 Ex 1 (work, 30s), Step 4 = Set 2 Transition (10s), Step 5 = Set 2 Ex 2 (work, 30s)
+          ts.steps[3].exerciseName = 'Curls';
+          ts.steps[5].exerciseName = 'Bench Press';
+          document.querySelector('[data-action="jump-timer-step"][data-step-index="3"]').click();
+
+          ts.soundLog = [];
+          ts.speechLog = [];
+          ts.remainingSeconds = 4;
+          ts.remainingMs = 3050;
+          document.getElementById('timerStartPauseBtn').click();
+          await new Promise(r => setTimeout(r, 90));
+          ts.remainingSeconds = 3;
+          ts.remainingMs = 2050;
+          await new Promise(r => setTimeout(r, 90));
+          ts.remainingSeconds = 2;
+          ts.remainingMs = 1050;
+          await new Promise(r => setTimeout(r, 90));
+          ts.remainingSeconds = 1;
+          ts.remainingMs = 70;
+          await new Promise(r => setTimeout(r, 130)); // Crosses into Step 4 (10s Transition) -> 1st ding at 10s
+
+          // Let Step 4 reach <= 9350ms to speak "Bench Press", then cross 9000ms (9s left -> ducked ding)
+          ts.remainingSeconds = 10;
+          ts.remainingMs = 9320;
+          await new Promise(r => setTimeout(r, 90));
+          ts.remainingSeconds = 10;
+          ts.remainingMs = 9030;
+          await new Promise(r => setTimeout(r, 90));
+
+          // Middle of 10s Transition (cross 6000ms -> 6s left -> regular volume ding)
+          ts.remainingSeconds = 7;
+          ts.remainingMs = 6030;
+          await new Promise(r => setTimeout(r, 90));
+
+          // Final 3, 2, 1 seconds of 10s Transition (ducked dings + "3", "2", "1") -> start of Bench Press (Step 5)
+          ts.remainingSeconds = 4;
+          ts.remainingMs = 3030;
+          await new Promise(r => setTimeout(r, 90));
+          ts.remainingSeconds = 3;
+          ts.remainingMs = 2030;
+          await new Promise(r => setTimeout(r, 90));
+          ts.remainingSeconds = 2;
+          ts.remainingMs = 1030;
+          await new Promise(r => setTimeout(r, 90));
+          ts.remainingSeconds = 1;
+          ts.remainingMs = 60;
+          await new Promise(r => setTimeout(r, 130));
+          document.getElementById('timerStartPauseBtn').click(); // Pause on Step 5 (Bench Press)
+
+          const curlsSpeechCount = ts.speechLog.filter(s => s.stepIndex === 3).length;
+          const transSpeechTexts = ts.speechLog.filter(s => s.stepIndex === 4).map(s => s.text);
+          const firstTransDing = ts.soundLog.find(
+            s => s.stepIndex === 4 && s.cueType === 'transition-pulse' && s.remainingSeconds === 10
+          );
+          const nameDuckedDing = ts.soundLog.find(
+            s => s.stepIndex === 4 && s.cueType === 'transition-pulse' && s.remainingSeconds === 9
+          );
+          const midRegularDing = ts.soundLog.find(
+            s => s.stepIndex === 4 && s.cueType === 'transition-pulse' && s.remainingSeconds === 6
+          );
+          const count3DuckedDing = ts.soundLog.find(
+            s => s.stepIndex === 4 && s.cueType === 'transition-pulse' && s.remainingSeconds === 3
+          );
+          const count2DuckedDing = ts.soundLog.find(
+            s => s.stepIndex === 4 && s.cueType === 'transition-pulse' && s.remainingSeconds === 2
+          );
+          const count1DuckedDing = ts.soundLog.find(
+            s => s.stepIndex === 4 && s.cueType === 'transition-pulse' && s.remainingSeconds === 1
+          );
+          const benchWorkStartDing = ts.soundLog.find(
+            s => s.stepIndex === 5 && s.cueType === 'work-start'
+          );
+          document.getElementById('closeTimerModalBtn').click();
+
+          // 3) Verify Standard Rest -> Work lead ("[Exercise] in 3, 2, 1" -> [Ding]) in Timed Duos (40/20)
+          typeSelect.value = 'Timed Duos (40/20)';
+          typeSelect.dispatchEvent(new Event('change'));
+          document.getElementById('generateWorkoutBtn').click();
+          document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
+          // Step 2 = 20s blue Rest -> Step 3 = Work
+          ts.steps[3].exerciseName = 'Bench Press';
+          document.querySelector('[data-action="jump-timer-step"][data-step-index="2"]').click();
+          ts.soundLog = [];
+          ts.speechLog = [];
+          ts.remainingSeconds = 4;
+          ts.remainingMs = 3950;
+          document.getElementById('timerStartPauseBtn').click();
+          await new Promise(r => setTimeout(r, 150)); // Crosses ~3892ms lead time -> "Bench Press in"
+          ts.remainingSeconds = 4;
+          ts.remainingMs = 3030;
+          await new Promise(r => setTimeout(r, 90));
+          ts.remainingSeconds = 3;
+          ts.remainingMs = 2030;
+          await new Promise(r => setTimeout(r, 90));
+          ts.remainingSeconds = 2;
+          ts.remainingMs = 1030;
+          await new Promise(r => setTimeout(r, 90));
+          ts.remainingSeconds = 1;
+          ts.remainingMs = 60;
+          await new Promise(r => setTimeout(r, 130));
+          document.getElementById('timerStartPauseBtn').click(); // Pause on Step 3
+          const duosRestSpeechTexts = ts.speechLog.filter(s => s.stepIndex === 2).map(s => s.text);
+          const duosWorkStartDing = ts.soundLog.find(
+            s => s.stepIndex === 3 && s.cueType === 'work-start'
+          );
+          document.getElementById('closeTimerModalBtn').click();
+
+          // 4) Toggle Spoken Exercise Names OFF in Settings -> verify zero speech & un-ducked pulses, then restore ON
+          document.getElementById('settingsBtn').click();
+          toggleBtn.click();
+          const offChecked = toggleBtn.getAttribute('aria-checked') === 'false';
+          const offClassCleared = !toggleBtn.classList.contains('is-on');
+          document.querySelector('[data-close-modal="settingsModal"]').click();
+
+          document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
+          document.querySelector('[data-action="jump-timer-step"][data-step-index="0"]').click();
+          ts.soundLog = [];
+          ts.speechLog = [];
+          ts.remainingSeconds = 4;
+          ts.remainingMs = 3030;
+          document.getElementById('timerStartPauseBtn').click();
+          await new Promise(r => setTimeout(r, 110));
+          document.getElementById('timerStartPauseBtn').click();
+          const speechWhenOffCount = ts.speechLog.length;
+          const offPulse3s = ts.soundLog.find(
+            s => s.stepIndex === 0 && s.cueType === 'transition-pulse' && s.remainingSeconds === 3
+          );
+          document.getElementById('closeTimerModalBtn').click();
+
+          // Restore toggle ON for subsequent tests
+          document.getElementById('settingsBtn').click();
+          toggleBtn.click();
+          const restoredOn =
+            toggleBtn.getAttribute('aria-checked') === 'true' && toggleBtn.classList.contains('is-on');
+          document.querySelector('[data-close-modal="settingsModal"]').click();
+
+          return {
+            defaultToggleChecked,
+            defaultToggleIsOn,
+            zeroTickClassesStillHold,
+            curlsSpeechCount,
+            transSpeechTexts,
+            firstTransDing,
+            nameDuckedDing,
+            midRegularDing,
+            count3DuckedDing,
+            count2DuckedDing,
+            count1DuckedDing,
+            benchWorkStartDing,
+            duosRestSpeechTexts,
+            duosWorkStartDing,
+            offChecked,
+            offClassCleared,
+            speechWhenOffCount,
+            offPulse3s,
+            restoredOn
+          };
+        });
+        if (
+          !speechCheck.defaultToggleChecked ||
+          !speechCheck.defaultToggleIsOn ||
+          !speechCheck.zeroTickClassesStillHold ||
+          speechCheck.curlsSpeechCount !== 0 ||
+          JSON.stringify(speechCheck.transSpeechTexts) !== JSON.stringify(['Bench Press', '3', '2', '1']) ||
+          speechCheck.firstTransDing?.gainScale !== 1 ||
+          speechCheck.firstTransDing?.ducked !== false ||
+          !speechCheck.nameDuckedDing?.ducked ||
+          !(speechCheck.nameDuckedDing?.gainScale < 0.3) ||
+          speechCheck.midRegularDing?.gainScale !== 1 ||
+          speechCheck.midRegularDing?.ducked !== false ||
+          !speechCheck.count3DuckedDing?.ducked ||
+          !speechCheck.count2DuckedDing?.ducked ||
+          !speechCheck.count1DuckedDing?.ducked ||
+          speechCheck.benchWorkStartDing?.gainScale !== 1 ||
+          speechCheck.benchWorkStartDing?.ducked !== false ||
+          JSON.stringify(speechCheck.duosRestSpeechTexts) !== JSON.stringify(['Bench Press in', '3', '2', '1']) ||
+          speechCheck.duosWorkStartDing?.gainScale !== 1 ||
+          !speechCheck.offChecked ||
+          !speechCheck.offClassCleared ||
+          speechCheck.speechWhenOffCount !== 0 ||
+          speechCheck.offPulse3s?.gainScale !== 1 ||
+          speechCheck.offPulse3s?.ducked !== false ||
+          !speechCheck.restoredOn
+        ) {
+          throw new Error('Spoken Exercise Names E2E check failed: ' + JSON.stringify(speechCheck));
+        }
+        console.log(
+          '  ✅ PASS: Spoken Exercise Names verified (Settings ON default, Curls->10s Transition->Bench Press ducking, Duos "[Exercise] in 3, 2, 1", and Off toggle)'
+        );
+
+        console.log('\n--- 11c. Background App-Switch Continuity & Silent-Mode Playback (Dings + Spoken Words) E2E ---');
+        const bgAndSilentCheck = await evalInPage(async () => {
+          const ts = window.__workoutTimerState;
+          // Wait briefly if speechPack is still finishing OfflineAudioContext decode
+          for (let attempt = 0; attempt < 25 && !ts.speechPackLoaded; attempt++) {
+            await new Promise(r => setTimeout(r, 80));
+          }
+
+          document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
+          document.querySelector('[data-action="jump-timer-step"][data-step-index="0"]').click();
+
+          // Set Step 0 countdown to 2 seconds BEFORE pressing Start so real wall-clock playback (zero synthetic jumps)
+          // crosses Step 0 -> Step 1 while the app is backgrounded!
+          ts.steps[0].duration = 2;
+          ts.remainingSeconds = 2;
+          ts.remainingMs = 2000;
+          ts.soundLog = [];
+          ts.speechLog = [];
+
+          // Start timer from user gesture -> unlocks Master <audio> WAV on 'playback' channel (Silent-switch bypass)
+          document.getElementById('timerStartPauseBtn').click();
+          await new Promise(r => setTimeout(r, 120));
+
+          const masterStateOnStart = ts.getMasterAudioState();
+          const playbackSessionActive = String(ts.audioSessionType || '').startsWith('playback');
+
+          // Simulate switching to another app on the phone (document hidden + pagehide + window blur)
+          const origHiddenDesc = Object.getOwnPropertyDescriptor( Document.prototype, 'hidden' );
+          const origVisDesc = Object.getOwnPropertyDescriptor( Document.prototype, 'visibilityState' );
+          Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+          Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+          document.dispatchEvent(new Event('visibilitychange'));
+          window.dispatchEvent(new Event('pagehide'));
+          window.dispatchEvent(new Event('blur'));
+
+          // Stay in the "other app" for 2.15 seconds while Step 0 finishes ("2", "1" + ducked dings)
+          // and transitions into Step 1 (Exercise 'work-start' ding)!
+          const stillRunningImmediatelyOnSwitch = ts.isRunning === true;
+          const audioStillPlayingInOtherApp = ts.isMasterAudioPlaying() === true;
+          await new Promise(r => setTimeout(r, 2150));
+
+          const stepWhileStillInOtherApp = ts.currentStepIndex;
+          const runningAfterIntervalInOtherApp = ts.isRunning === true;
+          const masterStillPlayingAfterTransition = ts.isMasterAudioPlaying() === true;
+
+          // Switch back to the Workout app
+          if (origHiddenDesc) Object.defineProperty(document, 'hidden', origHiddenDesc);
+          else delete document.hidden;
+          if (origVisDesc) Object.defineProperty(document, 'visibilityState', origVisDesc);
+          else delete document.visibilityState;
+          document.dispatchEvent(new Event('visibilitychange'));
+          window.dispatchEvent(new Event('pageshow'));
+          window.dispatchEvent(new Event('focus'));
+
+          await new Promise(r => setTimeout(r, 80));
+          const clockAfterReturn = document.getElementById('timerClockDisplay').innerText.trim();
+          const speechFiredInBackground = ts.speechLog.map(s => s.text);
+          const workDingFiredInBackground = ts.soundLog.some(
+            s => s.stepIndex === 1 && s.cueType === 'work-start'
+          );
+
+          // Pause timer and verify Master <audio> releases cleanly when stopped
+          document.getElementById('timerStartPauseBtn').click();
+          const stoppedCleanlyOnPause = ts.isRunning === false && ts.isMasterAudioPlaying() === false;
+          document.getElementById('resetStockTimerBtn').click();
+          document.getElementById('closeTimerModalBtn').click();
+
+          return {
+            speechPackLoaded: ts.speechPackLoaded,
+            speechPackClipCount: ts.speechPackClipCount,
+            playbackSessionActive,
+            masterStateOnStart,
+            stillRunningImmediatelyOnSwitch,
+            audioStillPlayingInOtherApp,
+            stepWhileStillInOtherApp,
+            runningAfterIntervalInOtherApp,
+            masterStillPlayingAfterTransition,
+            clockAfterReturn,
+            speechFiredInBackground,
+            workDingFiredInBackground,
+            stoppedCleanlyOnPause
+          };
+        });
+        if (
+          !bgAndSilentCheck.speechPackLoaded ||
+          bgAndSilentCheck.speechPackClipCount < 190 ||
+          !bgAndSilentCheck.playbackSessionActive ||
+          !bgAndSilentCheck.masterStateOnStart.playing ||
+          !bgAndSilentCheck.masterStateOnStart.inSync ||
+          bgAndSilentCheck.masterStateOnStart.muted !== false ||
+          bgAndSilentCheck.masterStateOnStart.volume !== 1 ||
+          bgAndSilentCheck.masterStateOnStart.bakedSpeechCount < 2 ||
+          !bgAndSilentCheck.stillRunningImmediatelyOnSwitch ||
+          !bgAndSilentCheck.audioStillPlayingInOtherApp ||
+          bgAndSilentCheck.stepWhileStillInOtherApp !== 1 ||
+          !bgAndSilentCheck.runningAfterIntervalInOtherApp ||
+          !bgAndSilentCheck.masterStillPlayingAfterTransition ||
+          !bgAndSilentCheck.speechFiredInBackground.includes('1') ||
+          !bgAndSilentCheck.workDingFiredInBackground ||
+          !bgAndSilentCheck.stoppedCleanlyOnPause
+        ) {
+          throw new Error(
+            'Background App-Switch & Silent-Mode Playback check failed: ' + JSON.stringify(bgAndSilentCheck)
+          );
+        }
+        console.log(
+          `  ✅ PASS: App-switch non-pause & Silent-mode Media Playback verified (${bgAndSilentCheck.speechPackClipCount} voice clips decoded, Master <audio> active across hidden transition)`
+        );
+
+        console.log('\n--- 11d. Dual iPhone Profile E2E: (A) Safari Home Screen Shortcut Standalone & (B) iPhone Mobile Chrome (CriOS) ---');
+        await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+
+        const trustedTouchTap = async selector => {
+          const pt = await evalInPage(
+            new Function(`
+              const el = document.querySelector(${JSON.stringify(selector)});
+              const r = el.getBoundingClientRect();
+              return {
+                x: Math.round(r.left + r.width / 2),
+                y: Math.round(r.top + r.height / 2),
+                bottom: r.bottom,
+                top: r.top,
+                winH: window.innerHeight
+              };
+            `)
+          );
+          await send('Input.dispatchTouchEvent', {
+            type: 'touchStart',
+            touchPoints: [{ x: pt.x, y: pt.y, radiusX: 5, radiusY: 5, force: 1, id: 1 }]
+          });
+          await send('Input.dispatchTouchEvent', {
+            type: 'touchEnd',
+            touchPoints: []
+          });
+          return pt;
+        };
+
+        // =========================================================================
+        // PROFILE A: iPhone Safari Home Screen Shortcut ("Add to Home Screen" Standalone PWA)
+        // =========================================================================
+        await send('Emulation.setUserAgentOverride', {
+          userAgent:
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1',
+          platform: 'iPhone'
+        });
+        await send('Emulation.setEmulatedMedia', {
+          features: [{ name: 'display-mode', value: 'standalone' }]
+        });
+        await send('Emulation.setDeviceMetricsOverride', {
+          width: 390,
+          height: 844,
+          deviceScaleFactor: 3,
+          mobile: true
+        });
+
+        const safariShortcutPrep = await evalInPage(async () => {
+          // Simulate iPhone Dynamic Island (59px) + Home Indicator (34px) safe-area insets & Safari iOS audioSession + standalone
+          document.documentElement.style.setProperty('--safe-top', '59px');
+          document.documentElement.style.setProperty('--safe-bottom', '34px');
+
+          let mockSessionType = 'auto';
+          const sessionHistory = [];
+          Object.defineProperty(navigator, 'standalone', { configurable: true, get: () => true });
+          Object.defineProperty(navigator, 'audioSession', {
+            configurable: true,
+            value: {
+              get type() {
+                return mockSessionType;
+              },
+              set type(val) {
+                mockSessionType = String(val);
+                sessionHistory.push(mockSessionType);
+              }
+            }
+          });
+          window.__iosAudioSessionHistory = sessionHistory;
+
+          // Verify PWA standalone meta tags, manifest.json display:standalone & Service Worker offline speech-pack cache
+          const appleCapable =
+            document.querySelector('meta[name="apple-mobile-web-app-capable"]')?.getAttribute('content') === 'yes';
+          const viewportContent = document.querySelector('meta[name="viewport"]')?.getAttribute('content') || '';
+          const viewportFitCover = viewportContent.includes('viewport-fit=cover');
+          const manifestJson = await fetch('./manifest.json').then(r => r.json());
+          const manifestStandalone = manifestJson?.display === 'standalone';
+
+          // Scroll down 100px and verify sticky .top-nav stays clear of 59px Dynamic Island
+          window.scrollTo(0, 100);
+          const topNavRect = document.querySelector('.top-nav').getBoundingClientRect();
+          const settingsBtnRect = document.getElementById('settingsBtn').getBoundingClientRect();
+          window.scrollTo(0, 0);
+
+          let swCachedSpeechPack = false;
+          if ('caches' in window) {
+            const keys = await caches.keys();
+            for (const k of keys) {
+              const c = await caches.open(k);
+              const reqs = await c.keys();
+              const urls = reqs.map(r => r.url);
+              if (
+                urls.some(u => u.includes('/data/speech-pack.m4a')) &&
+                urls.some(u => u.includes('/data/speech-pack.json'))
+              ) {
+                swCachedSpeechPack = true;
+              }
+            }
+          }
+
+          // Open Full Workout Timer (49 steps = 24+ min) to verify full-workout single-segment WAV & trusted touch Start
+          const typeSelect = document.getElementById('workoutTypeSelect');
+          typeSelect.value = 'Timed Duos (40/20)';
+          typeSelect.dispatchEvent(new Event('change'));
+          document.getElementById('generateWorkoutBtn').click();
+          document.getElementById('openWorkoutTimerBtn').click();
+
+          const ts = window.__workoutTimerState;
+          ts.steps[0].duration = 2;
+          ts.remainingSeconds = 2;
+          ts.remainingMs = 2000;
+          ts.soundLog = [];
+          ts.speechLog = [];
+
+          let trustedClickSeen = false;
+          document
+            .getElementById('timerStartPauseBtn')
+            .addEventListener('click', e => {
+              trustedClickSeen = e.isTrusted;
+            }, { once: true });
+          window.__lastSafariTrustedClick = () => trustedClickSeen;
+
+          const timerTopBarRect = document.querySelector('.timer-top-bar').getBoundingClientRect();
+          const noOverflow = document.documentElement.scrollWidth <= window.innerWidth;
+
+          return {
+            appleCapable,
+            viewportFitCover,
+            manifestStandalone,
+            navigatorStandalone: navigator.standalone === true,
+            settingsBtnBelowDynamicIsland: settingsBtnRect.top >= 59 && topNavRect.height >= 85,
+            timerHeaderBelowDynamicIsland: timerTopBarRect.top >= 59,
+            swCachedSpeechPack,
+            noOverflow
+          };
+        });
+
+        // Tap ▶ Start with real trusted touch gesture (`touchStart` + `touchEnd`)
+        await trustedTouchTap('#timerStartPauseBtn');
+        await new Promise(r => setTimeout(r, 120));
+
+        const safariShortcutResult = await evalInPage(async () => {
+          const ts = window.__workoutTimerState;
+          const trustedClick = window.__lastSafariTrustedClick();
+          const masterOnStart = ts.getMasterAudioState();
+          const audioSessionOnStart = navigator.audioSession?.type;
+          const webAudioNotContending = ts.getAudioContextState() !== 'running';
+
+          // Switch away from Safari Shortcut app to another iPhone app across Step 0 -> Step 1 transition
+          const origHidden = Object.getOwnPropertyDescriptor(Document.prototype, 'hidden');
+          const origVis = Object.getOwnPropertyDescriptor(Document.prototype, 'visibilityState');
+          Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+          Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+          document.dispatchEvent(new Event('visibilitychange'));
+          window.dispatchEvent(new Event('pagehide'));
+          window.dispatchEvent(new Event('blur'));
+
+          await new Promise(r => setTimeout(r, 2100));
+          const stepInBg = ts.currentStepIndex;
+          const playingInBg = ts.isMasterAudioPlaying() && ts.isRunning;
+
+          if (origHidden) Object.defineProperty(document, 'hidden', origHidden);
+          else delete document.hidden;
+          if (origVis) Object.defineProperty(document, 'visibilityState', origVis);
+          else delete document.visibilityState;
+          document.dispatchEvent(new Event('visibilitychange'));
+          window.dispatchEvent(new Event('pageshow'));
+          window.dispatchEvent(new Event('focus'));
+
+          return {
+            trustedClick,
+            masterOnStart,
+            audioSessionOnStart,
+            webAudioNotContending,
+            stepInBg,
+            playingInBg,
+            speechInBg: ts.speechLog.map(s => s.text),
+            workDingInBg: ts.soundLog.some(s => s.stepIndex === 1 && s.cueType === 'work-start')
+          };
+        });
+
+        // Trusted touch tap to Pause and verify audioSession releases back to 'auto'
+        await trustedTouchTap('#timerStartPauseBtn');
+        const safariReleasedToAuto = await evalInPage(() => {
+          const released = navigator.audioSession?.type === 'auto';
+          document.getElementById('resetStockTimerBtn').click();
+          document.getElementById('closeTimerModalBtn').click();
+          return released;
+        });
+
+        if (
+          !safariShortcutPrep.appleCapable ||
+          !safariShortcutPrep.viewportFitCover ||
+          !safariShortcutPrep.manifestStandalone ||
+          !safariShortcutPrep.navigatorStandalone ||
+          !safariShortcutPrep.settingsBtnBelowDynamicIsland ||
+          !safariShortcutPrep.timerHeaderBelowDynamicIsland ||
+          !safariShortcutPrep.swCachedSpeechPack ||
+          !safariShortcutPrep.noOverflow ||
+          !safariShortcutResult.trustedClick ||
+          safariShortcutResult.audioSessionOnStart !== 'playback' ||
+          !safariShortcutResult.webAudioNotContending ||
+          !safariShortcutResult.masterOnStart.playing ||
+          !safariShortcutResult.masterOnStart.inDom ||
+          !safariShortcutResult.masterOnStart.playsInline ||
+          safariShortcutResult.masterOnStart.hasMoreSegments !== false ||
+          safariShortcutResult.masterOnStart.lastBuildLatencyMs > 180 ||
+          safariShortcutResult.stepInBg !== 1 ||
+          !safariShortcutResult.playingInBg ||
+          !safariShortcutResult.speechInBg.includes('1') ||
+          !safariShortcutResult.workDingInBg ||
+          !safariReleasedToAuto
+        ) {
+          throw new Error(
+            'iPhone Safari Home Screen Shortcut E2E check failed: ' +
+              JSON.stringify({ safariShortcutPrep, safariShortcutResult, safariReleasedToAuto })
+          );
+        }
+        console.log(
+          `  ✅ PASS: [Profile A — iPhone Safari Home Screen Shortcut] Standalone safe-area, offline SW voice cache, trusted touch Start (${safariShortcutResult.masterOnStart.lastBuildLatencyMs}ms single-WAV), Silent-mode 'playback' & background transition verified`
+        );
+
+        // =========================================================================
+        // PROFILE B: iPhone Mobile Chrome (`CriOS` WKWebView on workouts.joshal.com)
+        // =========================================================================
+        await send('Emulation.setUserAgentOverride', {
+          userAgent:
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/131.0.6778.73 Mobile/15E148 Safari/604.1',
+          platform: 'iPhone'
+        });
+        await send('Emulation.setEmulatedMedia', {
+          features: [{ name: 'display-mode', value: 'browser' }]
+        });
+        // Mobile Chrome on iPhone has top Omnibox + bottom navigation bar -> ~690px visible viewport height
+        await send('Emulation.setDeviceMetricsOverride', {
+          width: 390,
+          height: 690,
+          deviceScaleFactor: 3,
+          mobile: true
+        });
+
+        const chromeIosPrep = await evalInPage(() => {
+          document.documentElement.style.setProperty('--safe-top', '0px');
+          document.documentElement.style.setProperty('--safe-bottom', '0px');
+          Object.defineProperty(navigator, 'standalone', { configurable: true, get: () => false });
+          // Authentic CriOS WKWebView: navigator.audioSession is undefined
+          Object.defineProperty(navigator, 'audioSession', { configurable: true, value: undefined });
+
+          const isCriOSUa = /CriOS\//.test(navigator.userAgent);
+          document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
+          document.querySelector('[data-action="jump-timer-step"][data-step-index="0"]').click();
+
+          const ts = window.__workoutTimerState;
+          ts.steps[0].duration = 2;
+          ts.remainingSeconds = 2;
+          ts.remainingMs = 2000;
+          ts.soundLog = [];
+          ts.speechLog = [];
+
+          let trustedClickSeen = false;
+          document
+            .getElementById('timerStartPauseBtn')
+            .addEventListener('click', e => {
+              trustedClickSeen = e.isTrusted;
+            }, { once: true });
+          window.__lastCriOSTrustedClick = () => trustedClickSeen;
+
+          const playBtnRect = document.getElementById('timerStartPauseBtn').getBoundingClientRect();
+          const noHorizontalOverflow = document.documentElement.scrollWidth <= window.innerWidth;
+          // Ensure ▶ Start button is immediately tappable above Chrome's bottom toolbar without scrolling
+          const controlsVisibleWithoutScroll = playBtnRect.bottom <= window.innerHeight && playBtnRect.top >= 0;
+
+          return {
+            isCriOSUa,
+            noHorizontalOverflow,
+            controlsVisibleWithoutScroll,
+            playBtnBottom: Math.round(playBtnRect.bottom),
+            winHeight: window.innerHeight
+          };
+        });
+
+        // Trusted touch tap on ▶ Start inside 390x690 CriOS viewport
+        await trustedTouchTap('#timerStartPauseBtn');
+        await new Promise(r => setTimeout(r, 120));
+
+        const chromeIosResult = await evalInPage(async () => {
+          const ts = window.__workoutTimerState;
+          const trustedClick = window.__lastCriOSTrustedClick();
+          const masterBlobState = ts.getMasterAudioState();
+          const audioSessionFallback = ts.audioSessionType;
+          const webAudioNotContending = ts.getAudioContextState() !== 'running';
+
+          // Switch from Mobile Chrome to another iPhone app across Step 0 -> Step 1 transition
+          const origHidden = Object.getOwnPropertyDescriptor(Document.prototype, 'hidden');
+          const origVis = Object.getOwnPropertyDescriptor(Document.prototype, 'visibilityState');
+          Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+          Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+          document.dispatchEvent(new Event('visibilitychange'));
+          window.dispatchEvent(new Event('pagehide'));
+          window.dispatchEvent(new Event('blur'));
+
+          await new Promise(r => setTimeout(r, 2100));
+          const stepInBg = ts.currentStepIndex;
+          const playingInBg = ts.isMasterAudioPlaying() && ts.isRunning;
+
+          if (origHidden) Object.defineProperty(document, 'hidden', origHidden);
+          else delete document.hidden;
+          if (origVis) Object.defineProperty(document, 'visibilityState', origVis);
+          else delete document.visibilityState;
+          document.dispatchEvent(new Event('visibilitychange'));
+          window.dispatchEvent(new Event('pageshow'));
+          window.dispatchEvent(new Event('focus'));
+
+          const speechInBg = ts.speechLog.map(s => s.text);
+          const workDingInBg = ts.soundLog.some(s => s.stepIndex === 1 && s.cueType === 'work-start');
+
+          // Also verify WKWebView data:audio/wav;base64 fallback resilience in CriOS
+          document.getElementById('timerStartPauseBtn').click(); // Pause
+          ts.setPreferDataUriMode(true);
+          document.getElementById('timerStartPauseBtn').click(); // Resume in data-uri mode
+          await new Promise(r => setTimeout(r, 100));
+          const masterDataUriState = ts.getMasterAudioState();
+          document.getElementById('timerStartPauseBtn').click(); // Pause
+          ts.setPreferDataUriMode(false);
+
+          document.getElementById('resetStockTimerBtn').click();
+          document.getElementById('closeTimerModalBtn').click();
+
+          return {
+            trustedClick,
+            audioSessionFallback,
+            webAudioNotContending,
+            masterBlobState,
+            stepInBg,
+            playingInBg,
+            speechInBg,
+            workDingInBg,
+            masterDataUriState
+          };
+        });
+
+        // Restore baseline 390x844 mobile metrics for subsequent tests & screenshots
+        await send('Emulation.setTouchEmulationEnabled', { enabled: false });
+        await send('Emulation.setUserAgentOverride', { userAgent: '' });
+        await send('Emulation.setDeviceMetricsOverride', {
+          width: 390,
+          height: 844,
+          deviceScaleFactor: 3,
+          mobile: true
+        });
+        await evalInPage(() => {
+          document.documentElement.style.removeProperty('--safe-top');
+          document.documentElement.style.removeProperty('--safe-bottom');
+          delete navigator.standalone;
+          delete navigator.audioSession;
+        });
+
+        if (
+          !chromeIosPrep.isCriOSUa ||
+          !chromeIosPrep.noHorizontalOverflow ||
+          !chromeIosPrep.controlsVisibleWithoutScroll ||
+          !chromeIosResult.trustedClick ||
+          chromeIosResult.audioSessionFallback !== 'playback-html5-media' ||
+          !chromeIosResult.webAudioNotContending ||
+          !chromeIosResult.masterBlobState.playing ||
+          !chromeIosResult.masterBlobState.inDom ||
+          !chromeIosResult.masterBlobState.playsInline ||
+          chromeIosResult.stepInBg !== 1 ||
+          !chromeIosResult.playingInBg ||
+          !chromeIosResult.speechInBg.includes('1') ||
+          !chromeIosResult.workDingInBg ||
+          !chromeIosResult.masterDataUriState.playing ||
+          chromeIosResult.masterDataUriState.sourceMode !== 'data-uri'
+        ) {
+          throw new Error(
+            'iPhone Mobile Chrome (CriOS) E2E check failed: ' +
+              JSON.stringify({ chromeIosPrep, chromeIosResult })
+          );
+        }
+        console.log(
+          `  ✅ PASS: [Profile B — iPhone Mobile Chrome (CriOS)] 390x690 toolbar fit (Start btn y=${chromeIosPrep.playBtnBottom}px <= 690px), WKWebView HTML5 <audio playsinline>, data-URI fallback & background transition verified`
         );
 
         console.log('\n--- 12. Drag-and-Drop Rounds, Intra-Round Reorder & Cross-Round Exercise Swap ---');

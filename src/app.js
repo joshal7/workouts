@@ -1,4 +1,4 @@
-import { DataService } from './services/dataService.js?v=23';
+import { DataService } from './services/dataService.js?v=26';
 import {
   FOCUS_SNAP_STEPS,
   DEFAULT_FOCUS_WEIGHTS,
@@ -27,12 +27,12 @@ import {
   getRandomEntry,
   getPrimaryMuscle,
   getPrimaryBodyArea
-} from './engine/workoutEngine.js?v=23';
+} from './engine/workoutEngine.js?v=26';
 import {
   analyzeMuscleLoad,
   applyBalancedRecommendation,
   SPECIFIC_MUSCLES
-} from './engine/muscleLoadAnalyzer.js?v=23';
+} from './engine/muscleLoadAnalyzer.js?v=26';
 import {
   TIMER_COLORS,
   CUSTOM_TIMER_PRESETS,
@@ -46,8 +46,16 @@ import {
   buildCalfStretchTimerSequence,
   finalizeWithCountdown,
   getStepStartSoundType,
-  shouldPlaySteadyTransitionPulse
-} from './engine/timerEngine.js?v=23';
+  shouldPlaySteadyTransitionPulse,
+  formatExerciseNameForSpeech,
+  estimateSpeechDurationMs,
+  getTransitionPulseGainScale,
+  buildStepSpeechPlan,
+  isRemainingMsInDuckWindow,
+  buildRemainingAudioEvents,
+  buildMasterTimelineWavBytes,
+  encodeWavBytesToDataUri
+} from './engine/timerEngine.js?v=26';
 
 const dataService = new DataService();
 
@@ -104,9 +112,42 @@ const timerState = {
   intervalId: null,
   customizerOpen: false,
   soundLog: [],
+  speechLog: [],
+  speechRateCalibration: 1.0,
+  activeStepSpeech: null,
+  consecutiveDuckedPulses: 0,
+  speechDuckUntilWallMs: 0,
   wakeLockActive: false,
   audioSessionType: null,
-  getAudioContextState: () => (sharedAudioCtx ? sharedAudioCtx.state : 'uncreated')
+  speechPackLoaded: false,
+  speechPackClipCount: 0,
+  getAudioContextState: () => (sharedAudioCtx ? sharedAudioCtx.state : 'uncreated'),
+  isMasterAudioPlaying: () =>
+    Boolean(masterTimelineAudio && !masterTimelineAudio.paused && !masterTimelineAudio.ended),
+  getMasterAudioState: () => ({
+    playing: Boolean(masterTimelineAudio && !masterTimelineAudio.paused && !masterTimelineAudio.ended),
+    inSync: Boolean(masterAudioSessionState.inSync),
+    inDom: Boolean(masterTimelineAudio && document.body?.contains(masterTimelineAudio)),
+    playsInline: Boolean(
+      masterTimelineAudio &&
+        masterTimelineAudio.playsInline &&
+        masterTimelineAudio.hasAttribute('playsinline') &&
+        masterTimelineAudio.hasAttribute('webkit-playsinline')
+    ),
+    sourceMode: masterAudioSessionState.preferDataUri ? 'data-uri' : 'blob',
+    hasMoreSegments: Boolean(masterAudioSessionState.hasMoreSegments),
+    lastBuildLatencyMs: masterAudioSessionState.lastBuildLatencyMs,
+    muted: masterTimelineAudio ? masterTimelineAudio.muted : false,
+    volume: masterTimelineAudio ? masterTimelineAudio.volume : 0,
+    currentTime: masterTimelineAudio ? masterTimelineAudio.currentTime : 0,
+    segmentDurationSec: masterAudioSessionState.segmentDurationSec,
+    bakedSpeechCount: masterAudioSessionState.bakedSpeechKeys
+      ? masterAudioSessionState.bakedSpeechKeys.size
+      : 0
+  }),
+  setPreferDataUriMode: val => {
+    masterAudioSessionState.preferDataUri = Boolean(val);
+  }
 };
 
 let focusState = {
@@ -171,17 +212,14 @@ const els = {
 };
 
 async function bootstrap() {
-  // Pre-configure OS Ambient audio mixing policy at startup so WebKit flushes AVAudioSessionCategoryAmbient
-  // long before any timer AudioContext is created or resumed (prevents synchronous click race condition).
-  configureAmbientAudioSession();
-
-  await dataService.init('./data/sheet-data.json?v=23', './data/enrichments.json?v=23');
+  await dataService.init('./data/sheet-data.json?v=26', './data/enrichments.json?v=26');
+  loadAndDecodeSpeechPack();
   populateWorkoutTypeSelect();
   populateCustomTimerPresetsSelect();
   syncUIFromActiveProfile();
   bindEvents();
 
-  // Register offline Service Worker if supported and auto-reload when an existing SW updates
+  // Register offline Service Worker if supported (Safari & iOS Home Screen Shortcut; guarded for CriOS WKWebView)
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     const hadController = !!navigator.serviceWorker.controller;
     let refreshing = false;
@@ -190,7 +228,7 @@ async function bootstrap() {
       refreshing = true;
       window.location.reload();
     });
-    navigator.serviceWorker.register('./sw.js?v=23', { updateViaCache: 'none' }).then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=26', { updateViaCache: 'none' }).then(reg => {
       reg.update().catch(() => {});
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
@@ -733,13 +771,16 @@ function renderMuscleFilterPills(containerEl, activeValue, onSelect) {
 // ============================================================================
 // HIIT & Custom Timer Controller
 // ============================================================================
-function stopTimerLoop() {
+function stopTimerLoop({ allowCompletionTail = false } = {}) {
   if (timerState.intervalId) {
     clearInterval(timerState.intervalId);
     timerState.intervalId = null;
   }
   timerState.isRunning = false;
-  stopTimerSessionKeepAlive();
+  lastTimerLoopTickWallMs = 0;
+  lastExpectedRemainingMs = null;
+  cancelTimerSpeech();
+  stopTimerSessionKeepAlive({ allowCompletionTail });
 }
 
 function resetTimerForWorkoutType(workoutTypeKey) {
@@ -805,6 +846,9 @@ function rebuildTimerSteps(resetCursor = true) {
     const initDur = timerState.steps[0]?.duration || timerState.countdownDuration || 10;
     timerState.remainingSeconds = initDur;
     timerState.remainingMs = initDur * 1000;
+    resetActiveStepSpeechState();
+  } else if (!timerState.isRunning) {
+    resetActiveStepSpeechState();
   }
 }
 
@@ -905,7 +949,7 @@ function openTimerModal({
   }
 
   timerState.customizerOpen = !!openCustomizer;
-  configureAmbientAudioSession();
+  configurePlaybackAudioSession();
   renderTimerModal();
   els.timerModal.hidden = false;
 }
@@ -923,7 +967,7 @@ function openCalfStretchTimer() {
   timerState.customStepsOverride = null;
   timerState.customizerOpen = false;
   rebuildTimerSteps(true);
-  configureAmbientAudioSession();
+  configurePlaybackAudioSession();
   renderTimerModal();
   els.timerModal.hidden = false;
 }
@@ -1227,28 +1271,381 @@ function renderTimerCustomizerView(wkState) {
 }
 
 // ============================================================================
-// Timer Audio Engine (Ambient Audio Mixing & Burst-Only Web Audio Cues)
+// Timer Audio Engine (Background App-Switch Continuity & Silent-Switch Bypass)
 // ============================================================================
+const SPEECH_PACK_SAMPLE_RATE = 16000;
 let sharedAudioCtx = null;
 let activeWakeLockSentinel = null;
 let audioIdleSuspendTimer = null;
+let masterCompletionTailTimer = null;
+let masterTimelineAudio = null;
+let speechPackMeta = null;
+const speechPcmMap = new Map();
+let speechPackLoadPromise = null;
+let lastTimerLoopTickWallMs = 0;
+let lastExpectedRemainingMs = null;
 
-function configureAmbientAudioSession() {
-  // Pre-configure OS Ambient audio session ahead of time so WebKit flushes AVAudioSessionCategoryAmbient
-  // before any AudioContext renders. Ambient overlays cleanly on top of music, books on tape, and podcasts
-  // (Libby, Hoopla, Spotify, Apple Music, Podcasts) without ever pausing or ducking them.
+const masterAudioSessionState = {
+  inSync: false,
+  blobUrl: null,
+  preferDataUri: false,
+  lastBuildLatencyMs: 0,
+  segmentStartOffsetSec: 0,
+  segmentDurationSec: 0,
+  hasMoreSegments: false,
+  totalDurationSec: 0,
+  events: [],
+  bakedSpeechKeys: new Set()
+};
+
+function configurePlaybackAudioSession() {
+  // Configure OS Media Playback session (`AVAudioSessionCategoryPlayback` on iOS 16.4+ / Safari / Standalone PWA;
+  // on Chrome iOS `CriOS` WKWebView where `navigator.audioSession` may be absent, the DOM `<audio>` element
+  // natively activates `AVAudioSessionCategoryPlayback`) so both timer dings AND spoken exercise names:
+  // 1) Continue playing uninterrupted when switching to another app or locking the screen
+  // 2) Play out loud even when the phone's hardware Silent switch is ON
   try {
     if (typeof navigator !== 'undefined' && navigator.audioSession) {
-      if (navigator.audioSession.type !== 'ambient') {
-        navigator.audioSession.type = 'ambient';
+      if (navigator.audioSession.type !== 'playback') {
+        navigator.audioSession.type = 'playback';
       }
-      timerState.audioSessionType = navigator.audioSession.type || 'ambient';
+      timerState.audioSessionType = navigator.audioSession.type || 'playback';
     } else {
-      timerState.audioSessionType = 'ambient-web-audio';
+      timerState.audioSessionType = 'playback-html5-media';
     }
   } catch {
-    timerState.audioSessionType = 'ambient-web-audio';
+    timerState.audioSessionType = 'playback-html5-media';
   }
+}
+
+function releasePlaybackAudioSession() {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.audioSession) {
+      navigator.audioSession.type = 'auto';
+    }
+  } catch {}
+}
+
+function getExactSpeechClipDurationMs(spokenText) {
+  if (!spokenText || !speechPackMeta?.clips) return null;
+  const formatted = formatExerciseNameForSpeech(spokenText);
+  const direct = speechPackMeta.clips[formatted];
+  if (direct && typeof direct.durationMs === 'number') {
+    return direct.durationMs;
+  }
+  if (formatted.endsWith(' in')) {
+    const base = formatted.slice(0, -3).trim();
+    const baseClip = speechPackMeta.clips[base];
+    const inClip = speechPackMeta.clips['in'];
+    if (baseClip && inClip) {
+      return baseClip.durationMs + 45 + inClip.durationMs;
+    }
+  }
+  return null;
+}
+
+function loadAndDecodeSpeechPack() {
+  if (speechPackLoadPromise) return speechPackLoadPromise;
+  if (typeof fetch !== 'function') return Promise.resolve(false);
+
+  speechPackLoadPromise = (async () => {
+    try {
+      // Versioned query (?v=26) allows both Safari SW cache AND Chrome iOS (CriOS WKWebView) HTTP disk cache
+      // to reuse the 1.3 MB voice pack locally without re-downloading over cellular every visit
+      const [metaRes, audioRes] = await Promise.all([
+        fetch('./data/speech-pack.json?v=26'),
+        fetch('./data/speech-pack.m4a?v=26')
+      ]);
+      if (!metaRes.ok || !audioRes.ok) return false;
+
+      speechPackMeta = await metaRes.json();
+      const m4aBuffer = await audioRes.arrayBuffer();
+
+      const OfflineCtx =
+        typeof window !== 'undefined'
+          ? window.OfflineAudioContext || window.webkitOfflineAudioContext
+          : null;
+      if (!OfflineCtx || !speechPackMeta?.clips) return false;
+
+      let offlineCtx;
+      try {
+        offlineCtx = new OfflineCtx(1, 1, SPEECH_PACK_SAMPLE_RATE);
+      } catch {
+        offlineCtx = new OfflineCtx(1, 1, 44100);
+      }
+      const decoded = await offlineCtx.decodeAudioData(m4aBuffer.slice(0));
+      const channel = decoded.getChannelData(0);
+      const decodedRate = decoded.sampleRate || SPEECH_PACK_SAMPLE_RATE;
+
+      for (const [key, clip] of Object.entries(speechPackMeta.clips)) {
+        const startFrame = Math.max(0, Math.round(clip.offsetSec * decodedRate));
+        const frameCount = Math.max(1, Math.round(clip.durationSec * decodedRate));
+        const endFrame = Math.min(channel.length, startFrame + frameCount);
+        if (endFrame <= startFrame) continue;
+
+        if (decodedRate === SPEECH_PACK_SAMPLE_RATE) {
+          const sliceLen = endFrame - startFrame;
+          const pcm = new Int16Array(sliceLen);
+          for (let i = 0; i < sliceLen; i++) {
+            const s = Math.max(-1, Math.min(1, channel[startFrame + i]));
+            pcm[i] = Math.round(s * 32767);
+          }
+          speechPcmMap.set(key, pcm);
+        } else {
+          const outLen = Math.max(1, Math.round(clip.durationSec * SPEECH_PACK_SAMPLE_RATE));
+          const pcm = new Int16Array(outLen);
+          const ratio = decodedRate / SPEECH_PACK_SAMPLE_RATE;
+          for (let i = 0; i < outLen; i++) {
+            const srcPos = startFrame + i * ratio;
+            const idx0 = Math.min(channel.length - 1, Math.floor(srcPos));
+            const idx1 = Math.min(channel.length - 1, idx0 + 1);
+            const frac = srcPos - idx0;
+            const s = channel[idx0] * (1 - frac) + channel[idx1] * frac;
+            pcm[i] = Math.round(Math.max(-1, Math.min(1, s)) * 32767);
+          }
+          speechPcmMap.set(key, pcm);
+        }
+      }
+
+      timerState.speechPackLoaded = speechPcmMap.size > 0;
+      timerState.speechPackClipCount = speechPcmMap.size;
+
+      // If timer was started before speech pack finished decoding on first cold load, hot-upgrade in exact wall-clock sync
+      if (timerState.isRunning && masterAudioSessionState.inSync && speechPcmMap.size > 0) {
+        advanceTimerToNow();
+        startOrSyncMasterTimelineAudio();
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
+  return speechPackLoadPromise;
+}
+
+function ensureMasterAudioElement() {
+  if (masterTimelineAudio) return masterTimelineAudio;
+  if (typeof document === 'undefined' && typeof Audio === 'undefined') return null;
+
+  masterTimelineAudio =
+    typeof document !== 'undefined' && typeof document.createElement === 'function'
+      ? document.createElement('audio')
+      : new Audio();
+  masterTimelineAudio.id = 'masterWorkoutTimelineAudio';
+  masterTimelineAudio.preload = 'auto';
+  masterTimelineAudio.playsInline = true;
+  masterTimelineAudio.muted = false;
+  masterTimelineAudio.volume = 1.0;
+  masterTimelineAudio.hidden = true;
+  if ('disableRemotePlayback' in masterTimelineAudio) {
+    masterTimelineAudio.disableRemotePlayback = true;
+  }
+  if (typeof masterTimelineAudio.setAttribute === 'function') {
+    masterTimelineAudio.setAttribute('playsinline', '');
+    masterTimelineAudio.setAttribute('webkit-playsinline', '');
+    masterTimelineAudio.setAttribute('aria-hidden', 'true');
+  }
+  if (typeof document !== 'undefined' && document.body && !document.body.contains(masterTimelineAudio)) {
+    document.body.appendChild(masterTimelineAudio);
+  }
+
+  // Drive timer progression from hardware media playback ticks as well as setInterval,
+  // ensuring the timer clock advances continuously even when backgrounded in another app
+  masterTimelineAudio.addEventListener('timeupdate', () => {
+    if (!timerState.isRunning) return;
+    advanceTimerToNow();
+    if (
+      masterAudioSessionState.inSync &&
+      masterAudioSessionState.hasMoreSegments &&
+      masterTimelineAudio.currentTime >= masterAudioSessionState.segmentDurationSec - 2.0
+    ) {
+      rolloverNextMasterSegment();
+    }
+  });
+
+  // Safety fallback for WKWebView / CriOS environments if a blob: media URL ever errors
+  masterTimelineAudio.addEventListener('error', () => {
+    if (
+      timerState.isRunning &&
+      masterAudioSessionState.inSync &&
+      !masterAudioSessionState.preferDataUri
+    ) {
+      masterAudioSessionState.preferDataUri = true;
+      advanceTimerToNow();
+      startOrSyncMasterTimelineAudio();
+    }
+  });
+
+  return masterTimelineAudio;
+}
+
+function clearMasterCompletionTailTimer() {
+  if (masterCompletionTailTimer) {
+    clearTimeout(masterCompletionTailTimer);
+    masterCompletionTailTimer = null;
+  }
+}
+
+function revokeBlobUrlSafe(urlToRevoke) {
+  if (!urlToRevoke) return;
+  try {
+    URL.revokeObjectURL(urlToRevoke);
+  } catch {}
+}
+
+function revokeMasterAudioBlobUrl() {
+  if (masterAudioSessionState.blobUrl) {
+    revokeBlobUrlSafe(masterAudioSessionState.blobUrl);
+    masterAudioSessionState.blobUrl = null;
+  }
+}
+
+function stopMasterTimelineAudio({ allowCompletionTail = false } = {}) {
+  clearMasterCompletionTailTimer();
+  masterAudioSessionState.inSync = false;
+  masterAudioSessionState.hasMoreSegments = false;
+  masterAudioSessionState.bakedSpeechKeys = new Set();
+
+  if (!masterTimelineAudio) {
+    revokeMasterAudioBlobUrl();
+    releasePlaybackAudioSession();
+    return;
+  }
+
+  const teardownNow = () => {
+    try {
+      masterTimelineAudio.pause();
+      masterTimelineAudio.removeAttribute('src');
+      masterTimelineAudio.load();
+    } catch {}
+    revokeMasterAudioBlobUrl();
+    if (!timerState.isRunning) {
+      releasePlaybackAudioSession();
+    }
+  };
+
+  if (allowCompletionTail && !masterTimelineAudio.paused) {
+    // Allow final 0.65s workout-complete fanfare in master <audio> track to finish ringing out
+    masterCompletionTailTimer = setTimeout(() => {
+      masterCompletionTailTimer = null;
+      if (!timerState.isRunning) {
+        teardownNow();
+      }
+    }, 750);
+  } else {
+    teardownNow();
+  }
+}
+
+function playMasterSegmentAtOffset(startOffsetSec) {
+  const audioEl = ensureMasterAudioElement();
+  if (!audioEl) return false;
+
+  const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now();
+  const useDataUri = masterAudioSessionState.preferDataUri;
+  const built = buildMasterTimelineWavBytes({
+    totalDurationSec: masterAudioSessionState.totalDurationSec,
+    events: masterAudioSessionState.events,
+    startOffsetSec,
+    maxWindowSec: useDataUri ? 360 : 3600,
+    speechPcmMap: speechPcmMap.size > 0 ? speechPcmMap : null,
+    sampleRate: SPEECH_PACK_SAMPLE_RATE
+  });
+
+  const previousBlobUrl = masterAudioSessionState.blobUrl;
+  let nextMediaSrc;
+  if (useDataUri || typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
+    masterAudioSessionState.preferDataUri = true;
+    masterAudioSessionState.blobUrl = null;
+    nextMediaSrc = encodeWavBytesToDataUri(built.wavBytes);
+  } else {
+    const blob = new Blob([built.wavBytes], { type: 'audio/wav' });
+    nextMediaSrc = URL.createObjectURL(blob);
+    masterAudioSessionState.blobUrl = nextMediaSrc;
+  }
+
+  masterAudioSessionState.lastBuildLatencyMs = Number(
+    ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0).toFixed(2)
+  );
+  masterAudioSessionState.segmentStartOffsetSec = built.segmentStartOffsetSec;
+  masterAudioSessionState.segmentDurationSec = built.segmentDurationSec;
+  masterAudioSessionState.hasMoreSegments = built.hasMoreSegments;
+  masterAudioSessionState.bakedSpeechKeys = built.bakedSpeechKeys;
+  masterAudioSessionState.inSync = true;
+
+  configurePlaybackAudioSession();
+  audioEl.muted = false;
+  audioEl.volume = 1.0;
+  // Assign new src BEFORE revoking previous blob URL and avoid setting currentTime=0 while readyState===0 (WebKit InvalidStateError)
+  audioEl.src = nextMediaSrc;
+  if (previousBlobUrl && previousBlobUrl !== nextMediaSrc) {
+    setTimeout(() => revokeBlobUrlSafe(previousBlobUrl), 250);
+  }
+
+  const playPromise = audioEl.play();
+  if (playPromise && typeof playPromise.catch === 'function') {
+    playPromise.catch(() => {
+      if (timerState.isRunning && !masterAudioSessionState.preferDataUri) {
+        masterAudioSessionState.preferDataUri = true;
+        audioEl.src = encodeWavBytesToDataUri(built.wavBytes);
+        audioEl.play().catch(() => {
+          masterAudioSessionState.inSync = false;
+        });
+        return;
+      }
+      masterAudioSessionState.inSync = false;
+    });
+  }
+  return true;
+}
+
+function hasUnbakedSpeechCues() {
+  if (!dataService.isSpokenExerciseNamesEnabled()) return false;
+  const speechEvents = masterAudioSessionState.events.filter(ev => ev.kind === 'speech');
+  if (speechEvents.length === 0) return false;
+  return speechEvents.some(
+    ev => !masterAudioSessionState.bakedSpeechKeys.has(`${ev.stepIndex}:${ev.id}`)
+  );
+}
+
+function startOrSyncMasterTimelineAudio() {
+  clearMasterCompletionTailTimer();
+  if (!timerState.isRunning || !timerState.steps.length) return false;
+
+  const timeline = buildRemainingAudioEvents(
+    timerState.steps,
+    timerState.currentStepIndex,
+    timerState.remainingMs,
+    {
+      spokenExerciseNames: dataService.isSpokenExerciseNamesEnabled(),
+      durationLookupFn: getExactSpeechClipDurationMs,
+      rate: 1.0,
+      calibration: timerState.speechRateCalibration
+    }
+  );
+
+  masterAudioSessionState.totalDurationSec = timeline.totalDurationSec;
+  masterAudioSessionState.events = timeline.events;
+
+  return playMasterSegmentAtOffset(0);
+}
+
+function rolloverNextMasterSegment() {
+  if (!timerState.isRunning || !masterTimelineAudio) return;
+  const elapsedInCurrent = masterTimelineAudio.currentTime || 0;
+  const nextOffsetSec = masterAudioSessionState.segmentStartOffsetSec + elapsedInCurrent;
+  if (nextOffsetSec >= masterAudioSessionState.totalDurationSec + 0.5) return;
+  playMasterSegmentAtOffset(nextOffsetSec);
+}
+
+function isMasterAudioCoveringTimeline() {
+  return Boolean(
+    masterAudioSessionState.inSync &&
+      masterTimelineAudio &&
+      !masterTimelineAudio.paused &&
+      !masterTimelineAudio.ended
+  );
 }
 
 function clearAudioIdleSuspendTimer() {
@@ -1279,8 +1676,8 @@ function scheduleIdleAudioSuspend(delayMs) {
   }, delayMs);
 }
 
-function unlockAmbientAudioContextFromGesture() {
-  configureAmbientAudioSession();
+function unlockWebAudioFallbackFromGesture() {
+  configurePlaybackAudioSession();
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return null;
@@ -1288,7 +1685,6 @@ function unlockAmbientAudioContextFromGesture() {
       sharedAudioCtx = new AudioCtx();
     }
     if (sharedAudioCtx.state === 'suspended') {
-      // Unlock user-gesture requirement on iOS Safari; we immediately suspend again once idle
       sharedAudioCtx.resume().catch(() => {});
     }
     return sharedAudioCtx;
@@ -1322,11 +1718,13 @@ function releaseScreenWakeLock() {
   timerState.wakeLockActive = false;
 }
 
-function scheduleSoundProfileOnContext(ctx, profile, startAtContextTime) {
+function scheduleSoundProfileOnContext(ctx, profile, startAtContextTime, gainScale = 1.0) {
   if (!ctx || !profile) return;
+  const safeScale = Math.max(0.05, Math.min(1.5, Number(gainScale) || 1.0));
   for (const note of profile.notes) {
     const t0 = startAtContextTime + note.startSec;
     const tEnd = t0 + note.durationSec;
+    const peakGain = Math.max(0.001, note.gain * safeScale);
 
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -1334,7 +1732,7 @@ function scheduleSoundProfileOnContext(ctx, profile, startAtContextTime) {
     osc.frequency.setValueAtTime(note.freq, t0);
 
     gain.gain.setValueAtTime(0.0001, t0);
-    gain.gain.linearRampToValueAtTime(note.gain, t0 + 0.005);
+    gain.gain.linearRampToValueAtTime(peakGain, t0 + 0.005);
     gain.gain.exponentialRampToValueAtTime(0.0005, tEnd);
 
     osc.connect(gain);
@@ -1348,7 +1746,7 @@ function scheduleSoundProfileOnContext(ctx, profile, startAtContextTime) {
       overOsc.type = 'triangle';
       overOsc.frequency.setValueAtTime(note.overtoneFreq, t0);
       overGain.gain.setValueAtTime(0.0001, t0);
-      overGain.gain.linearRampToValueAtTime(note.gain * 0.28, t0 + 0.005);
+      overGain.gain.linearRampToValueAtTime(Math.max(0.0008, peakGain * 0.28), t0 + 0.005);
       overGain.gain.exponentialRampToValueAtTime(0.0005, tEnd);
       overOsc.connect(overGain);
       overGain.connect(ctx.destination);
@@ -1358,41 +1756,246 @@ function scheduleSoundProfileOnContext(ctx, profile, startAtContextTime) {
   }
 }
 
-function startTimerSessionKeepAlive() {
-  unlockAmbientAudioContextFromGesture();
+let speechGestureUnlocked = false;
+
+function resetActiveStepSpeechState() {
+  timerState.activeStepSpeech = null;
+  timerState.consecutiveDuckedPulses = 0;
+  timerState.speechDuckUntilWallMs = 0;
+}
+
+function cancelTimerSpeech() {
+  timerState.speechDuckUntilWallMs = 0;
+  timerState.consecutiveDuckedPulses = 0;
+  try {
+    if (
+      typeof window !== 'undefined' &&
+      window.speechSynthesis &&
+      (window.speechSynthesis.speaking || window.speechSynthesis.pending)
+    ) {
+      window.speechSynthesis.cancel();
+    }
+  } catch {}
+}
+
+function unlockSpeechSynthesisFromGesture() {
+  if (!dataService.isSpokenExerciseNamesEnabled() || speechGestureUnlocked) return;
+  try {
+    if (
+      typeof window !== 'undefined' &&
+      window.speechSynthesis &&
+      typeof window.SpeechSynthesisUtterance === 'function'
+    ) {
+      configurePlaybackAudioSession();
+      const warm = new window.SpeechSynthesisUtterance(' ');
+      warm.volume = 0;
+      warm.rate = 2;
+      window.speechSynthesis.speak(warm);
+      speechGestureUnlocked = true;
+    }
+  } catch {}
+}
+
+function ensureStepSpeechTracker(stepIndex) {
+  const enabled = dataService.isSpokenExerciseNamesEnabled();
+  if (
+    timerState.activeStepSpeech &&
+    timerState.activeStepSpeech.stepIndex === stepIndex &&
+    timerState.activeStepSpeech.enabled === enabled
+  ) {
+    return timerState.activeStepSpeech;
+  }
+
+  const plan = buildStepSpeechPlan(timerState.steps, stepIndex, {
+    spokenExerciseNames: enabled,
+    durationLookupFn: getExactSpeechClipDurationMs,
+    rate: 1.0,
+    calibration: timerState.speechRateCalibration
+  });
+  timerState.activeStepSpeech = {
+    stepIndex,
+    enabled,
+    plan,
+    firedIds: new Set()
+  };
+  return timerState.activeStepSpeech;
+}
+
+function speakTimerCue(cue, stepIndex, { logOnly = false } = {}) {
+  timerState.speechLog.push({
+    id: cue.id,
+    kind: cue.kind,
+    text: cue.text,
+    stepIndex,
+    remainingSeconds: timerState.remainingSeconds,
+    remainingMs: Math.round(timerState.remainingMs),
+    estimatedDurationMs: cue.estimatedDurationMs,
+    timestamp: Date.now()
+  });
+  if (timerState.speechLog.length > 300) {
+    timerState.speechLog.shift();
+  }
+
+  if (cue.kind === 'exercise-name') {
+    timerState.speechDuckUntilWallMs = Date.now() + cue.estimatedDurationMs + 120;
+  }
+
+  if (logOnly) return;
+
+  // If this spoken phrase is already baked into the active Master <audio> WAV stream,
+  // it plays directly on the hardware Media Playback channel (even on Silent & in background apps)
+  const bakedKey = `${stepIndex}:${cue.id}`;
+  if (isMasterAudioCoveringTimeline() && masterAudioSessionState.bakedSpeechKeys.has(bakedKey)) {
+    return;
+  }
+
+  configurePlaybackAudioSession();
+  try {
+    if (
+      typeof window !== 'undefined' &&
+      window.speechSynthesis &&
+      typeof window.SpeechSynthesisUtterance === 'function'
+    ) {
+      const utter = new window.SpeechSynthesisUtterance(cue.text);
+      utter.volume = 1.0;
+      utter.rate = cue.kind === 'countdown-digit' ? 1.08 : 1.0;
+
+      const startedRef = { t0: Date.now() };
+      utter.onstart = () => {
+        startedRef.t0 = Date.now();
+      };
+      utter.onend = () => {
+        const elapsed = Date.now() - startedRef.t0;
+        if (
+          (cue.kind === 'exercise-name' || cue.kind === 'exercise-intro') &&
+          elapsed >= Math.max(300, cue.estimatedDurationMs * 0.45) &&
+          elapsed <= 8000
+        ) {
+          const baseUnscaled = estimateSpeechDurationMs(cue.text, { rate: 1.0, calibration: 1.0 });
+          if (baseUnscaled > 0) {
+            const observedRatio = Math.max(0.75, Math.min(1.45, elapsed / baseUnscaled));
+            timerState.speechRateCalibration =
+              0.7 * timerState.speechRateCalibration + 0.3 * observedRatio;
+          }
+          if (cue.kind === 'exercise-name' && timerState.speechDuckUntilWallMs > Date.now()) {
+            timerState.speechDuckUntilWallMs = Date.now();
+          }
+        }
+      };
+
+      window.speechSynthesis.speak(utter);
+    }
+  } catch {}
+}
+
+function evaluateStepSpeechAtCurrentTime({ logOnly = false } = {}) {
+  if (!timerState.isRunning || !dataService.isSpokenExerciseNamesEnabled()) return;
+  const tracker = ensureStepSpeechTracker(timerState.currentStepIndex);
+  if (!tracker.plan.hasSpeech) return;
+
+  for (const cue of tracker.plan.cues) {
+    if (
+      !tracker.firedIds.has(cue.id) &&
+      timerState.remainingMs <= cue.triggerRemainingMs &&
+      (logOnly || timerState.remainingMs > cue.minRemainingMs)
+    ) {
+      tracker.firedIds.add(cue.id);
+      speakTimerCue(cue, timerState.currentStepIndex, { logOnly });
+    }
+  }
+}
+
+function computeSteadyPulseGainScale(stepIndex, nextSec) {
+  if (!dataService.isSpokenExerciseNamesEnabled()) {
+    timerState.consecutiveDuckedPulses = 0;
+    return 1.0;
+  }
+  const tracker = ensureStepSpeechTracker(stepIndex);
+  if (!tracker.plan.hasSpeech || tracker.plan.mode !== 'transition-ducked') {
+    timerState.consecutiveDuckedPulses = 0;
+    return 1.0;
+  }
+
+  const inFinalCountdown = nextSec <= 3 && nextSec >= 1;
+  const nameWindow = tracker.plan.duckWindowsMs.find(w => w.reason === 'exercise-name');
+  const withinNameTimeline = Boolean(
+    nameWindow &&
+      timerState.remainingMs <= nameWindow.startRemainingMs &&
+      timerState.remainingMs >= nameWindow.endRemainingMs
+  );
+  const inExerciseNameSpeech =
+    tracker.firedIds.has('transition-exercise-name') &&
+    withinNameTimeline &&
+    timerState.speechDuckUntilWallMs > Date.now();
+
+  const isDucked = inFinalCountdown || inExerciseNameSpeech;
+  if (isDucked) {
+    timerState.consecutiveDuckedPulses += 1;
+    return getTransitionPulseGainScale({
+      isDucked: true,
+      consecutiveDuckedCount: timerState.consecutiveDuckedPulses
+    });
+  }
+
+  timerState.consecutiveDuckedPulses = 0;
+  return 1.0;
+}
+
+function startTimerSessionKeepAlive({ masterStarted = false } = {}) {
+  configurePlaybackAudioSession();
+  // Avoid spinning up an idle Ambient WebAudio context or AVSpeechSynthesizer on iOS Safari Shortcut / CriOS
+  // when the DOM `<audio>` Master WAV timeline already owns `AVAudioSessionCategoryPlayback` for 100% of cues
+  if (!masterStarted) {
+    unlockWebAudioFallbackFromGesture();
+  }
+  if (hasUnbakedSpeechCues()) {
+    unlockSpeechSynthesisFromGesture();
+  }
   requestScreenWakeLock();
 }
 
-function stopTimerSessionKeepAlive() {
+function stopTimerSessionKeepAlive({ allowCompletionTail = false } = {}) {
+  stopMasterTimelineAudio({ allowCompletionTail });
   suspendAudioContextNow();
   releaseScreenWakeLock();
 }
 
 /**
- * Play one of the distinct timer sound cues as a short ambient burst:
+ * Play or log one of the distinct timer sound cues:
  * - 'work-start': bright rising double bell ding when starting an exercise block
  * - 'rest-start': warm descending two-tone chime when starting a rest block
  * - 'transition-pulse': steady light sound during a short transition / 10s countdown block
  * - 'workout-complete': 3-note completion fanfare
- * Automatically suspends the AudioContext right after the beep finishes so no audio stream
- * stays open when the timer is silent.
+ * When the Master `<audio>` WAV stream is actively playing in sync, audio comes directly from
+ * that continuous Media Playback track (working across app switches and Silent mode without double-playing).
  */
-function playTimerSoundCue(cueType, stepIndex = timerState.currentStepIndex) {
+function playTimerSoundCue(
+  cueType,
+  stepIndex = timerState.currentStepIndex,
+  { gainScale = 1.0, logOnly = false } = {}
+) {
   const profile = TIMER_SOUND_PROFILES[cueType] || TIMER_SOUND_PROFILES['transition-pulse'];
   const step = timerState.steps?.[stepIndex] || null;
+  const effectiveGainScale = Number((Number(gainScale) || 1.0).toFixed(3));
 
   timerState.soundLog.push({
     cueType: profile.id,
     stepIndex,
     stepType: step?.type || null,
     remainingSeconds: timerState.remainingSeconds,
+    gainScale: effectiveGainScale,
+    ducked: effectiveGainScale < 0.99,
     timestamp: Date.now()
   });
   if (timerState.soundLog.length > 300) {
     timerState.soundLog.shift();
   }
 
-  configureAmbientAudioSession();
+  if (logOnly || isMasterAudioCoveringTimeline()) {
+    return;
+  }
+
+  configurePlaybackAudioSession();
   clearAudioIdleSuspendTimer();
 
   let maxNoteEndSec = 0.08;
@@ -1408,38 +2011,170 @@ function playTimerSoundCue(cueType, stepIndex = timerState.currentStepIndex) {
       sharedAudioCtx = new AudioCtx();
     }
 
-    const emitNotesAndScheduleSuspend = () => {
+    const emitNotes = () => {
       if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') return;
-      scheduleSoundProfileOnContext(sharedAudioCtx, profile, sharedAudioCtx.currentTime + 0.008);
-      // Keep context open across consecutive 1s transition ticks, but suspend immediately (~150ms)
-      // after work-start, rest-start, or workout-complete chimes so silent intervals have zero active stream.
-      const idlePadSec =
-        profile.id === 'transition-pulse' && timerState.isRunning && timerState.remainingSeconds > 1
-          ? 1.15
-          : 0.15;
-      scheduleIdleAudioSuspend(Math.ceil((maxNoteEndSec + idlePadSec) * 1000));
+      scheduleSoundProfileOnContext(
+        sharedAudioCtx,
+        profile,
+        sharedAudioCtx.currentTime + 0.008,
+        effectiveGainScale
+      );
+      if (!timerState.isRunning) {
+        scheduleIdleAudioSuspend(Math.ceil((maxNoteEndSec + 0.15) * 1000));
+      }
     };
 
     if (sharedAudioCtx.state === 'running') {
-      emitNotesAndScheduleSuspend();
+      emitNotes();
     } else {
       sharedAudioCtx
         .resume()
-        .then(emitNotesAndScheduleSuspend)
+        .then(emitNotes)
         .catch(() => {});
     }
   } catch {}
 }
 
-if (typeof document !== 'undefined') {
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-      configureAmbientAudioSession();
-      if (timerState.isRunning) {
-        requestScreenWakeLock();
+function advanceTimerToNow() {
+  if (!timerState.isRunning) return;
+
+  const now = Date.now();
+  if (!lastTimerLoopTickWallMs) {
+    lastTimerLoopTickWallMs = now;
+  }
+
+  // Detect external programmatic mutation of remainingMs (e.g. synthetic fast-forward jumps)
+  if (
+    typeof lastExpectedRemainingMs === 'number' &&
+    Math.abs(timerState.remainingMs - lastExpectedRemainingMs) > 45
+  ) {
+    if (masterAudioSessionState.inSync) {
+      masterAudioSessionState.inSync = false;
+      try {
+        masterTimelineAudio?.pause();
+      } catch {}
+    }
+  }
+
+  let deltaMs = Math.max(0, now - lastTimerLoopTickWallMs);
+  lastTimerLoopTickWallMs = now;
+  if (deltaMs === 0) return;
+
+  let stepChangedOrSecondTicked = false;
+
+  // Advance across one or more steps using wall-clock elapsed time so switching to another app
+  // never pauses or slows the workout timer
+  while (deltaMs > 0 && timerState.isRunning) {
+    const currentStep = timerState.steps[timerState.currentStepIndex];
+    if (!currentStep) {
+      stopTimerLoop();
+      break;
+    }
+
+    if (deltaMs < timerState.remainingMs) {
+      const prevSec = timerState.remainingSeconds;
+      timerState.remainingMs = Math.max(0, timerState.remainingMs - deltaMs);
+      deltaMs = 0;
+      const nextSec = Math.ceil(timerState.remainingMs / 1000);
+      if (nextSec !== prevSec) {
+        timerState.remainingSeconds = nextSec;
+        stepChangedOrSecondTicked = true;
+      }
+      evaluateStepSpeechAtCurrentTime();
+      if (nextSec !== prevSec && shouldPlaySteadyTransitionPulse(currentStep) && nextSec >= 1) {
+        const pulseGainScale = computeSteadyPulseGainScale(timerState.currentStepIndex, nextSec);
+        playTimerSoundCue('transition-pulse', timerState.currentStepIndex, {
+          gainScale: pulseGainScale
+        });
+      }
+    } else {
+      // Flush any unfired speech logs on the finishing step before advancing
+      deltaMs -= timerState.remainingMs;
+      timerState.remainingMs = 0;
+      evaluateStepSpeechAtCurrentTime({ logOnly: true });
+
+      if (timerState.currentStepIndex < timerState.steps.length - 1) {
+        timerState.currentStepIndex += 1;
+        resetActiveStepSpeechState();
+        const nextStep = timerState.steps[timerState.currentStepIndex];
+        const nextDur = nextStep.duration;
+        timerState.remainingSeconds = nextDur;
+        timerState.remainingMs = nextDur * 1000;
+        stepChangedOrSecondTicked = true;
+
+        const isHistoricalCatchup = deltaMs > 1200;
+        playTimerSoundCue(getStepStartSoundType(nextStep), timerState.currentStepIndex, {
+          gainScale: 1.0,
+          logOnly: isHistoricalCatchup
+        });
+        evaluateStepSpeechAtCurrentTime({ logOnly: isHistoricalCatchup });
+      } else {
+        // Timer finished -> full grey (0% fill)
+        timerState.remainingSeconds = 0;
+        timerState.remainingMs = 0;
+        deltaMs = 0;
+        stepChangedOrSecondTicked = true;
+        playTimerSoundCue('workout-complete', timerState.currentStepIndex, {
+          gainScale: 1.0
+        });
+        stopTimerLoop({ allowCompletionTail: true });
+        showToast('Timer complete!');
       }
     }
-  });
+  }
+
+  lastExpectedRemainingMs = timerState.isRunning ? timerState.remainingMs : null;
+
+  if (stepChangedOrSecondTicked) {
+    renderTimerExecutionView();
+  } else if (timerState.isRunning) {
+    const currentStep = timerState.steps[timerState.currentStepIndex];
+    const totalMs = Math.max(1000, (currentStep?.duration || 1) * 1000);
+    const pct = Math.max(0, Math.min(100, (timerState.remainingMs / totalMs) * 100));
+    const stageFill = document.getElementById('timerStageFill');
+    if (stageFill) {
+      stageFill.style.height = `${pct}%`;
+    }
+  }
+}
+
+function handleAppLifecycleSync() {
+  if (!timerState.isRunning) return;
+  // Never pause when switching to another app; immediately catch up wall-clock time
+  advanceTimerToNow();
+  if (typeof document !== 'undefined' && !document.hidden) {
+    configurePlaybackAudioSession();
+    requestScreenWakeLock();
+    // If an external OS interruption (e.g. phone call or Siri) paused <audio>, seamlessly resume in sync
+    if (masterAudioSessionState.inSync && masterTimelineAudio && masterTimelineAudio.paused) {
+      startOrSyncMasterTimelineAudio();
+    }
+  }
+}
+
+function handleGestureAudioRecovery(e) {
+  if (!timerState.isRunning || !masterAudioSessionState.inSync) return;
+  if (
+    e?.target?.closest?.(
+      '#timerStartPauseBtn, #timerPrevStepBtn, #timerNextStepBtn, #timerResetBtn, #closeTimerModalBtn'
+    )
+  ) {
+    return;
+  }
+  if (masterTimelineAudio && masterTimelineAudio.paused) {
+    advanceTimerToNow();
+    startOrSyncMasterTimelineAudio();
+  }
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', handleAppLifecycleSync);
+  document.addEventListener('pointerdown', handleGestureAudioRecovery, { passive: true });
+  document.addEventListener('touchstart', handleGestureAudioRecovery, { passive: true });
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('pageshow', handleAppLifecycleSync);
+  window.addEventListener('focus', handleAppLifecycleSync);
 }
 
 function toggleTimerPlayPause() {
@@ -1463,90 +2198,27 @@ function toggleTimerPlayPause() {
     timerState.remainingMs = startDur * 1000;
   }
 
-  startTimerSessionKeepAlive();
+  configurePlaybackAudioSession();
+  const masterStarted = startOrSyncMasterTimelineAudio();
+  startTimerSessionKeepAlive({ masterStarted });
 
-  // Play the initial cue if starting at the beginning of a step; otherwise suspend immediately after gesture unlock
   const initialStep = timerState.steps[timerState.currentStepIndex];
   if (
     initialStep &&
     Math.abs(timerState.remainingMs - (initialStep.duration || 10) * 1000) < 80
   ) {
-    playTimerSoundCue(getStepStartSoundType(initialStep), timerState.currentStepIndex);
-  } else {
-    scheduleIdleAudioSuspend(120);
+    resetActiveStepSpeechState();
+    playTimerSoundCue(getStepStartSoundType(initialStep), timerState.currentStepIndex, {
+      gainScale: 1.0
+    });
   }
+  evaluateStepSpeechAtCurrentTime();
 
-  let lastTickTime = Date.now();
+  lastTimerLoopTickWallMs = Date.now();
+  lastExpectedRemainingMs = timerState.remainingMs;
   renderTimerExecutionView();
 
-  timerState.intervalId = setInterval(() => {
-    const now = Date.now();
-    let deltaMs = Math.max(0, now - lastTickTime);
-    lastTickTime = now;
-
-    let stepChangedOrSecondTicked = false;
-
-    // Advance across one or more steps using wall-clock elapsed time (handles sleep/wake catch-up accurately)
-    while (deltaMs > 0 && timerState.isRunning) {
-      const currentStep = timerState.steps[timerState.currentStepIndex];
-      if (!currentStep) {
-        stopTimerLoop();
-        break;
-      }
-
-      if (deltaMs < timerState.remainingMs) {
-        const prevSec = timerState.remainingSeconds;
-        timerState.remainingMs = Math.max(0, timerState.remainingMs - deltaMs);
-        deltaMs = 0;
-        const nextSec = Math.ceil(timerState.remainingMs / 1000);
-        if (nextSec !== prevSec) {
-          timerState.remainingSeconds = nextSec;
-          stepChangedOrSecondTicked = true;
-          // Steady light sound every second during a short transition / countdown block
-          if (shouldPlaySteadyTransitionPulse(currentStep) && nextSec >= 1) {
-            playTimerSoundCue('transition-pulse', timerState.currentStepIndex);
-          }
-        }
-      } else {
-        // Consume remaining time of current step and advance to next interval step
-        deltaMs -= timerState.remainingMs;
-        if (timerState.currentStepIndex < timerState.steps.length - 1) {
-          timerState.currentStepIndex += 1;
-          const nextStep = timerState.steps[timerState.currentStepIndex];
-          const nextDur = nextStep.duration;
-          timerState.remainingSeconds = nextDur;
-          timerState.remainingMs = nextDur * 1000;
-          stepChangedOrSecondTicked = true;
-          // Distinct noise when starting:
-          // 1) an exercise block ('work-start'),
-          // 2) a rest block ('rest-start'), or
-          // 3) a short transition block ('transition-pulse')
-          playTimerSoundCue(getStepStartSoundType(nextStep), timerState.currentStepIndex);
-        } else {
-          // Timer finished -> full grey (0% fill)
-          timerState.remainingSeconds = 0;
-          timerState.remainingMs = 0;
-          deltaMs = 0;
-          stepChangedOrSecondTicked = true;
-          stopTimerLoop();
-          playTimerSoundCue('workout-complete', timerState.currentStepIndex);
-          showToast('Timer complete!');
-        }
-      }
-    }
-
-    if (stepChangedOrSecondTicked) {
-      renderTimerExecutionView();
-    } else if (timerState.isRunning) {
-      const currentStep = timerState.steps[timerState.currentStepIndex];
-      const totalMs = Math.max(1000, (currentStep?.duration || 1) * 1000);
-      const pct = Math.max(0, Math.min(100, (timerState.remainingMs / totalMs) * 100));
-      const stageFill = document.getElementById('timerStageFill');
-      if (stageFill) {
-        stageFill.style.height = `${pct}%`;
-      }
-    }
-  }, 50);
+  timerState.intervalId = setInterval(advanceTimerToNow, 50);
 }
 
 // ============================================================================
@@ -1962,6 +2634,12 @@ function openSettingsModal() {
 
 function renderSettingsModalContent() {
   const profile = dataService.getActiveProfile();
+  const spokenEnabled = dataService.isSpokenExerciseNamesEnabled();
+  const spokenToggle = document.getElementById('spokenExerciseNamesToggle');
+  if (spokenToggle) {
+    spokenToggle.classList.toggle('is-on', spokenEnabled);
+    spokenToggle.setAttribute('aria-checked', String(spokenEnabled));
+  }
 
   document.querySelectorAll('[data-options-count]').forEach(btn => {
     const count = Number(btn.getAttribute('data-options-count'));
@@ -2371,8 +3049,8 @@ function bindEvents() {
   });
 
   const startPauseBtn = document.getElementById('timerStartPauseBtn');
-  startPauseBtn.addEventListener('pointerdown', configureAmbientAudioSession, { passive: true });
-  startPauseBtn.addEventListener('touchstart', configureAmbientAudioSession, { passive: true });
+  startPauseBtn.addEventListener('pointerdown', configurePlaybackAudioSession, { passive: true });
+  startPauseBtn.addEventListener('touchstart', configurePlaybackAudioSession, { passive: true });
   startPauseBtn.addEventListener('click', toggleTimerPlayPause);
 
   document.getElementById('timerPrevStepBtn').addEventListener('click', () => {
@@ -2383,6 +3061,7 @@ function bindEvents() {
     const dur = timerState.steps[timerState.currentStepIndex]?.duration || 10;
     timerState.remainingSeconds = dur;
     timerState.remainingMs = dur * 1000;
+    resetActiveStepSpeechState();
     renderTimerExecutionView();
   });
 
@@ -2394,6 +3073,7 @@ function bindEvents() {
     const dur = timerState.steps[timerState.currentStepIndex]?.duration || 10;
     timerState.remainingSeconds = dur;
     timerState.remainingMs = dur * 1000;
+    resetActiveStepSpeechState();
     renderTimerExecutionView();
   });
 
@@ -2403,6 +3083,7 @@ function bindEvents() {
     const dur = timerState.steps[0]?.duration || timerState.countdownDuration || 10;
     timerState.remainingSeconds = dur;
     timerState.remainingMs = dur * 1000;
+    resetActiveStepSpeechState();
     renderTimerExecutionView();
   });
 
@@ -2416,6 +3097,7 @@ function bindEvents() {
       const dur = timerState.steps[idx].duration;
       timerState.remainingSeconds = dur;
       timerState.remainingMs = dur * 1000;
+      resetActiveStepSpeechState();
       renderTimerExecutionView();
     }
   });
@@ -2828,6 +3510,23 @@ function bindEvents() {
   }
 
   // Settings Modal interactions
+  const spokenToggleBtn = document.getElementById('spokenExerciseNamesToggle');
+  if (spokenToggleBtn) {
+    spokenToggleBtn.addEventListener('click', () => {
+      const nextVal = !dataService.isSpokenExerciseNamesEnabled();
+      dataService.setSpokenExerciseNames(nextVal);
+      resetActiveStepSpeechState();
+      if (!nextVal) {
+        cancelTimerSpeech();
+      }
+      if (timerState.isRunning) {
+        startOrSyncMasterTimelineAudio();
+      }
+      renderSettingsModalContent();
+      showToast(nextVal ? 'Spoken exercise names on' : 'Spoken exercise names off');
+    });
+  }
+
   document.querySelectorAll('[data-options-count]').forEach(btn => {
     btn.addEventListener('click', () => {
       const count = Number(btn.getAttribute('data-options-count'));

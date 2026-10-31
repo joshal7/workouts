@@ -8,6 +8,18 @@ const STORAGE_KEY_PROFILES = 'joshal_workout_profiles_v1';
 const STORAGE_KEY_ACTIVE_PROFILE_ID = 'joshal_workout_active_profile_v1';
 const STORAGE_KEY_REMOTE_CACHE = 'joshal_workout_remote_sheet_cache_v1';
 
+function getBrowserStorage() {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return window.localStorage;
+    }
+  } catch {}
+  if (typeof globalThis !== 'undefined' && globalThis.__testLocalStorage) {
+    return globalThis.__testLocalStorage;
+  }
+  return null;
+}
+
 export const DEFAULT_INPUTS = {
   workoutCategory: 'HIIT',
   bodyCategory: 'All',
@@ -35,6 +47,7 @@ export function createDefaultProfiles() {
       name: 'User',
       excludedExerciseIds: [],
       optionsPerSlot: 1,
+      spokenExerciseNames: true,
       inputs: structuredClone(DEFAULT_INPUTS),
       activeWorkout: null
     }
@@ -52,7 +65,7 @@ export class DataService {
   /**
    * Load static JSON files (Option A) and merge enrichments with sheet rows.
    */
-  async init(sheetUrl = './data/sheet-data.json?v=23', enrichmentsUrl = './data/enrichments.json?v=23') {
+  async init(sheetUrl = './data/sheet-data.json?v=26', enrichmentsUrl = './data/enrichments.json?v=26') {
     const [sheetRes, enrichRes] = await Promise.all([
       fetch(sheetUrl, { cache: 'no-cache' }),
       fetch(enrichmentsUrl, { cache: 'no-cache' })
@@ -109,8 +122,11 @@ export class DataService {
       throw new Error(`Apps Script sync failed: ${response.status}`);
     }
     const remoteSheetData = await response.json();
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY_REMOTE_CACHE, JSON.stringify(remoteSheetData));
+    const storage = getBrowserStorage();
+    if (storage && typeof storage.setItem === 'function') {
+      try {
+        storage.setItem(STORAGE_KEY_REMOTE_CACHE, JSON.stringify(remoteSheetData));
+      } catch {}
     }
     this.setLoadedData(remoteSheetData, this.enrichments);
     return this.sheetData;
@@ -120,14 +136,18 @@ export class DataService {
   // Per-User Profile Management (Exclusion List, 1/2/3 Options, Active Workout)
   // ==========================================================================
   loadProfilesFromStorage() {
-    if (typeof localStorage === 'undefined') return;
+    const storage = getBrowserStorage();
+    if (!storage || typeof storage.getItem !== 'function') return;
     try {
-      const savedProfiles = localStorage.getItem(STORAGE_KEY_PROFILES);
-      const savedActiveId = localStorage.getItem(STORAGE_KEY_ACTIVE_PROFILE_ID);
+      const savedProfiles = storage.getItem(STORAGE_KEY_PROFILES);
+      const savedActiveId = storage.getItem(STORAGE_KEY_ACTIVE_PROFILE_ID);
       if (savedProfiles) {
         const parsed = JSON.parse(savedProfiles);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          this.profiles = parsed;
+          this.profiles = parsed.map(p => ({
+            ...p,
+            spokenExerciseNames: typeof p.spokenExerciseNames === 'boolean' ? p.spokenExerciseNames : true
+          }));
         }
       }
       if (savedActiveId && this.profiles.some(p => p.id === savedActiveId)) {
@@ -141,10 +161,11 @@ export class DataService {
   }
 
   saveProfilesToStorage() {
-    if (typeof localStorage === 'undefined') return;
+    const storage = getBrowserStorage();
+    if (!storage || typeof storage.setItem !== 'function') return;
     try {
-      localStorage.setItem(STORAGE_KEY_PROFILES, JSON.stringify(this.profiles));
-      localStorage.setItem(STORAGE_KEY_ACTIVE_PROFILE_ID, this.activeProfileId);
+      storage.setItem(STORAGE_KEY_PROFILES, JSON.stringify(this.profiles));
+      storage.setItem(STORAGE_KEY_ACTIVE_PROFILE_ID, this.activeProfileId);
     } catch (e) {
       console.warn('Could not save profiles to localStorage:', e);
     }
@@ -174,6 +195,7 @@ export class DataService {
       name: cleanName,
       excludedExerciseIds: [],
       optionsPerSlot: 1,
+      spokenExerciseNames: true,
       inputs: structuredClone(DEFAULT_INPUTS),
       activeWorkout: null
     };
@@ -219,5 +241,18 @@ export class DataService {
     profile.optionsPerSlot = num;
     this.saveProfilesToStorage();
     return num;
+  }
+
+  isSpokenExerciseNamesEnabled() {
+    const profile = this.getActiveProfile();
+    return profile?.spokenExerciseNames !== false;
+  }
+
+  setSpokenExerciseNames(enabled) {
+    const val = Boolean(enabled);
+    const profile = this.getActiveProfile();
+    profile.spokenExerciseNames = val;
+    this.saveProfilesToStorage();
+    return val;
   }
 }

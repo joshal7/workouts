@@ -6,8 +6,9 @@
   <title>Workouts — joshal.com</title>
   <meta name="description" content="Minimalist HIIT & Strength Workout Generator PWA with multi-frame exercise diagrams, custom exercise slotting, and HIIT interval timer." />
   
-  <!-- iOS PWA Meta Tags -->
+  <!-- iOS Safari Home Screen Shortcut & Mobile PWA Meta Tags -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Workouts" />
   <meta name="theme-color" content="#f0f6fc" />
@@ -15,7 +16,7 @@
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/svg+xml" href="./diagrams/app-icon.svg" />
   <link rel="apple-touch-icon" href="./diagrams/app-icon.svg" />
-  <link rel="stylesheet" href="./src/styles.css?v=23" />
+  <link rel="stylesheet" href="./src/styles.css?v=26" />
 </head>
 <body>
   <div class="app-shell">
@@ -315,6 +316,25 @@
         <button class="close-sheet-btn" data-close-modal="settingsModal" type="button" aria-label="Close">✕</button>
       </div>
       <div class="sheet-content">
+        <div class="settings-block" id="spokenExerciseNamesSettingBlock">
+          <div class="settings-toggle-row">
+            <div class="settings-toggle-copy">
+              <h3>Spoken Exercise Names</h3>
+              <p class="settings-help">Announce upcoming exercises and count down 3, 2, 1 in the timer.</p>
+            </div>
+            <button
+              id="spokenExerciseNamesToggle"
+              class="ios-toggle-switch is-on"
+              type="button"
+              role="switch"
+              aria-checked="true"
+              aria-label="Spoken Exercise Names"
+            >
+              <span class="ios-toggle-thumb"></span>
+            </button>
+          </div>
+        </div>
+
         <div class="settings-block">
           <h3>Options per Exercise Slot</h3>
           <p class="settings-help">Provide 1 single exercise or 2–3 balanced options per slot.</p>
@@ -504,6 +524,6 @@
     <div id="toast" class="toast" hidden>Updated</div>
   </div>
 
-  <script type="module" src="./src/app.js?v=23"></script>
+  <script type="module" src="./src/app.js?v=26"></script>
 </body>
 </html>

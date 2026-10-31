@@ -1,4 +1,4 @@
-const CACHE_NAME = 'joshal-workout-pwa-v23';
+const CACHE_NAME = 'joshal-workout-pwa-v26';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -12,6 +12,8 @@ const CORE_ASSETS = [
   './src/engine/timerEngine.js',
   './data/sheet-data.json',
   './data/enrichments.json',
+  './data/speech-pack.json',
+  './data/speech-pack.m4a',
   './diagrams/app-icon.svg'
 ];
 
@@ -37,9 +39,37 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Network-first strategy bypassing HTTP disk cache so updates appear immediately
+// Versioned speech-pack assets load cache-first for instant gym startup on iPhone Safari Shortcut;
+// app shell uses network-first bypassing HTTP disk cache so updates appear immediately
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+  if (!event.request.url.startsWith(self.location.origin)) return;
+
+  const url = new URL(event.request.url);
+  const isSpeechPackAsset =
+    url.pathname.endsWith('/data/speech-pack.m4a') ||
+    url.pathname.endsWith('/data/speech-pack.json');
+
+  if (isSpeechPackAsset) {
+    event.respondWith(
+      caches.open(CACHE_NAME).then(async cache => {
+        const exactCached = await cache.match(event.request);
+        if (exactCached) return exactCached;
+        try {
+          const response = await fetch(event.request);
+          if (response && response.status === 200) {
+            cache.put(event.request, response.clone());
+          }
+          return response;
+        } catch {
+          const fallbackCached = await cache.match(event.request, { ignoreSearch: true });
+          return fallbackCached || Response.error();
+        }
+      })
+    );
+    return;
+  }
+
   event.respondWith(
     fetch(event.request, { cache: 'no-cache' })
       .then(response => {
