@@ -1,4 +1,4 @@
-import { DataService } from './services/dataService.js?v=21';
+import { DataService } from './services/dataService.js?v=22';
 import {
   FOCUS_SNAP_STEPS,
   DEFAULT_FOCUS_WEIGHTS,
@@ -27,12 +27,12 @@ import {
   getRandomEntry,
   getPrimaryMuscle,
   getPrimaryBodyArea
-} from './engine/workoutEngine.js?v=21';
+} from './engine/workoutEngine.js?v=22';
 import {
   analyzeMuscleLoad,
   applyBalancedRecommendation,
   SPECIFIC_MUSCLES
-} from './engine/muscleLoadAnalyzer.js?v=21';
+} from './engine/muscleLoadAnalyzer.js?v=22';
 import {
   TIMER_COLORS,
   CUSTOM_TIMER_PRESETS,
@@ -47,7 +47,7 @@ import {
   finalizeWithCountdown,
   getStepStartSoundType,
   shouldPlaySteadyTransitionPulse
-} from './engine/timerEngine.js?v=21';
+} from './engine/timerEngine.js?v=22';
 
 const dataService = new DataService();
 
@@ -169,7 +169,7 @@ async function bootstrap() {
   // long before any timer AudioContext is created or resumed (prevents synchronous click race condition).
   configureAmbientAudioSession();
 
-  await dataService.init('./data/sheet-data.json?v=21', './data/enrichments.json?v=21');
+  await dataService.init('./data/sheet-data.json?v=22', './data/enrichments.json?v=22');
   populateWorkoutTypeSelect();
   populateCustomTimerPresetsSelect();
   syncUIFromActiveProfile();
@@ -184,7 +184,7 @@ async function bootstrap() {
       refreshing = true;
       window.location.reload();
     });
-    navigator.serviceWorker.register('./sw.js?v=21', { updateViaCache: 'none' }).then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=22', { updateViaCache: 'none' }).then(reg => {
       reg.update().catch(() => {});
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
@@ -735,16 +735,27 @@ function rebuildTimerSteps(resetCursor = true) {
   if (!wkState && timerState.mode !== 'calf-stretch') return;
 
   if (timerState.customStepsOverride && timerState.customStepsOverride.length > 0) {
-    const cdOverride = timerState.customStepsOverride.find(s => s.type === 'countdown');
-    timerState.steps = finalizeWithCountdown(
-      timerState.customStepsOverride.filter(s => s.type !== 'countdown'),
-      timerState.countdownDuration,
-      cdOverride?.customLabel || null
-    );
+    if (timerState.mode === 'calf-stretch') {
+      timerState.steps = timerState.customStepsOverride
+        .filter(s => s.type !== 'countdown')
+        .map((s, i, arr) => {
+          const nextWork = arr.slice(i + 1).find(x => x.type === 'work') || arr[i + 1] || null;
+          return {
+            ...s,
+            index: i,
+            nextExerciseName: nextWork ? nextWork.exerciseName : 'Workout Complete!'
+          };
+        });
+    } else {
+      const cdOverride = timerState.customStepsOverride.find(s => s.type === 'countdown');
+      timerState.steps = finalizeWithCountdown(
+        timerState.customStepsOverride.filter(s => s.type !== 'countdown'),
+        timerState.countdownDuration,
+        cdOverride?.customLabel || null
+      );
+    }
   } else if (timerState.mode === 'calf-stretch') {
-    timerState.steps = buildCalfStretchTimerSequence({
-      countdownDuration: timerState.countdownDuration
-    });
+    timerState.steps = buildCalfStretchTimerSequence();
   } else if (timerState.mode === 'custom-preset') {
     timerState.steps = buildCustomPresetTimerSequence(timerState.presetId, wkState, {
       roundIndex: timerState.roundIndex,
@@ -1062,6 +1073,10 @@ function renderTimerCustomizerView(wkState) {
   const stockBtn = document.getElementById('timerModeStockBtn');
   const customBtn = document.getElementById('timerModeCustomBtn');
   const presetBox = document.getElementById('customPresetSelectorBox');
+  const modeSettingsBlock = stockBtn?.closest('.settings-block');
+  if (modeSettingsBlock) {
+    modeSettingsBlock.hidden = timerState.mode === 'calf-stretch';
+  }
 
   stockBtn.classList.toggle('active', timerState.mode === 'stock');
   customBtn.classList.toggle('active', timerState.mode === 'custom-preset');

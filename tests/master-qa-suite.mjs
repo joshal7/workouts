@@ -1238,12 +1238,7 @@ async function runBrowserCDPTests(wsUrl) {
           const bottomLabelEl = document.getElementById('timerActiveExerciseName');
           const clockEl = document.getElementById('timerClockDisplay');
 
-          // Step 0: 10s yellow prep countdown
-          const step0Clock = clockEl.innerText.trim();
-          const step0Label = bottomLabelEl.innerText.trim();
-
-          // Advance to Step 1: 30s Right calf, straight leg (gastrox) (yellow-green)
-          document.getElementById('timerNextStepBtn').click();
+          // Step 0 is immediately 30s Right calf, straight leg (gastrox) (yellow-green), no 10s countdown
           const step1Clock = clockEl.innerText.trim();
           const step1Label = bottomLabelEl.innerText.trim();
           const step1Class = stageCard.className;
@@ -1259,13 +1254,13 @@ async function runBrowserCDPTests(wsUrl) {
           await new Promise(r => setTimeout(r, 40));
           const midDrainPct = parseFloat(stageFill.style.height);
           await new Promise(r => setTimeout(r, 180));
-          document.getElementById('timerStartPauseBtn').click(); // Pause on Step 2
+          document.getElementById('timerStartPauseBtn').click(); // Pause on Step 2 (index 1)
 
           const step2Clock = clockEl.innerText.trim();
           const step2Label = bottomLabelEl.innerText.trim();
           const step2Class = stageCard.className;
           const step2FillBg = getComputedStyle(stageFill).backgroundColor;
-          const dingedOnTransition = ts.soundLog.some(s => s.cueType === 'work-start' && s.stepIndex === 2);
+          const dingedOnTransition = ts.soundLog.some(s => s.cueType === 'work-start' && s.stepIndex === 1);
 
           // Step 3 & Step 4 labels/colors
           document.getElementById('timerNextStepBtn').click();
@@ -1289,8 +1284,6 @@ async function runBrowserCDPTests(wsUrl) {
             timerOpen,
             modalTitle,
             chipsCount,
-            step0Clock,
-            step0Label,
             step1Clock,
             step1Label,
             step1IsYellowGreen: step1Class.includes('timer-color-yellow-green'),
@@ -1315,9 +1308,7 @@ async function runBrowserCDPTests(wsUrl) {
           !calfStretchCheck.settingsClosed ||
           !calfStretchCheck.timerOpen ||
           calfStretchCheck.modalTitle !== 'Calf Stretch Timer' ||
-          calfStretchCheck.chipsCount !== 13 ||
-          calfStretchCheck.step0Clock !== '00:10' ||
-          calfStretchCheck.step0Label !== 'Count Down' ||
+          calfStretchCheck.chipsCount !== 12 ||
           calfStretchCheck.step1Clock !== '00:30' ||
           calfStretchCheck.step1Label !== 'Right calf, straight leg (gastrox)' ||
           !calfStretchCheck.step1IsYellowGreen ||

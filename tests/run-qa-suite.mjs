@@ -1732,21 +1732,13 @@ test('index.html, styles.css, app.js & qa-gallery.html satisfy Top Menu, Focus S
 // ----------------------------------------------------------------------------
 console.log('\n17. Settings Easter Egg: 6-Minute Calf Stretch Timer');
 
-test('Calf Stretch Timer builds 10s yellow countdown + 3 passes (6 min = 360s) of gastrox/soleus stretches with yellow-green & blue-green colors and dings', () => {
+test('Calf Stretch Timer builds 3 passes (6 min = 360s, no 10s countdown) of gastrox/soleus stretches with yellow-green & blue-green colors and dings', () => {
   assert.equal(CALF_STRETCH_CYCLE.length, 4);
   const seq = buildCalfStretchTimerSequence();
-  // 1 countdown + 12 stretch steps (4 stretches * 3 sets) = 13 steps
-  assert.equal(seq.length, 13, `Expected 13 steps (1 countdown + 12 x 30s stretches), got ${seq.length}`);
+  // 12 stretch steps (4 stretches * 3 sets) = 12 steps, no countdown
+  assert.equal(seq.length, 12, `Expected 12 steps (12 x 30s stretches, no countdown), got ${seq.length}`);
 
-  // Step 0: 10s yellow prep countdown
-  assert.equal(seq[0].type, 'countdown');
-  assert.equal(seq[0].duration, 10);
-  assert.equal(seq[0].color, 'yellow');
-  assert.equal(getTimerBottomLabel(seq[0]), 'Count Down');
-
-  const workSteps = seq.slice(1);
-  assert.equal(workSteps.length, 12);
-  const totalStretchSeconds = workSteps.reduce((sum, s) => sum + s.duration, 0);
+  const totalStretchSeconds = seq.reduce((sum, s) => sum + s.duration, 0);
   assert.equal(totalStretchSeconds, 360, 'Expected exactly 360 seconds (6 minutes) of calf stretching');
 
   const expectedCycle = [
@@ -1758,7 +1750,7 @@ test('Calf Stretch Timer builds 10s yellow countdown + 3 passes (6 min = 360s) o
 
   for (let pass = 0; pass < 3; pass++) {
     for (let i = 0; i < 4; i++) {
-      const step = workSteps[pass * 4 + i];
+      const step = seq[pass * 4 + i];
       assert.equal(step.type, 'work');
       assert.equal(step.duration, 30);
       assert.equal(step.exerciseName, expectedCycle[i].label);

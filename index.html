@@ -15,7 +15,7 @@
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/svg+xml" href="./diagrams/app-icon.svg" />
   <link rel="apple-touch-icon" href="./diagrams/app-icon.svg" />
-  <link rel="stylesheet" href="./src/styles.css?v=21" />
+  <link rel="stylesheet" href="./src/styles.css?v=22" />
 </head>
 <body>
   <div class="app-shell">
@@ -45,95 +45,97 @@
 
     <main class="main-content">
       <!-- Top Menu Row + 3-Part Focus Slider Card -->
-      <section class="card inputs-card" aria-label="Workout Generator Inputs">
-        <div class="top-menu-row" aria-label="Workout Filters">
-          <div class="top-menu-cell">
-            <label for="workoutCategorySelect">Category</label>
-            <div class="select-wrapper">
-              <select id="workoutCategorySelect">
-                <option value="HIIT">HIIT</option>
-                <option value="Strength">Strength</option>
-                <option value="Either">Either</option>
-              </select>
+      <section id="inputsCard" class="card inputs-card" aria-label="Workout Generator Inputs">
+        <div id="generatorSettingsCollapsible" class="generator-settings-collapsible">
+          <div class="top-menu-row" aria-label="Workout Filters">
+            <div class="top-menu-cell">
+              <label for="workoutCategorySelect">Category</label>
+              <div class="select-wrapper">
+                <select id="workoutCategorySelect">
+                  <option value="HIIT">HIIT</option>
+                  <option value="Strength">Strength</option>
+                  <option value="Either">Either</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="top-menu-cell top-menu-cell-type">
+              <label for="workoutTypeSelect">Type</label>
+              <div class="select-wrapper">
+                <select id="workoutTypeSelect">
+                  <option value="Random">Random</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="top-menu-cell">
+              <label for="equipmentSelect">Equipment</label>
+              <div class="select-wrapper">
+                <select id="equipmentSelect">
+                  <option value="Any">Any</option>
+                  <option value="Weights">Weights</option>
+                  <option value="Bands">Bands</option>
+                  <option value="Nothing">Nothing</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          <div class="top-menu-cell top-menu-cell-type">
-            <label for="workoutTypeSelect">Type</label>
-            <div class="select-wrapper">
-              <select id="workoutTypeSelect">
-                <option value="Random">Random</option>
-              </select>
+          <div id="focusSliderSection" class="focus-slider-section" aria-label="Body Focus Distribution">
+            <div class="focus-header-row">
+              <span class="focus-section-title">Focus</span>
+              <button
+                type="button"
+                id="resetFocusBtn"
+                class="focus-reset-btn is-default"
+                aria-label="Reset focus to 1/3 Upper Body, 1/3 Core, 1/3 Lower Body"
+              >
+                ↺ Reset
+              </button>
             </div>
-          </div>
+            <div class="focus-labels-row">
+              <button
+                type="button"
+                id="focusLabelUpper"
+                class="focus-area-label focus-label-upper"
+                data-focus-area="Upper Body"
+                aria-pressed="true"
+              >
+                <span class="focus-label-name">Upper Body</span>
+                <span class="focus-label-pct" id="focusPctUpper">33%</span>
+              </button>
 
-          <div class="top-menu-cell">
-            <label for="equipmentSelect">Equipment</label>
-            <div class="select-wrapper">
-              <select id="equipmentSelect">
-                <option value="Any">Any</option>
-                <option value="Weights">Weights</option>
-                <option value="Bands">Bands</option>
-                <option value="Nothing">Nothing</option>
-              </select>
+              <button
+                type="button"
+                id="focusLabelCore"
+                class="focus-area-label focus-label-core"
+                data-focus-area="Core"
+                aria-pressed="true"
+              >
+                <span class="focus-label-name">Core</span>
+                <span class="focus-label-pct" id="focusPctCore">33%</span>
+              </button>
+
+              <button
+                type="button"
+                id="focusLabelLower"
+                class="focus-area-label focus-label-lower"
+                data-focus-area="Legs"
+                aria-pressed="true"
+              >
+                <span class="focus-label-name">Lower Body</span>
+                <span class="focus-label-pct" id="focusPctLower">33%</span>
+              </button>
             </div>
-          </div>
-        </div>
 
-        <div id="focusSliderSection" class="focus-slider-section" aria-label="Body Focus Distribution">
-          <div class="focus-header-row">
-            <span class="focus-section-title">Focus</span>
-            <button
-              type="button"
-              id="resetFocusBtn"
-              class="focus-reset-btn is-default"
-              aria-label="Reset focus to 1/3 Upper Body, 1/3 Core, 1/3 Lower Body"
-            >
-              ↺ Reset
-            </button>
-          </div>
-          <div class="focus-labels-row">
-            <button
-              type="button"
-              id="focusLabelUpper"
-              class="focus-area-label focus-label-upper"
-              data-focus-area="Upper Body"
-              aria-pressed="true"
-            >
-              <span class="focus-label-name">Upper Body</span>
-              <span class="focus-label-pct" id="focusPctUpper">33%</span>
-            </button>
-
-            <button
-              type="button"
-              id="focusLabelCore"
-              class="focus-area-label focus-label-core"
-              data-focus-area="Core"
-              aria-pressed="true"
-            >
-              <span class="focus-label-name">Core</span>
-              <span class="focus-label-pct" id="focusPctCore">33%</span>
-            </button>
-
-            <button
-              type="button"
-              id="focusLabelLower"
-              class="focus-area-label focus-label-lower"
-              data-focus-area="Legs"
-              aria-pressed="true"
-            >
-              <span class="focus-label-name">Lower Body</span>
-              <span class="focus-label-pct" id="focusPctLower">33%</span>
-            </button>
-          </div>
-
-          <div id="focusBarTrack" class="focus-bar-track">
-            <div class="focus-bar-segments">
-              <div id="focusSegUpper" class="focus-seg focus-seg-upper" style="width: 33.3333%;"></div>
-              <div id="focusSegCore" class="focus-seg focus-seg-core" style="width: 33.3333%;"></div>
-              <div id="focusSegLower" class="focus-seg focus-seg-lower" style="width: 33.3334%;"></div>
+            <div id="focusBarTrack" class="focus-bar-track">
+              <div class="focus-bar-segments">
+                <div id="focusSegUpper" class="focus-seg focus-seg-upper" style="width: 33.3333%;"></div>
+                <div id="focusSegCore" class="focus-seg focus-seg-core" style="width: 33.3333%;"></div>
+                <div id="focusSegLower" class="focus-seg focus-seg-lower" style="width: 33.3334%;"></div>
+              </div>
+              <div id="focusHandlesLayer" class="focus-handles-layer"></div>
             </div>
-            <div id="focusHandlesLayer" class="focus-handles-layer"></div>
           </div>
         </div>
 
@@ -143,6 +145,19 @@
           </button>
           <button id="selectExercisesBtn" class="select-exercises-btn" type="button">
             Select 9 Exercises
+          </button>
+          <button
+            id="toggleInputsCollapseBtn"
+            class="toggle-inputs-btn"
+            type="button"
+            aria-expanded="true"
+            aria-controls="generatorSettingsCollapsible"
+            aria-label="Collapse workout generator settings"
+            title="Collapse workout generator settings"
+          >
+            <svg class="toggle-inputs-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="18 15 12 9 6 15"></polyline>
+            </svg>
           </button>
         </div>
       </section>
@@ -489,6 +504,6 @@
     <div id="toast" class="toast" hidden>Updated</div>
   </div>
 
-  <script type="module" src="./src/app.js?v=21"></script>
+  <script type="module" src="./src/app.js?v=22"></script>
 </body>
 </html>

@@ -814,9 +814,9 @@ export const CALF_STRETCH_CYCLE = [
 /**
  * Build the 6-minute Calf Stretch Timer sequence:
  * 3 passes (initial pass + repeat two times) of the 4 x 30s calf stretches = 12 x 30s (360s),
- * preceded by the standard 10s yellow prep countdown.
+ * with no 10s prep countdown.
  */
-export function buildCalfStretchTimerSequence({ countdownDuration = 10 } = {}) {
+export function buildCalfStretchTimerSequence() {
   const totalSets = 3;
   const steps = [];
 
@@ -840,7 +840,12 @@ export function buildCalfStretchTimerSequence({ countdownDuration = 10 } = {}) {
     });
   }
 
-  return finalizeWithCountdown(steps, countdownDuration);
+  for (let i = 0; i < steps.length; i++) {
+    const nextWork = steps.slice(i + 1).find(s => s.type === 'work') || steps[i + 1] || null;
+    steps[i].index = i;
+    steps[i].nextExerciseName = nextWork ? nextWork.exerciseName : 'Workout Complete!';
+  }
+  return steps;
 }
 
 /**
