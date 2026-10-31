@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>90 Exercises &amp; Diagrams — Fact-Check &amp; QA Gallery</title>
-  <link rel="stylesheet" href="./src/styles.css?v=26" />
+  <link rel="stylesheet" href="./src/styles.css?v=27" />
   <style>
     .qa-shell {
       max-width: 1180px;
@@ -107,11 +107,11 @@
         refreshing = true;
         window.location.reload();
       });
-      navigator.serviceWorker.register('./sw.js?v=26', { updateViaCache: 'none' }).then(reg => reg.update()).catch(() => {});
+      navigator.serviceWorker.register('./sw.js?v=27', { updateViaCache: 'none' }).then(reg => reg.update()).catch(() => {});
     }
 
     const ds = new DataService();
-    await ds.init('./data/sheet-data.json?v=26', './data/enrichments.json?v=26');
+    await ds.init('./data/sheet-data.json?v=27', './data/enrichments.json?v=27');
 
     const totalExCount = ds.sheetData.exercises.length;
     const totalWkCount = ds.sheetData.workouts.length;

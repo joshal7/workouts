@@ -2054,17 +2054,18 @@ test('10s Transition sequence (Curls -> 10s Transition -> Bench Press) skips Cur
 // ----------------------------------------------------------------------------
 console.log('\n20. Background App-Switch Continuity, Silent-Switch Bypass & Speech Pack Mixer');
 
-test('Pre-rendered Samantha speech-pack.json & speech-pack.m4a cover all 90 exercises, all 4 Calf Stretches, and countdown words', () => {
+test('Pre-rendered 24kHz neural speech-pack.json & speech-pack.m4a cover all 90 exercises, all 4 Calf Stretches, and countdown words', () => {
   const packJsonPath = path.join(rootDir, 'data', 'speech-pack.json');
   const packM4aPath = path.join(rootDir, 'data', 'speech-pack.m4a');
   assert.ok(fs.existsSync(packJsonPath), 'Missing data/speech-pack.json');
   assert.ok(fs.existsSync(packM4aPath), 'Missing data/speech-pack.m4a');
 
   const m4aStat = fs.statSync(packM4aPath);
-  assert.ok(m4aStat.size > 100_000, `Expected non-empty speech-pack.m4a, got ${m4aStat.size} bytes`);
+  assert.ok(m4aStat.size > 1_500_000, `Expected high-bitrate neural speech-pack.m4a (>1.5MB), got ${m4aStat.size} bytes`);
 
   const pack = JSON.parse(fs.readFileSync(packJsonPath, 'utf8'));
-  assert.equal(pack.sampleRate, 16000);
+  assert.equal(pack.sampleRate, 24000);
+  assert.equal(pack.voice, 'en-US-AvaNeural');
   for (const requiredKey of ['3', '2', '1', 'in']) {
     assert.ok(pack.clips[requiredKey]?.durationMs > 150, `Missing countdown word "${requiredKey}" in speech-pack.json`);
   }
@@ -2088,9 +2089,9 @@ test('buildRemainingAudioEvents & buildMasterTimelineWavBytes mix dings + spoken
   pyrSeq[3].exerciseName = 'Curls';
   pyrSeq[5].exerciseName = 'Bench Press';
 
-  // Synthetic 16kHz voice buffers with strong amplitude (12000) to verify exact sample mixing
+  // Synthetic 24kHz voice buffers with strong amplitude (12000) to verify exact sample mixing
   const mockVoice = (durationMs, amp = 12000) => {
-    const n = Math.round((durationMs / 1000) * 16000);
+    const n = Math.round((durationMs / 1000) * 24000);
     const arr = new Int16Array(n);
     for (let i = 0; i < n; i++) arr[i] = i % 2 === 0 ? amp : -amp;
     return arr;
@@ -2119,7 +2120,7 @@ test('buildRemainingAudioEvents & buildMasterTimelineWavBytes mix dings + spoken
     startOffsetSec: 0,
     maxWindowSec: 120,
     speechPcmMap: mockSpeechMap,
-    sampleRate: 16000
+    sampleRate: 24000
   });
 
   // 1) Valid RIFF WAVE header
@@ -2134,8 +2135,8 @@ test('buildRemainingAudioEvents & buildMasterTimelineWavBytes mix dings + spoken
   );
 
   const maxAbsInWindow = (startSec, endSec) => {
-    const i0 = Math.floor(startSec * 16000);
-    const i1 = Math.min(pcm.length, Math.ceil(endSec * 16000));
+    const i0 = Math.floor(startSec * 24000);
+    const i1 = Math.min(pcm.length, Math.ceil(endSec * 24000));
     let maxAbs = 0;
     for (let i = i0; i < i1; i++) {
       const a = Math.abs(pcm[i]);
@@ -2170,7 +2171,7 @@ test('iPhone Safari Shortcut & Mobile Chrome (CriOS): full 36-min workout synthe
     totalDurationSec: timeline.totalDurationSec,
     events: timeline.events,
     startOffsetSec: 0,
-    sampleRate: 16000
+    sampleRate: 24000
   });
   const elapsedMs = performance.now() - t0;
 
@@ -2190,7 +2191,7 @@ test('iPhone Safari Shortcut & Mobile Chrome (CriOS): full 36-min workout synthe
     events: [{ offsetSec: 0, kind: 'sound', cueType: 'work-start', stepIndex: 0, gainScale: 1.0 }],
     startOffsetSec: 0,
     maxWindowSec: 10,
-    sampleRate: 16000
+    sampleRate: 24000
   });
   const dataUri = encodeWavBytesToDataUri(shortBuilt.wavBytes);
   assert.ok(dataUri.startsWith('data:audio/wav;base64,UklGR'), 'Expected valid RIFF WAVE base64 data URI');

@@ -1,4 +1,4 @@
-import { DataService } from './services/dataService.js?v=26';
+import { DataService } from './services/dataService.js?v=27';
 import {
   FOCUS_SNAP_STEPS,
   DEFAULT_FOCUS_WEIGHTS,
@@ -27,12 +27,12 @@ import {
   getRandomEntry,
   getPrimaryMuscle,
   getPrimaryBodyArea
-} from './engine/workoutEngine.js?v=26';
+} from './engine/workoutEngine.js?v=27';
 import {
   analyzeMuscleLoad,
   applyBalancedRecommendation,
   SPECIFIC_MUSCLES
-} from './engine/muscleLoadAnalyzer.js?v=26';
+} from './engine/muscleLoadAnalyzer.js?v=27';
 import {
   TIMER_COLORS,
   CUSTOM_TIMER_PRESETS,
@@ -55,7 +55,7 @@ import {
   buildRemainingAudioEvents,
   buildMasterTimelineWavBytes,
   encodeWavBytesToDataUri
-} from './engine/timerEngine.js?v=26';
+} from './engine/timerEngine.js?v=27';
 
 const dataService = new DataService();
 
@@ -212,7 +212,7 @@ const els = {
 };
 
 async function bootstrap() {
-  await dataService.init('./data/sheet-data.json?v=26', './data/enrichments.json?v=26');
+  await dataService.init('./data/sheet-data.json?v=27', './data/enrichments.json?v=27');
   loadAndDecodeSpeechPack();
   populateWorkoutTypeSelect();
   populateCustomTimerPresetsSelect();
@@ -228,7 +228,7 @@ async function bootstrap() {
       refreshing = true;
       window.location.reload();
     });
-    navigator.serviceWorker.register('./sw.js?v=26', { updateViaCache: 'none' }).then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=27', { updateViaCache: 'none' }).then(reg => {
       reg.update().catch(() => {});
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
@@ -1273,7 +1273,7 @@ function renderTimerCustomizerView(wkState) {
 // ============================================================================
 // Timer Audio Engine (Background App-Switch Continuity & Silent-Switch Bypass)
 // ============================================================================
-const SPEECH_PACK_SAMPLE_RATE = 16000;
+const SPEECH_PACK_SAMPLE_RATE = 24000;
 let sharedAudioCtx = null;
 let activeWakeLockSentinel = null;
 let audioIdleSuspendTimer = null;
@@ -1350,11 +1350,11 @@ function loadAndDecodeSpeechPack() {
 
   speechPackLoadPromise = (async () => {
     try {
-      // Versioned query (?v=26) allows both Safari SW cache AND Chrome iOS (CriOS WKWebView) HTTP disk cache
-      // to reuse the 1.3 MB voice pack locally without re-downloading over cellular every visit
+      // Versioned query (?v=27) allows both Safari SW cache AND Chrome iOS (CriOS WKWebView) HTTP disk cache
+      // to reuse the neural 24kHz voice pack locally without re-downloading over cellular every visit
       const [metaRes, audioRes] = await Promise.all([
-        fetch('./data/speech-pack.json?v=26'),
-        fetch('./data/speech-pack.m4a?v=26')
+        fetch('./data/speech-pack.json?v=27'),
+        fetch('./data/speech-pack.m4a?v=27')
       ]);
       if (!metaRes.ok || !audioRes.ok) return false;
 
@@ -1548,7 +1548,7 @@ function playMasterSegmentAtOffset(startOffsetSec) {
     totalDurationSec: masterAudioSessionState.totalDurationSec,
     events: masterAudioSessionState.events,
     startOffsetSec,
-    maxWindowSec: useDataUri ? 360 : 3600,
+    maxWindowSec: useDataUri ? 240 : 3600,
     speechPcmMap: speechPcmMap.size > 0 ? speechPcmMap : null,
     sampleRate: SPEECH_PACK_SAMPLE_RATE
   });
@@ -1821,6 +1821,36 @@ function ensureStepSpeechTracker(stepIndex) {
   return timerState.activeStepSpeech;
 }
 
+let cachedPreferredVoice = null;
+
+function pickPreferredSpeechSynthesisVoice() {
+  if (cachedPreferredVoice) return cachedPreferredVoice;
+  try {
+    if (typeof window === 'undefined' || !window.speechSynthesis?.getVoices) return null;
+    const voices = window.speechSynthesis.getVoices() || [];
+    const enVoices = voices.filter(v => /^en(-|_)/i.test(v.lang || ''));
+    if (enVoices.length === 0) return null;
+
+    const scoreVoice = v => {
+      const id = `${v.name || ''} ${v.voiceURI || ''}`;
+      let score = /^en[-_]US/i.test(v.lang || '') ? 40 : 15;
+      if (/siri|natural|neural|premium|enhanced/i.test(id)) score += 60;
+      if (/ava|zoe|allison|samantha/i.test(id)) score += 20;
+      if (/compact|albert|bad news|bahh|bells|boing|bubbles|cellos|jester|organ|trinoids|whisper|zarvox/i.test(id)) {
+        score -= 80;
+      }
+      if (v.localService) score += 5;
+      return score;
+    };
+
+    enVoices.sort((a, b) => scoreVoice(b) - scoreVoice(a));
+    cachedPreferredVoice = enVoices[0] || null;
+    return cachedPreferredVoice;
+  } catch {
+    return null;
+  }
+}
+
 function speakTimerCue(cue, stepIndex, { logOnly = false } = {}) {
   timerState.speechLog.push({
     id: cue.id,
@@ -1857,8 +1887,12 @@ function speakTimerCue(cue, stepIndex, { logOnly = false } = {}) {
       typeof window.SpeechSynthesisUtterance === 'function'
     ) {
       const utter = new window.SpeechSynthesisUtterance(cue.text);
+      const preferredVoice = pickPreferredSpeechSynthesisVoice();
+      if (preferredVoice) {
+        utter.voice = preferredVoice;
+      }
       utter.volume = 1.0;
-      utter.rate = cue.kind === 'countdown-digit' ? 1.08 : 1.0;
+      utter.rate = cue.kind === 'countdown-digit' ? 1.06 : 1.0;
 
       const startedRef = { t0: Date.now() };
       utter.onstart = () => {

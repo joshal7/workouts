@@ -1,1018 +1,1019 @@
 {
-  "version": 1,
-  "sampleRate": 16000,
-  "totalDurationSec": 329.952,
+  "version": 2,
+  "voice": "en-US-AvaNeural",
+  "sampleRate": 24000,
+  "totalDurationSec": 378.006,
   "clipCount": 202,
   "clips": {
     "1": {
-      "offsetSec": 0.9291,
-      "durationSec": 0.3679,
-      "durationMs": 368
+      "offsetSec": 1.3469,
+      "durationSec": 0.4763,
+      "durationMs": 476
     },
     "2": {
-      "offsetSec": 0.5294,
-      "durationSec": 0.3197,
-      "durationMs": 320
+      "offsetSec": 0.7104,
+      "durationSec": 0.5565,
+      "durationMs": 557
     },
     "3": {
       "offsetSec": 0.08,
-      "durationSec": 0.3694,
-      "durationMs": 369
+      "durationSec": 0.5504,
+      "durationMs": 550
     },
     "in": {
-      "offsetSec": 1.377,
-      "durationSec": 0.3169,
-      "durationMs": 317
+      "offsetSec": 1.9032,
+      "durationSec": 0.3613,
+      "durationMs": 361
     },
     "1.5 Pulse and Hold Squats": {
-      "offsetSec": 1.7739,
-      "durationSec": 2.1373,
-      "durationMs": 2137
+      "offsetSec": 2.3445,
+      "durationSec": 2.2039,
+      "durationMs": 2204
     },
     "1.5 Pulse and Hold Squats in": {
-      "offsetSec": 3.9912,
-      "durationSec": 2.1903,
-      "durationMs": 2190
+      "offsetSec": 4.6284,
+      "durationSec": 2.5221,
+      "durationMs": 2522
     },
     "3 Stop Pushups": {
-      "offsetSec": 6.2615,
-      "durationSec": 1.2914,
-      "durationMs": 1291
+      "offsetSec": 7.2305,
+      "durationSec": 1.3009,
+      "durationMs": 1301
     },
     "3 Stop Pushups in": {
-      "offsetSec": 7.6329,
-      "durationSec": 1.3707,
-      "durationMs": 1371
+      "offsetSec": 8.6113,
+      "durationSec": 1.7181,
+      "durationMs": 1718
     },
     "3 way V ups": {
-      "offsetSec": 9.0836,
-      "durationSec": 1,
-      "durationMs": 1000
+      "offsetSec": 10.4094,
+      "durationSec": 1.1015,
+      "durationMs": 1102
     },
     "3 way V ups in": {
-      "offsetSec": 10.1636,
-      "durationSec": 1.1352,
-      "durationMs": 1135
+      "offsetSec": 11.5909,
+      "durationSec": 1.4512,
+      "durationMs": 1451
     },
     "Ab Wheel or Roller": {
-      "offsetSec": 11.3788,
-      "durationSec": 1.0303,
-      "durationMs": 1030
-    },
-    "Ab Wheel or Roller in": {
-      "offsetSec": 12.4891,
-      "durationSec": 1.2669,
-      "durationMs": 1267
-    },
-    "Alternating glute bridge and butterflies with band": {
-      "offsetSec": 13.8359,
-      "durationSec": 2.4497,
-      "durationMs": 2450
-    },
-    "Alternating glute bridge and butterflies with band in": {
-      "offsetSec": 16.3657,
-      "durationSec": 2.5999,
-      "durationMs": 2600
-    },
-    "Arnold Press": {
-      "offsetSec": 19.0456,
-      "durationSec": 0.8413,
-      "durationMs": 841
-    },
-    "Arnold Press in": {
-      "offsetSec": 19.9669,
-      "durationSec": 0.9616,
-      "durationMs": 962
-    },
-    "Band Straight-Arm Lat Pulldowns": {
-      "offsetSec": 21.0085,
-      "durationSec": 1.7589,
-      "durationMs": 1759
-    },
-    "Band Straight-Arm Lat Pulldowns in": {
-      "offsetSec": 22.8474,
-      "durationSec": 1.8829,
-      "durationMs": 1883
-    },
-    "Band Walks (Lateral and Monster)": {
-      "offsetSec": 24.8104,
-      "durationSec": 2.0949,
-      "durationMs": 2095
-    },
-    "Band Walks (Lateral and Monster) in": {
-      "offsetSec": 26.9853,
-      "durationSec": 2.5852,
-      "durationMs": 2585
-    },
-    "Band leg kick backs and diagonals": {
-      "offsetSec": 29.6504,
-      "durationSec": 1.9355,
-      "durationMs": 1936
-    },
-    "Band leg kick backs and diagonals in": {
-      "offsetSec": 31.6659,
-      "durationSec": 2.1244,
-      "durationMs": 2124
-    },
-    "Banded Pallof Anti-Rotation Press": {
-      "offsetSec": 33.8703,
-      "durationSec": 2.1433,
-      "durationMs": 2143
-    },
-    "Banded Pallof Anti-Rotation Press in": {
-      "offsetSec": 36.0936,
-      "durationSec": 2.2823,
-      "durationMs": 2282
-    },
-    "Barbell Bent-Over or Pendlay Row": {
-      "offsetSec": 38.4559,
-      "durationSec": 1.8364,
-      "durationMs": 1836
-    },
-    "Barbell Bent-Over or Pendlay Row in": {
-      "offsetSec": 40.3723,
-      "durationSec": 1.9077,
-      "durationMs": 1908
-    },
-    "Barbell Deadlift (Conventional or Sumo)": {
-      "offsetSec": 42.36,
-      "durationSec": 2.3879,
-      "durationMs": 2388
-    },
-    "Barbell Deadlift (Conventional or Sumo) in": {
-      "offsetSec": 44.8279,
-      "durationSec": 2.8785,
-      "durationMs": 2879
-    },
-    "Barbell Hip Thrust on Bench": {
-      "offsetSec": 47.7864,
-      "durationSec": 1.5277,
-      "durationMs": 1528
-    },
-    "Barbell Hip Thrust on Bench in": {
-      "offsetSec": 49.3941,
-      "durationSec": 1.6316,
-      "durationMs": 1632
-    },
-    "Barbell Overhead Push Press": {
-      "offsetSec": 51.1057,
-      "durationSec": 1.5548,
-      "durationMs": 1555
-    },
-    "Barbell Overhead Push Press in": {
-      "offsetSec": 52.7405,
-      "durationSec": 1.6908,
-      "durationMs": 1691
-    },
-    "Barbell Romanian Deadlift (RDL)": {
-      "offsetSec": 54.5113,
-      "durationSec": 2.3272,
-      "durationMs": 2327
-    },
-    "Barbell Romanian Deadlift (RDL) in": {
-      "offsetSec": 56.9185,
-      "durationSec": 2.8159,
-      "durationMs": 2816
-    },
-    "Barbell or Goblet Squats": {
-      "offsetSec": 59.8144,
-      "durationSec": 1.5351,
-      "durationMs": 1535
-    },
-    "Barbell or Goblet Squats in": {
-      "offsetSec": 61.4295,
-      "durationSec": 1.5889,
-      "durationMs": 1589
-    },
-    "Barbell or Heavy Band Good Mornings": {
-      "offsetSec": 63.0984,
-      "durationSec": 1.7764,
-      "durationMs": 1776
-    },
-    "Barbell or Heavy Band Good Mornings in": {
-      "offsetSec": 64.9549,
-      "durationSec": 1.9611,
-      "durationMs": 1961
-    },
-    "Bear crawls": {
-      "offsetSec": 66.9959,
-      "durationSec": 0.7366,
-      "durationMs": 737
-    },
-    "Bear crawls in": {
-      "offsetSec": 67.8126,
-      "durationSec": 0.8607,
-      "durationMs": 861
-    },
-    "Bench Press": {
-      "offsetSec": 68.7532,
-      "durationSec": 0.7224,
-      "durationMs": 722
-    },
-    "Bench Press in": {
-      "offsetSec": 69.5556,
-      "durationSec": 0.8318,
-      "durationMs": 832
-    },
-    "Bicycle crunches": {
-      "offsetSec": 70.4674,
-      "durationSec": 1.1383,
-      "durationMs": 1138
-    },
-    "Bicycle crunches in": {
-      "offsetSec": 71.6857,
-      "durationSec": 1.2741,
-      "durationMs": 1274
-    },
-    "Burpees": {
-      "offsetSec": 73.0399,
-      "durationSec": 0.5811,
-      "durationMs": 581
-    },
-    "Burpees in": {
-      "offsetSec": 73.701,
-      "durationSec": 0.7021,
-      "durationMs": 702
-    },
-    "Chair Dips": {
-      "offsetSec": 74.4831,
-      "durationSec": 0.7393,
-      "durationMs": 739
-    },
-    "Chair Dips in": {
-      "offsetSec": 75.3024,
-      "durationSec": 0.8266,
-      "durationMs": 827
-    },
-    "Cheerleaders": {
-      "offsetSec": 76.209,
-      "durationSec": 0.7145,
-      "durationMs": 715
-    },
-    "Cheerleaders in": {
-      "offsetSec": 77.0035,
-      "durationSec": 0.8796,
-      "durationMs": 880
-    },
-    "Chest Flys": {
-      "offsetSec": 77.9631,
-      "durationSec": 0.8355,
-      "durationMs": 836
-    },
-    "Chest Flys in": {
-      "offsetSec": 78.8786,
-      "durationSec": 0.9517,
-      "durationMs": 952
-    },
-    "Chest Press 6-6-6": {
-      "offsetSec": 79.9103,
-      "durationSec": 2.3588,
-      "durationMs": 2359
-    },
-    "Chest Press 6-6-6 in": {
-      "offsetSec": 82.3491,
-      "durationSec": 2.4861,
-      "durationMs": 2486
-    },
-    "Chest-Supported Incline Bench Dumbbell Row": {
-      "offsetSec": 84.9151,
-      "durationSec": 2.2139,
-      "durationMs": 2214
-    },
-    "Chest-Supported Incline Bench Dumbbell Row in": {
-      "offsetSec": 87.2091,
-      "durationSec": 2.2837,
-      "durationMs": 2284
-    },
-    "Chin-ups": {
-      "offsetSec": 89.5727,
-      "durationSec": 0.6108,
-      "durationMs": 611
-    },
-    "Chin-ups in": {
-      "offsetSec": 90.2636,
-      "durationSec": 0.7544,
-      "durationMs": 754
-    },
-    "Copenhagen Adductor Side Plank on Bench": {
-      "offsetSec": 91.098,
-      "durationSec": 2.5641,
-      "durationMs": 2564
-    },
-    "Copenhagen Adductor Side Plank on Bench in": {
-      "offsetSec": 93.7421,
-      "durationSec": 2.6671,
-      "durationMs": 2667
-    },
-    "Crunches": {
-      "offsetSec": 96.4892,
-      "durationSec": 0.5886,
-      "durationMs": 589
-    },
-    "Crunches in": {
-      "offsetSec": 97.1579,
-      "durationSec": 0.7314,
-      "durationMs": 731
-    },
-    "Curls": {
-      "offsetSec": 97.9693,
-      "durationSec": 0.4691,
-      "durationMs": 469
-    },
-    "Curls in": {
-      "offsetSec": 98.5184,
-      "durationSec": 0.6401,
-      "durationMs": 640
-    },
-    "Curls (Weights, TRX, or Bands)": {
-      "offsetSec": 99.2385,
-      "durationSec": 2.8582,
-      "durationMs": 2858
-    },
-    "Curls (Weights, TRX, or Bands) in": {
-      "offsetSec": 102.1767,
-      "durationSec": 3.3541,
-      "durationMs": 3354
-    },
-    "Face-Pulls": {
-      "offsetSec": 105.6109,
-      "durationSec": 0.7356,
-      "durationMs": 736
-    },
-    "Face-Pulls in": {
-      "offsetSec": 106.4264,
-      "durationSec": 0.8513,
-      "durationMs": 851
-    },
-    "Feet-Elevated Bench Hamstring Bridge": {
-      "offsetSec": 107.3577,
-      "durationSec": 1.9632,
-      "durationMs": 1963
-    },
-    "Feet-Elevated Bench Hamstring Bridge in": {
-      "offsetSec": 109.401,
-      "durationSec": 2.1276,
-      "durationMs": 2128
-    },
-    "Flat Barbell Bench Press": {
-      "offsetSec": 111.6086,
-      "durationSec": 1.4466,
-      "durationMs": 1447
-    },
-    "Flat Barbell Bench Press in": {
-      "offsetSec": 113.1352,
-      "durationSec": 1.5494,
-      "durationMs": 1549
-    },
-    "Frog Pumps": {
-      "offsetSec": 114.7646,
-      "durationSec": 0.8745,
-      "durationMs": 875
-    },
-    "Frog Pumps in": {
-      "offsetSec": 115.7191,
-      "durationSec": 0.9244,
-      "durationMs": 924
-    },
-    "Hammer and Zottman Dumbbell Curls": {
-      "offsetSec": 116.7235,
-      "durationSec": 1.7619,
-      "durationMs": 1762
-    },
-    "Hammer and Zottman Dumbbell Curls in": {
-      "offsetSec": 118.5654,
-      "durationSec": 1.9501,
-      "durationMs": 1950
-    },
-    "Hanging Leg or Knee Raises (Pull-Up Bar)": {
-      "offsetSec": 120.5955,
-      "durationSec": 2.2683,
-      "durationMs": 2268
-    },
-    "Hanging Leg or Knee Raises (Pull-Up Bar) in": {
-      "offsetSec": 122.9438,
-      "durationSec": 2.7576,
-      "durationMs": 2758
-    },
-    "High-Band Tricep Pushdowns": {
-      "offsetSec": 125.7814,
-      "durationSec": 1.6999,
-      "durationMs": 1700
-    },
-    "High-Band Tricep Pushdowns in": {
-      "offsetSec": 127.5613,
-      "durationSec": 1.8534,
-      "durationMs": 1853
-    },
-    "Incline Barbell Bench Press": {
-      "offsetSec": 129.4947,
-      "durationSec": 1.6221,
-      "durationMs": 1622
-    },
-    "Incline Barbell Bench Press in": {
-      "offsetSec": 131.1968,
-      "durationSec": 1.7293,
-      "durationMs": 1729
-    },
-    "Incline Bench Dumbbell Curls": {
-      "offsetSec": 133.0061,
-      "durationSec": 1.6203,
-      "durationMs": 1620
-    },
-    "Incline Bench Dumbbell Curls in": {
-      "offsetSec": 134.7064,
-      "durationSec": 1.8067,
-      "durationMs": 1807
-    },
-    "Landmine 180s (Rotational Rainbows)": {
-      "offsetSec": 136.5931,
-      "durationSec": 2.7211,
-      "durationMs": 2721
-    },
-    "Landmine 180s (Rotational Rainbows) in": {
-      "offsetSec": 139.3942,
-      "durationSec": 2.8744,
-      "durationMs": 2874
-    },
-    "Landmine Hack or Front Squat": {
-      "offsetSec": 142.3486,
-      "durationSec": 1.7246,
-      "durationMs": 1725
-    },
-    "Landmine Hack or Front Squat in": {
-      "offsetSec": 144.1533,
-      "durationSec": 1.8356,
-      "durationMs": 1836
-    },
-    "Landmine Lateral Lunge (Cossack Squat)": {
-      "offsetSec": 146.0688,
-      "durationSec": 2.5707,
-      "durationMs": 2571
-    },
-    "Landmine Lateral Lunge (Cossack Squat) in": {
-      "offsetSec": 148.7195,
-      "durationSec": 3.0625,
-      "durationMs": 3063
-    },
-    "Landmine Single-Arm Shoulder Press": {
-      "offsetSec": 151.862,
-      "durationSec": 2.0779,
-      "durationMs": 2078
-    },
-    "Landmine Single-Arm Shoulder Press in": {
-      "offsetSec": 154.0199,
-      "durationSec": 2.2166,
-      "durationMs": 2217
-    },
-    "Landmine Single-Arm or Meadows Row": {
-      "offsetSec": 156.3166,
-      "durationSec": 2.0496,
-      "durationMs": 2050
-    },
-    "Landmine Single-Arm or Meadows Row in": {
-      "offsetSec": 158.4461,
-      "durationSec": 2.133,
-      "durationMs": 2133
-    },
-    "Lateral Shoulder Raises": {
-      "offsetSec": 160.6591,
-      "durationSec": 1.4229,
-      "durationMs": 1423
-    },
-    "Lateral Shoulder Raises in": {
-      "offsetSec": 162.162,
-      "durationSec": 1.5967,
-      "durationMs": 1597
-    },
-    "Left calf, bent leg (soleus)": {
-      "offsetSec": 163.8387,
-      "durationSec": 2.2773,
-      "durationMs": 2277
-    },
-    "Left calf, bent leg (soleus) in": {
-      "offsetSec": 166.196,
-      "durationSec": 2.7742,
-      "durationMs": 2774
-    },
-    "Left calf, straight leg (gastrox)": {
-      "offsetSec": 169.0503,
-      "durationSec": 2.4174,
-      "durationMs": 2417
-    },
-    "Left calf, straight leg (gastrox) in": {
-      "offsetSec": 171.5477,
-      "durationSec": 2.9137,
-      "durationMs": 2914
-    },
-    "Leg Lifts": {
-      "offsetSec": 174.5414,
-      "durationSec": 0.7019,
-      "durationMs": 702
-    },
-    "Leg Lifts in": {
-      "offsetSec": 175.3233,
-      "durationSec": 0.8527,
-      "durationMs": 853
-    },
-    "Lunge Jumps": {
-      "offsetSec": 176.256,
-      "durationSec": 0.8558,
-      "durationMs": 856
-    },
-    "Lunge Jumps in": {
-      "offsetSec": 177.1918,
-      "durationSec": 0.9055,
-      "durationMs": 906
-    },
-    "Lunge twists with slam ball": {
-      "offsetSec": 178.1773,
-      "durationSec": 1.455,
-      "durationMs": 1455
-    },
-    "Lunge twists with slam ball in": {
-      "offsetSec": 179.7123,
-      "durationSec": 1.6896,
-      "durationMs": 1690
-    },
-    "Lunge with one foot on bench": {
-      "offsetSec": 181.4819,
-      "durationSec": 1.5708,
-      "durationMs": 1571
-    },
-    "Lunge with one foot on bench in": {
-      "offsetSec": 183.1327,
-      "durationSec": 1.6524,
-      "durationMs": 1652
-    },
-    "Lunges (Split-squats)": {
-      "offsetSec": 184.8651,
-      "durationSec": 1.6554,
-      "durationMs": 1655
-    },
-    "Lunges (Split-squats) in": {
-      "offsetSec": 186.6005,
-      "durationSec": 2.1539,
-      "durationMs": 2154
-    },
-    "Lunges with one dumbbell up": {
-      "offsetSec": 188.8344,
-      "durationSec": 1.3957,
-      "durationMs": 1396
-    },
-    "Lunges with one dumbbell up in": {
-      "offsetSec": 190.3101,
-      "durationSec": 1.6587,
-      "durationMs": 1659
-    },
-    "Mountain Climbers": {
-      "offsetSec": 192.0488,
-      "durationSec": 1.0545,
-      "durationMs": 1055
-    },
-    "Mountain Climbers in": {
-      "offsetSec": 193.1832,
-      "durationSec": 1.2372,
-      "durationMs": 1237
-    },
-    "Opposite arm and leg lifts": {
-      "offsetSec": 194.5005,
-      "durationSec": 1.4488,
-      "durationMs": 1449
-    },
-    "Opposite arm and leg lifts in": {
-      "offsetSec": 196.0293,
-      "durationSec": 1.6032,
-      "durationMs": 1603
-    },
-    "Pilates Hundred": {
-      "offsetSec": 197.7125,
-      "durationSec": 0.9086,
-      "durationMs": 909
-    },
-    "Pilates Hundred in": {
-      "offsetSec": 198.7011,
-      "durationSec": 1.1154,
-      "durationMs": 1115
-    },
-    "Pilates Roll-Up to Teaser V-Sit": {
-      "offsetSec": 199.8964,
-      "durationSec": 1.9359,
-      "durationMs": 1936
-    },
-    "Pilates Roll-Up to Teaser V-Sit in": {
-      "offsetSec": 201.9124,
-      "durationSec": 2.0814,
-      "durationMs": 2081
-    },
-    "Pilates Single and Double Leg Stretch": {
-      "offsetSec": 204.0738,
-      "durationSec": 1.9999,
-      "durationMs": 2000
-    },
-    "Pilates Single and Double Leg Stretch in": {
-      "offsetSec": 206.1538,
-      "durationSec": 2.1477,
-      "durationMs": 2148
-    },
-    "Plank": {
-      "offsetSec": 208.3815,
-      "durationSec": 0.4554,
-      "durationMs": 455
-    },
-    "Plank in": {
-      "offsetSec": 208.9169,
-      "durationSec": 0.6334,
-      "durationMs": 633
-    },
-    "Plank Jacks": {
-      "offsetSec": 209.6302,
-      "durationSec": 0.8594,
-      "durationMs": 859
-    },
-    "Plank Jacks in": {
-      "offsetSec": 210.5697,
-      "durationSec": 0.9621,
-      "durationMs": 962
-    },
-    "Pull-ups": {
-      "offsetSec": 211.6118,
-      "durationSec": 0.6074,
-      "durationMs": 607
-    },
-    "Pull-ups in": {
-      "offsetSec": 212.2991,
-      "durationSec": 0.74,
-      "durationMs": 740
-    },
-    "Push-Ups": {
-      "offsetSec": 213.1191,
-      "durationSec": 0.6332,
-      "durationMs": 633
-    },
-    "Push-Ups in": {
-      "offsetSec": 213.8323,
-      "durationSec": 0.7737,
-      "durationMs": 774
-    },
-    "Push-ups": {
-      "offsetSec": 214.686,
-      "durationSec": 0.6332,
-      "durationMs": 633
-    },
-    "Push-ups in": {
-      "offsetSec": 215.3992,
-      "durationSec": 0.7737,
-      "durationMs": 774
-    },
-    "Pushups with shoulder tap": {
-      "offsetSec": 216.2529,
-      "durationSec": 1.3819,
+      "offsetSec": 13.1221,
+      "durationSec": 1.3818,
       "durationMs": 1382
     },
-    "Pushups with shoulder tap in": {
-      "offsetSec": 217.7148,
-      "durationSec": 1.6172,
-      "durationMs": 1617
+    "Ab Wheel or Roller in": {
+      "offsetSec": 14.5838,
+      "durationSec": 1.6819,
+      "durationMs": 1682
     },
-    "Reverse Flys": {
-      "offsetSec": 219.4119,
-      "durationSec": 0.8839,
-      "durationMs": 884
+    "Alternating glute bridge and butterflies with band": {
+      "offsetSec": 16.3457,
+      "durationSec": 2.9446,
+      "durationMs": 2945
     },
-    "Reverse Flys in": {
-      "offsetSec": 220.3759,
-      "durationSec": 1.0095,
-      "durationMs": 1010
+    "Alternating glute bridge and butterflies with band in": {
+      "offsetSec": 19.3703,
+      "durationSec": 3.3872,
+      "durationMs": 3387
     },
-    "Right calf, bent leg (soleus)": {
-      "offsetSec": 221.4654,
-      "durationSec": 2.2674,
-      "durationMs": 2267
+    "Arnold Press": {
+      "offsetSec": 22.8375,
+      "durationSec": 1.002,
+      "durationMs": 1002
     },
-    "Right calf, bent leg (soleus) in": {
-      "offsetSec": 223.8128,
-      "durationSec": 2.7628,
-      "durationMs": 2763
-    },
-    "Right calf, straight leg (gastrox)": {
-      "offsetSec": 226.6556,
-      "durationSec": 2.4071,
-      "durationMs": 2407
-    },
-    "Right calf, straight leg (gastrox) in": {
-      "offsetSec": 229.1427,
-      "durationSec": 2.9022,
-      "durationMs": 2902
-    },
-    "Round the worlds plank raises": {
-      "offsetSec": 232.1249,
-      "durationSec": 1.5597,
-      "durationMs": 1560
-    },
-    "Round the worlds plank raises in": {
-      "offsetSec": 233.7646,
-      "durationSec": 1.7331,
-      "durationMs": 1733
-    },
-    "Rows": {
-      "offsetSec": 235.5776,
-      "durationSec": 0.4128,
-      "durationMs": 413
-    },
-    "Rows in": {
-      "offsetSec": 236.0704,
-      "durationSec": 0.5431,
-      "durationMs": 543
-    },
-    "Russian twists with slam ball": {
-      "offsetSec": 236.6936,
-      "durationSec": 1.5053,
-      "durationMs": 1505
-    },
-    "Russian twists with slam ball in": {
-      "offsetSec": 238.2789,
-      "durationSec": 1.7419,
-      "durationMs": 1742
-    },
-    "Seated Overhead Dumbbell Tricep Extension": {
-      "offsetSec": 240.1008,
-      "durationSec": 2.4865,
-      "durationMs": 2487
-    },
-    "Seated Overhead Dumbbell Tricep Extension in": {
-      "offsetSec": 242.6673,
-      "durationSec": 2.6233,
-      "durationMs": 2623
-    },
-    "Serratus Pushups": {
-      "offsetSec": 245.3706,
-      "durationSec": 1.2784,
-      "durationMs": 1278
-    },
-    "Serratus Pushups in": {
-      "offsetSec": 246.729,
-      "durationSec": 1.3609,
+    "Arnold Press in": {
+      "offsetSec": 23.9195,
+      "durationSec": 1.3612,
       "durationMs": 1361
     },
-    "Shoulder Press": {
-      "offsetSec": 248.1699,
-      "durationSec": 0.9038,
-      "durationMs": 904
+    "Band Straight-Arm Lat Pulldowns": {
+      "offsetSec": 25.3607,
+      "durationSec": 1.7737,
+      "durationMs": 1774
     },
-    "Shoulder Press in": {
-      "offsetSec": 249.1536,
-      "durationSec": 1.0346,
-      "durationMs": 1035
+    "Band Straight-Arm Lat Pulldowns in": {
+      "offsetSec": 27.2144,
+      "durationSec": 2.2201,
+      "durationMs": 2220
     },
-    "Side Plank (Hip Dip or Leg Lift)": {
-      "offsetSec": 250.2682,
-      "durationSec": 2.1576,
-      "durationMs": 2158
+    "Band Walks (Lateral and Monster)": {
+      "offsetSec": 29.5145,
+      "durationSec": 2.0426,
+      "durationMs": 2043
     },
-    "Side Plank (Hip Dip or Leg Lift) in": {
-      "offsetSec": 252.5058,
-      "durationSec": 2.648,
-      "durationMs": 2648
+    "Band Walks (Lateral and Monster) in": {
+      "offsetSec": 31.6371,
+      "durationSec": 2.7999,
+      "durationMs": 2800
     },
-    "Side plank with reach under": {
-      "offsetSec": 255.2338,
-      "durationSec": 1.4663,
-      "durationMs": 1466
+    "Band leg kick backs and diagonals": {
+      "offsetSec": 34.517,
+      "durationSec": 2.0555,
+      "durationMs": 2056
     },
-    "Side plank with reach under in": {
-      "offsetSec": 256.7801,
-      "durationSec": 1.7032,
-      "durationMs": 1703
+    "Band leg kick backs and diagonals in": {
+      "offsetSec": 36.6525,
+      "durationSec": 2.4363,
+      "durationMs": 2436
     },
-    "Single Leg Deadlift": {
-      "offsetSec": 258.5634,
-      "durationSec": 1.1259,
-      "durationMs": 1126
+    "Banded Pallof Anti-Rotation Press": {
+      "offsetSec": 39.1688,
+      "durationSec": 2.2101,
+      "durationMs": 2210
     },
-    "Single Leg Deadlift in": {
-      "offsetSec": 259.7693,
-      "durationSec": 1.3486,
-      "durationMs": 1349
+    "Banded Pallof Anti-Rotation Press in": {
+      "offsetSec": 41.4589,
+      "durationSec": 2.7736,
+      "durationMs": 2774
     },
-    "Single Leg TRX Squats (8 Forward plus 8 Reverse)": {
-      "offsetSec": 261.1979,
-      "durationSec": 3.4762,
-      "durationMs": 3476
+    "Barbell Bent-Over or Pendlay Row": {
+      "offsetSec": 44.3125,
+      "durationSec": 1.9189,
+      "durationMs": 1919
     },
-    "Single Leg TRX Squats (8 Forward plus 8 Reverse) in": {
-      "offsetSec": 264.7542,
-      "durationSec": 3.9701,
-      "durationMs": 3970
+    "Barbell Bent-Over or Pendlay Row in": {
+      "offsetSec": 46.3114,
+      "durationSec": 2.4882,
+      "durationMs": 2488
     },
-    "Single leg band glute bridge": {
-      "offsetSec": 268.8043,
-      "durationSec": 1.5372,
-      "durationMs": 1537
+    "Barbell Deadlift (Conventional or Sumo)": {
+      "offsetSec": 48.8796,
+      "durationSec": 2.4752,
+      "durationMs": 2475
     },
-    "Single leg band glute bridge in": {
-      "offsetSec": 270.4214,
-      "durationSec": 1.6621,
-      "durationMs": 1662
+    "Barbell Deadlift (Conventional or Sumo) in": {
+      "offsetSec": 51.4348,
+      "durationSec": 3.1586,
+      "durationMs": 3159
     },
-    "Single leg leg-lifts on bench with weight": {
-      "offsetSec": 272.1635,
-      "durationSec": 2.1301,
-      "durationMs": 2130
+    "Barbell Hip Thrust on Bench": {
+      "offsetSec": 54.6733,
+      "durationSec": 1.7499,
+      "durationMs": 1750
     },
-    "Single leg leg-lifts on bench with weight in": {
-      "offsetSec": 274.3736,
-      "durationSec": 2.2576,
-      "durationMs": 2258
+    "Barbell Hip Thrust on Bench in": {
+      "offsetSec": 56.5033,
+      "durationSec": 2.0674,
+      "durationMs": 2067
     },
-    "Skull Crushers": {
-      "offsetSec": 276.7112,
-      "durationSec": 0.9501,
-      "durationMs": 950
+    "Barbell Overhead Push Press": {
+      "offsetSec": 58.6506,
+      "durationSec": 1.6474,
+      "durationMs": 1647
     },
-    "Skull Crushers in": {
-      "offsetSec": 277.7413,
-      "durationSec": 1.0869,
-      "durationMs": 1087
+    "Barbell Overhead Push Press in": {
+      "offsetSec": 60.378,
+      "durationSec": 2.0446,
+      "durationMs": 2045
     },
-    "Slam Ball Slams": {
-      "offsetSec": 278.9083,
-      "durationSec": 1.1663,
-      "durationMs": 1166
+    "Barbell Romanian Deadlift (RDL)": {
+      "offsetSec": 62.5026,
+      "durationSec": 2.1938,
+      "durationMs": 2194
     },
-    "Slam Ball Slams in": {
-      "offsetSec": 280.1545,
-      "durationSec": 1.3033,
-      "durationMs": 1303
+    "Barbell Romanian Deadlift (RDL) in": {
+      "offsetSec": 64.7764,
+      "durationSec": 3.1803,
+      "durationMs": 3180
     },
-    "Squat Jumps": {
-      "offsetSec": 281.5378,
-      "durationSec": 0.8746,
-      "durationMs": 875
+    "Barbell or Goblet Squats": {
+      "offsetSec": 68.0367,
+      "durationSec": 1.7161,
+      "durationMs": 1716
     },
-    "Squat Jumps in": {
-      "offsetSec": 282.4924,
-      "durationSec": 0.9282,
-      "durationMs": 928
+    "Barbell or Goblet Squats in": {
+      "offsetSec": 69.8328,
+      "durationSec": 1.9656,
+      "durationMs": 1966
     },
-    "Squats": {
-      "offsetSec": 283.5006,
-      "durationSec": 0.6514,
-      "durationMs": 651
+    "Barbell or Heavy Band Good Mornings": {
+      "offsetSec": 71.8784,
+      "durationSec": 2.1537,
+      "durationMs": 2154
     },
-    "Squats in": {
-      "offsetSec": 284.232,
-      "durationSec": 0.6934,
-      "durationMs": 693
+    "Barbell or Heavy Band Good Mornings in": {
+      "offsetSec": 74.112,
+      "durationSec": 2.4558,
+      "durationMs": 2456
     },
-    "Step-ups": {
-      "offsetSec": 285.0054,
-      "durationSec": 0.7347,
-      "durationMs": 735
+    "Bear crawls": {
+      "offsetSec": 76.6478,
+      "durationSec": 0.7967,
+      "durationMs": 797
     },
-    "Step-ups in": {
-      "offsetSec": 285.8201,
-      "durationSec": 0.8706,
-      "durationMs": 871
-    },
-    "Sumo-Squats": {
-      "offsetSec": 286.7706,
-      "durationSec": 0.9988,
-      "durationMs": 999
-    },
-    "Sumo-Squats in": {
-      "offsetSec": 287.8494,
-      "durationSec": 1.0581,
-      "durationMs": 1058
-    },
-    "Swings": {
-      "offsetSec": 288.9875,
-      "durationSec": 0.5575,
-      "durationMs": 558
-    },
-    "Swings in": {
-      "offsetSec": 289.625,
-      "durationSec": 0.6736,
-      "durationMs": 674
-    },
-    "TRX Chest Press": {
-      "offsetSec": 290.3786,
-      "durationSec": 1.2871,
-      "durationMs": 1287
-    },
-    "TRX Chest Press in": {
-      "offsetSec": 291.7457,
-      "durationSec": 1.3949,
-      "durationMs": 1395
-    },
-    "TRX Crunches (Pike Optional)": {
-      "offsetSec": 293.2206,
-      "durationSec": 2.1393,
-      "durationMs": 2139
-    },
-    "TRX Crunches (Pike Optional) in": {
-      "offsetSec": 295.4399,
-      "durationSec": 2.6292,
-      "durationMs": 2629
-    },
-    "TRX Hamstring Curls": {
-      "offsetSec": 298.1491,
-      "durationSec": 1.5134,
-      "durationMs": 1513
-    },
-    "TRX Hamstring Curls in": {
-      "offsetSec": 299.7424,
-      "durationSec": 1.6862,
-      "durationMs": 1686
-    },
-    "TRX I-Y-Ts": {
-      "offsetSec": 301.5086,
-      "durationSec": 2.1341,
-      "durationMs": 2134
-    },
-    "TRX I-Y-Ts in": {
-      "offsetSec": 303.7227,
-      "durationSec": 2.2416,
-      "durationMs": 2242
-    },
-    "TRX Triceps": {
-      "offsetSec": 306.0442,
-      "durationSec": 1.2503,
-      "durationMs": 1250
-    },
-    "TRX Triceps in": {
-      "offsetSec": 307.3745,
-      "durationSec": 1.3901,
-      "durationMs": 1390
-    },
-    "TRX Wood Choppers": {
-      "offsetSec": 308.8446,
-      "durationSec": 1.2882,
-      "durationMs": 1288
-    },
-    "TRX Wood Choppers in": {
-      "offsetSec": 310.2129,
-      "durationSec": 1.4458,
-      "durationMs": 1446
-    },
-    "Tricep kick backs": {
-      "offsetSec": 311.7387,
-      "durationSec": 1.2117,
+    "Bear crawls in": {
+      "offsetSec": 77.5245,
+      "durationSec": 1.2118,
       "durationMs": 1212
     },
+    "Bench Press": {
+      "offsetSec": 78.8163,
+      "durationSec": 0.8227,
+      "durationMs": 823
+    },
+    "Bench Press in": {
+      "offsetSec": 79.7191,
+      "durationSec": 1.1633,
+      "durationMs": 1163
+    },
+    "Bicycle crunches": {
+      "offsetSec": 80.9624,
+      "durationSec": 1.2191,
+      "durationMs": 1219
+    },
+    "Bicycle crunches in": {
+      "offsetSec": 82.2615,
+      "durationSec": 1.6292,
+      "durationMs": 1629
+    },
+    "Burpees": {
+      "offsetSec": 83.9707,
+      "durationSec": 0.7354,
+      "durationMs": 735
+    },
+    "Burpees in": {
+      "offsetSec": 84.786,
+      "durationSec": 0.9885,
+      "durationMs": 989
+    },
+    "Chair Dips": {
+      "offsetSec": 85.8545,
+      "durationSec": 0.8515,
+      "durationMs": 851
+    },
+    "Chair Dips in": {
+      "offsetSec": 86.786,
+      "durationSec": 1.2255,
+      "durationMs": 1226
+    },
+    "Cheerleaders": {
+      "offsetSec": 88.0915,
+      "durationSec": 0.9504,
+      "durationMs": 950
+    },
+    "Cheerleaders in": {
+      "offsetSec": 89.122,
+      "durationSec": 1.4093,
+      "durationMs": 1409
+    },
+    "Chest Flys": {
+      "offsetSec": 90.6113,
+      "durationSec": 0.9537,
+      "durationMs": 954
+    },
+    "Chest Flys in": {
+      "offsetSec": 91.645,
+      "durationSec": 1.2959,
+      "durationMs": 1296
+    },
+    "Chest Press 6-6-6": {
+      "offsetSec": 93.021,
+      "durationSec": 2.0456,
+      "durationMs": 2046
+    },
+    "Chest Press 6-6-6 in": {
+      "offsetSec": 95.1466,
+      "durationSec": 3.2824,
+      "durationMs": 3282
+    },
+    "Chest-Supported Incline Bench Dumbbell Row": {
+      "offsetSec": 98.509,
+      "durationSec": 2.3451,
+      "durationMs": 2345
+    },
+    "Chest-Supported Incline Bench Dumbbell Row in": {
+      "offsetSec": 100.9341,
+      "durationSec": 2.8733,
+      "durationMs": 2873
+    },
+    "Chin-ups": {
+      "offsetSec": 103.8874,
+      "durationSec": 0.7836,
+      "durationMs": 784
+    },
+    "Chin-ups in": {
+      "offsetSec": 104.751,
+      "durationSec": 1.2343,
+      "durationMs": 1234
+    },
+    "Copenhagen Adductor Side Plank on Bench": {
+      "offsetSec": 106.0653,
+      "durationSec": 2.4196,
+      "durationMs": 2420
+    },
+    "Copenhagen Adductor Side Plank on Bench in": {
+      "offsetSec": 108.5648,
+      "durationSec": 2.8945,
+      "durationMs": 2895
+    },
+    "Crunches": {
+      "offsetSec": 111.5394,
+      "durationSec": 0.8323,
+      "durationMs": 832
+    },
+    "Crunches in": {
+      "offsetSec": 112.4517,
+      "durationSec": 1.1875,
+      "durationMs": 1187
+    },
+    "Curls": {
+      "offsetSec": 113.7191,
+      "durationSec": 0.5923,
+      "durationMs": 592
+    },
+    "Curls in": {
+      "offsetSec": 114.3915,
+      "durationSec": 1.0892,
+      "durationMs": 1089
+    },
+    "Curls (Weights, TRX, or Bands)": {
+      "offsetSec": 115.5607,
+      "durationSec": 2.9887,
+      "durationMs": 2989
+    },
+    "Curls (Weights, TRX, or Bands) in": {
+      "offsetSec": 118.6294,
+      "durationSec": 3.3391,
+      "durationMs": 3339
+    },
+    "Face-Pulls": {
+      "offsetSec": 122.0485,
+      "durationSec": 0.8784,
+      "durationMs": 878
+    },
+    "Face-Pulls in": {
+      "offsetSec": 123.0068,
+      "durationSec": 1.4064,
+      "durationMs": 1406
+    },
+    "Feet-Elevated Bench Hamstring Bridge": {
+      "offsetSec": 124.4932,
+      "durationSec": 2.0011,
+      "durationMs": 2001
+    },
+    "Feet-Elevated Bench Hamstring Bridge in": {
+      "offsetSec": 126.5743,
+      "durationSec": 2.4183,
+      "durationMs": 2418
+    },
+    "Flat Barbell Bench Press": {
+      "offsetSec": 129.0726,
+      "durationSec": 1.5443,
+      "durationMs": 1544
+    },
+    "Flat Barbell Bench Press in": {
+      "offsetSec": 130.6969,
+      "durationSec": 2.0037,
+      "durationMs": 2004
+    },
+    "Frog Pumps": {
+      "offsetSec": 132.7805,
+      "durationSec": 0.8333,
+      "durationMs": 833
+    },
+    "Frog Pumps in": {
+      "offsetSec": 133.6938,
+      "durationSec": 1.1771,
+      "durationMs": 1177
+    },
+    "Hammer and Zottman Dumbbell Curls": {
+      "offsetSec": 134.9509,
+      "durationSec": 1.9467,
+      "durationMs": 1947
+    },
+    "Hammer and Zottman Dumbbell Curls in": {
+      "offsetSec": 136.9776,
+      "durationSec": 2.4001,
+      "durationMs": 2400
+    },
+    "Hanging Leg or Knee Raises (Pull-Up Bar)": {
+      "offsetSec": 139.4578,
+      "durationSec": 2.2835,
+      "durationMs": 2284
+    },
+    "Hanging Leg or Knee Raises (Pull-Up Bar) in": {
+      "offsetSec": 141.8212,
+      "durationSec": 2.7512,
+      "durationMs": 2751
+    },
+    "High-Band Tricep Pushdowns": {
+      "offsetSec": 144.6524,
+      "durationSec": 1.7047,
+      "durationMs": 1705
+    },
+    "High-Band Tricep Pushdowns in": {
+      "offsetSec": 146.4371,
+      "durationSec": 2.0543,
+      "durationMs": 2054
+    },
+    "Incline Barbell Bench Press": {
+      "offsetSec": 148.5714,
+      "durationSec": 1.6517,
+      "durationMs": 1652
+    },
+    "Incline Barbell Bench Press in": {
+      "offsetSec": 150.3031,
+      "durationSec": 2.0914,
+      "durationMs": 2091
+    },
+    "Incline Bench Dumbbell Curls": {
+      "offsetSec": 152.4745,
+      "durationSec": 1.685,
+      "durationMs": 1685
+    },
+    "Incline Bench Dumbbell Curls in": {
+      "offsetSec": 154.2395,
+      "durationSec": 2.1273,
+      "durationMs": 2127
+    },
+    "Landmine 180s (Rotational Rainbows)": {
+      "offsetSec": 156.4468,
+      "durationSec": 2.7591,
+      "durationMs": 2759
+    },
+    "Landmine 180s (Rotational Rainbows) in": {
+      "offsetSec": 159.2859,
+      "durationSec": 3.2325,
+      "durationMs": 3232
+    },
+    "Landmine Hack or Front Squat": {
+      "offsetSec": 162.5984,
+      "durationSec": 1.9454,
+      "durationMs": 1945
+    },
+    "Landmine Hack or Front Squat in": {
+      "offsetSec": 164.6238,
+      "durationSec": 2.2138,
+      "durationMs": 2214
+    },
+    "Landmine Lateral Lunge (Cossack Squat)": {
+      "offsetSec": 166.9175,
+      "durationSec": 2.3959,
+      "durationMs": 2396
+    },
+    "Landmine Lateral Lunge (Cossack Squat) in": {
+      "offsetSec": 169.3934,
+      "durationSec": 3.1371,
+      "durationMs": 3137
+    },
+    "Landmine Single-Arm Shoulder Press": {
+      "offsetSec": 172.6105,
+      "durationSec": 2.197,
+      "durationMs": 2197
+    },
+    "Landmine Single-Arm Shoulder Press in": {
+      "offsetSec": 174.8874,
+      "durationSec": 2.6686,
+      "durationMs": 2669
+    },
+    "Landmine Single-Arm or Meadows Row": {
+      "offsetSec": 177.636,
+      "durationSec": 2.2993,
+      "durationMs": 2299
+    },
+    "Landmine Single-Arm or Meadows Row in": {
+      "offsetSec": 180.0153,
+      "durationSec": 2.8472,
+      "durationMs": 2847
+    },
+    "Lateral Shoulder Raises": {
+      "offsetSec": 182.9425,
+      "durationSec": 1.5103,
+      "durationMs": 1510
+    },
+    "Lateral Shoulder Raises in": {
+      "offsetSec": 184.5328,
+      "durationSec": 1.9729,
+      "durationMs": 1973
+    },
+    "Left calf, bent leg (soleus)": {
+      "offsetSec": 186.5857,
+      "durationSec": 2.4705,
+      "durationMs": 2471
+    },
+    "Left calf, bent leg (soleus) in": {
+      "offsetSec": 189.1363,
+      "durationSec": 3.0315,
+      "durationMs": 3032
+    },
+    "Left calf, straight leg (gastrox)": {
+      "offsetSec": 192.2478,
+      "durationSec": 2.3943,
+      "durationMs": 2394
+    },
+    "Left calf, straight leg (gastrox) in": {
+      "offsetSec": 194.7221,
+      "durationSec": 3.1738,
+      "durationMs": 3174
+    },
+    "Leg Lifts": {
+      "offsetSec": 197.9759,
+      "durationSec": 0.8472,
+      "durationMs": 847
+    },
+    "Leg Lifts in": {
+      "offsetSec": 198.9031,
+      "durationSec": 1.0738,
+      "durationMs": 1074
+    },
+    "Lunge Jumps": {
+      "offsetSec": 200.0569,
+      "durationSec": 1.0105,
+      "durationMs": 1010
+    },
+    "Lunge Jumps in": {
+      "offsetSec": 201.1473,
+      "durationSec": 1.2361,
+      "durationMs": 1236
+    },
+    "Lunge twists with slam ball": {
+      "offsetSec": 202.4635,
+      "durationSec": 1.7889,
+      "durationMs": 1789
+    },
+    "Lunge twists with slam ball in": {
+      "offsetSec": 204.3323,
+      "durationSec": 2.1678,
+      "durationMs": 2168
+    },
+    "Lunge with one foot on bench": {
+      "offsetSec": 206.5801,
+      "durationSec": 1.6506,
+      "durationMs": 1651
+    },
+    "Lunge with one foot on bench in": {
+      "offsetSec": 208.3108,
+      "durationSec": 2.0535,
+      "durationMs": 2054
+    },
+    "Lunges (Split-squats)": {
+      "offsetSec": 210.4443,
+      "durationSec": 1.559,
+      "durationMs": 1559
+    },
+    "Lunges (Split-squats) in": {
+      "offsetSec": 212.0833,
+      "durationSec": 1.9734,
+      "durationMs": 1973
+    },
+    "Lunges with one dumbbell up": {
+      "offsetSec": 214.1367,
+      "durationSec": 1.794,
+      "durationMs": 1794
+    },
+    "Lunges with one dumbbell up in": {
+      "offsetSec": 216.0107,
+      "durationSec": 2.1208,
+      "durationMs": 2121
+    },
+    "Mountain Climbers": {
+      "offsetSec": 218.2115,
+      "durationSec": 1.0767,
+      "durationMs": 1077
+    },
+    "Mountain Climbers in": {
+      "offsetSec": 219.3682,
+      "durationSec": 1.4628,
+      "durationMs": 1463
+    },
+    "Opposite arm and leg lifts": {
+      "offsetSec": 220.911,
+      "durationSec": 1.933,
+      "durationMs": 1933
+    },
+    "Opposite arm and leg lifts in": {
+      "offsetSec": 222.924,
+      "durationSec": 2.0904,
+      "durationMs": 2090
+    },
+    "Pilates Hundred": {
+      "offsetSec": 225.0944,
+      "durationSec": 1.1038,
+      "durationMs": 1104
+    },
+    "Pilates Hundred in": {
+      "offsetSec": 226.2782,
+      "durationSec": 1.5748,
+      "durationMs": 1575
+    },
+    "Pilates Roll-Up to Teaser V-Sit": {
+      "offsetSec": 227.933,
+      "durationSec": 1.8646,
+      "durationMs": 1865
+    },
+    "Pilates Roll-Up to Teaser V-Sit in": {
+      "offsetSec": 229.8776,
+      "durationSec": 2.3559,
+      "durationMs": 2356
+    },
+    "Pilates Single and Double Leg Stretch": {
+      "offsetSec": 232.3135,
+      "durationSec": 2.4185,
+      "durationMs": 2419
+    },
+    "Pilates Single and Double Leg Stretch in": {
+      "offsetSec": 234.812,
+      "durationSec": 2.9477,
+      "durationMs": 2948
+    },
+    "Plank": {
+      "offsetSec": 237.8398,
+      "durationSec": 0.5268,
+      "durationMs": 527
+    },
+    "Plank in": {
+      "offsetSec": 238.4465,
+      "durationSec": 0.8759,
+      "durationMs": 876
+    },
+    "Plank Jacks": {
+      "offsetSec": 239.4024,
+      "durationSec": 0.9227,
+      "durationMs": 923
+    },
+    "Plank Jacks in": {
+      "offsetSec": 240.4051,
+      "durationSec": 1.3228,
+      "durationMs": 1323
+    },
+    "Pull-ups": {
+      "offsetSec": 241.8079,
+      "durationSec": 0.6278,
+      "durationMs": 628
+    },
+    "Pull-ups in": {
+      "offsetSec": 242.5157,
+      "durationSec": 1.143,
+      "durationMs": 1143
+    },
+    "Push-Ups": {
+      "offsetSec": 243.7387,
+      "durationSec": 1.0083,
+      "durationMs": 1008
+    },
+    "Push-Ups in": {
+      "offsetSec": 244.827,
+      "durationSec": 1.253,
+      "durationMs": 1253
+    },
+    "Push-ups": {
+      "offsetSec": 246.16,
+      "durationSec": 0.7122,
+      "durationMs": 712
+    },
+    "Push-ups in": {
+      "offsetSec": 246.9521,
+      "durationSec": 1.185,
+      "durationMs": 1185
+    },
+    "Pushups with shoulder tap": {
+      "offsetSec": 248.2171,
+      "durationSec": 1.498,
+      "durationMs": 1498
+    },
+    "Pushups with shoulder tap in": {
+      "offsetSec": 249.7951,
+      "durationSec": 2.0635,
+      "durationMs": 2063
+    },
+    "Reverse Flys": {
+      "offsetSec": 251.9386,
+      "durationSec": 1.1419,
+      "durationMs": 1142
+    },
+    "Reverse Flys in": {
+      "offsetSec": 253.1605,
+      "durationSec": 1.465,
+      "durationMs": 1465
+    },
+    "Right calf, bent leg (soleus)": {
+      "offsetSec": 254.7055,
+      "durationSec": 2.2566,
+      "durationMs": 2257
+    },
+    "Right calf, bent leg (soleus) in": {
+      "offsetSec": 257.0421,
+      "durationSec": 2.821,
+      "durationMs": 2821
+    },
+    "Right calf, straight leg (gastrox)": {
+      "offsetSec": 259.9431,
+      "durationSec": 2.2668,
+      "durationMs": 2267
+    },
+    "Right calf, straight leg (gastrox) in": {
+      "offsetSec": 262.29,
+      "durationSec": 3.0046,
+      "durationMs": 3005
+    },
+    "Round the worlds plank raises": {
+      "offsetSec": 265.3746,
+      "durationSec": 1.981,
+      "durationMs": 1981
+    },
+    "Round the worlds plank raises in": {
+      "offsetSec": 267.4356,
+      "durationSec": 2.3031,
+      "durationMs": 2303
+    },
+    "Rows": {
+      "offsetSec": 269.8188,
+      "durationSec": 0.6619,
+      "durationMs": 662
+    },
+    "Rows in": {
+      "offsetSec": 270.5606,
+      "durationSec": 0.877,
+      "durationMs": 877
+    },
+    "Russian twists with slam ball": {
+      "offsetSec": 271.5176,
+      "durationSec": 1.8505,
+      "durationMs": 1851
+    },
+    "Russian twists with slam ball in": {
+      "offsetSec": 273.4481,
+      "durationSec": 2.163,
+      "durationMs": 2163
+    },
+    "Seated Overhead Dumbbell Tricep Extension": {
+      "offsetSec": 275.6912,
+      "durationSec": 2.5387,
+      "durationMs": 2539
+    },
+    "Seated Overhead Dumbbell Tricep Extension in": {
+      "offsetSec": 278.3098,
+      "durationSec": 2.9291,
+      "durationMs": 2929
+    },
+    "Serratus Pushups": {
+      "offsetSec": 281.3189,
+      "durationSec": 1.3621,
+      "durationMs": 1362
+    },
+    "Serratus Pushups in": {
+      "offsetSec": 282.761,
+      "durationSec": 1.7542,
+      "durationMs": 1754
+    },
+    "Shoulder Press": {
+      "offsetSec": 284.5952,
+      "durationSec": 0.9472,
+      "durationMs": 947
+    },
+    "Shoulder Press in": {
+      "offsetSec": 285.6224,
+      "durationSec": 1.4142,
+      "durationMs": 1414
+    },
+    "Side Plank (Hip Dip or Leg Lift)": {
+      "offsetSec": 287.1166,
+      "durationSec": 2.475,
+      "durationMs": 2475
+    },
+    "Side Plank (Hip Dip or Leg Lift) in": {
+      "offsetSec": 289.6716,
+      "durationSec": 2.873,
+      "durationMs": 2873
+    },
+    "Side plank with reach under": {
+      "offsetSec": 292.6246,
+      "durationSec": 1.5752,
+      "durationMs": 1575
+    },
+    "Side plank with reach under in": {
+      "offsetSec": 294.2798,
+      "durationSec": 1.9887,
+      "durationMs": 1989
+    },
+    "Single Leg Deadlift": {
+      "offsetSec": 296.3485,
+      "durationSec": 1.4461,
+      "durationMs": 1446
+    },
+    "Single Leg Deadlift in": {
+      "offsetSec": 297.8745,
+      "durationSec": 1.7037,
+      "durationMs": 1704
+    },
+    "Single Leg TRX Squats (8 Forward plus 8 Reverse)": {
+      "offsetSec": 299.6583,
+      "durationSec": 3.6336,
+      "durationMs": 3634
+    },
+    "Single Leg TRX Squats (8 Forward plus 8 Reverse) in": {
+      "offsetSec": 303.3719,
+      "durationSec": 4.0762,
+      "durationMs": 4076
+    },
+    "Single leg band glute bridge": {
+      "offsetSec": 307.5281,
+      "durationSec": 1.7129,
+      "durationMs": 1713
+    },
+    "Single leg band glute bridge in": {
+      "offsetSec": 309.321,
+      "durationSec": 2.0307,
+      "durationMs": 2031
+    },
+    "Single leg leg-lifts on bench with weight": {
+      "offsetSec": 311.4318,
+      "durationSec": 2.2811,
+      "durationMs": 2281
+    },
+    "Single leg leg-lifts on bench with weight in": {
+      "offsetSec": 313.7929,
+      "durationSec": 2.7666,
+      "durationMs": 2767
+    },
+    "Skull Crushers": {
+      "offsetSec": 316.6395,
+      "durationSec": 1.1459,
+      "durationMs": 1146
+    },
+    "Skull Crushers in": {
+      "offsetSec": 317.8654,
+      "durationSec": 1.4862,
+      "durationMs": 1486
+    },
+    "Slam Ball Slams": {
+      "offsetSec": 319.4316,
+      "durationSec": 1.3462,
+      "durationMs": 1346
+    },
+    "Slam Ball Slams in": {
+      "offsetSec": 320.8578,
+      "durationSec": 1.6235,
+      "durationMs": 1623
+    },
+    "Squat Jumps": {
+      "offsetSec": 322.5612,
+      "durationSec": 1.0212,
+      "durationMs": 1021
+    },
+    "Squat Jumps in": {
+      "offsetSec": 323.6624,
+      "durationSec": 1.2731,
+      "durationMs": 1273
+    },
+    "Squats": {
+      "offsetSec": 325.0155,
+      "durationSec": 0.7794,
+      "durationMs": 779
+    },
+    "Squats in": {
+      "offsetSec": 325.875,
+      "durationSec": 1.0928,
+      "durationMs": 1093
+    },
+    "Step-ups": {
+      "offsetSec": 327.0477,
+      "durationSec": 0.7964,
+      "durationMs": 796
+    },
+    "Step-ups in": {
+      "offsetSec": 327.9241,
+      "durationSec": 1.2491,
+      "durationMs": 1249
+    },
+    "Sumo-Squats": {
+      "offsetSec": 329.2532,
+      "durationSec": 1.0577,
+      "durationMs": 1058
+    },
+    "Sumo-Squats in": {
+      "offsetSec": 330.3908,
+      "durationSec": 1.4453,
+      "durationMs": 1445
+    },
+    "Swings": {
+      "offsetSec": 331.9161,
+      "durationSec": 0.7716,
+      "durationMs": 772
+    },
+    "Swings in": {
+      "offsetSec": 332.7677,
+      "durationSec": 1.0331,
+      "durationMs": 1033
+    },
+    "TRX Chest Press": {
+      "offsetSec": 333.8808,
+      "durationSec": 1.2773,
+      "durationMs": 1277
+    },
+    "TRX Chest Press in": {
+      "offsetSec": 335.2382,
+      "durationSec": 1.8015,
+      "durationMs": 1802
+    },
+    "TRX Crunches (Pike Optional)": {
+      "offsetSec": 337.1197,
+      "durationSec": 1.9261,
+      "durationMs": 1926
+    },
+    "TRX Crunches (Pike Optional) in": {
+      "offsetSec": 339.1258,
+      "durationSec": 2.6603,
+      "durationMs": 2660
+    },
+    "TRX Hamstring Curls": {
+      "offsetSec": 341.8661,
+      "durationSec": 1.5028,
+      "durationMs": 1503
+    },
+    "TRX Hamstring Curls in": {
+      "offsetSec": 343.4489,
+      "durationSec": 2.0202,
+      "durationMs": 2020
+    },
+    "TRX I-Y-Ts": {
+      "offsetSec": 345.5491,
+      "durationSec": 1.5481,
+      "durationMs": 1548
+    },
+    "TRX I-Y-Ts in": {
+      "offsetSec": 347.1772,
+      "durationSec": 2.3725,
+      "durationMs": 2373
+    },
+    "TRX Triceps": {
+      "offsetSec": 349.6297,
+      "durationSec": 1.1981,
+      "durationMs": 1198
+    },
+    "TRX Triceps in": {
+      "offsetSec": 350.9078,
+      "durationSec": 1.6207,
+      "durationMs": 1621
+    },
+    "TRX Wood Choppers": {
+      "offsetSec": 352.6085,
+      "durationSec": 1.2479,
+      "durationMs": 1248
+    },
+    "TRX Wood Choppers in": {
+      "offsetSec": 353.9364,
+      "durationSec": 1.6313,
+      "durationMs": 1631
+    },
+    "Tricep kick backs": {
+      "offsetSec": 355.6477,
+      "durationSec": 1.2428,
+      "durationMs": 1243
+    },
     "Tricep kick backs in": {
-      "offsetSec": 313.0304,
-      "durationSec": 1.3279,
-      "durationMs": 1328
+      "offsetSec": 356.9706,
+      "durationSec": 1.6867,
+      "durationMs": 1687
     },
     "Up Up down ups (Optional lateral taps)": {
-      "offsetSec": 314.4383,
-      "durationSec": 2.6109,
-      "durationMs": 2611
+      "offsetSec": 358.7373,
+      "durationSec": 3.3076,
+      "durationMs": 3308
     },
     "Up Up down ups (Optional lateral taps) in": {
-      "offsetSec": 317.1293,
-      "durationSec": 3.1044,
-      "durationMs": 3104
+      "offsetSec": 362.1249,
+      "durationSec": 3.7295,
+      "durationMs": 3730
     },
     "V ups with the Ball": {
-      "offsetSec": 320.3137,
-      "durationSec": 1.0165,
-      "durationMs": 1017
+      "offsetSec": 365.9344,
+      "durationSec": 1.1021,
+      "durationMs": 1102
     },
     "V ups with the Ball in": {
-      "offsetSec": 321.4102,
-      "durationSec": 1.2541,
-      "durationMs": 1254
+      "offsetSec": 367.1165,
+      "durationSec": 1.5578,
+      "durationMs": 1558
     },
     "Weighted or Banded Dead Bug": {
-      "offsetSec": 322.7443,
-      "durationSec": 1.4013,
-      "durationMs": 1401
+      "offsetSec": 368.7543,
+      "durationSec": 1.8007,
+      "durationMs": 1801
     },
     "Weighted or Banded Dead Bug in": {
-      "offsetSec": 324.2256,
-      "durationSec": 1.5297,
-      "durationMs": 1530
+      "offsetSec": 370.635,
+      "durationSec": 2.1353,
+      "durationMs": 2135
     },
     "Wide then Narrow Squats": {
-      "offsetSec": 325.8353,
-      "durationSec": 1.4076,
-      "durationMs": 1408
+      "offsetSec": 372.8503,
+      "durationSec": 1.4976,
+      "durationMs": 1498
     },
     "Wide then Narrow Squats in": {
-      "offsetSec": 327.3229,
-      "durationSec": 1.4321,
-      "durationMs": 1432
+      "offsetSec": 374.4279,
+      "durationSec": 1.788,
+      "durationMs": 1788
     },
     "Work": {
-      "offsetSec": 328.8351,
-      "durationSec": 0.3826,
-      "durationMs": 383
+      "offsetSec": 376.2959,
+      "durationSec": 0.5665,
+      "durationMs": 567
     },
     "Work in": {
-      "offsetSec": 329.2977,
-      "durationSec": 0.5747,
-      "durationMs": 575
+      "offsetSec": 376.9424,
+      "durationSec": 0.9839,
+      "durationMs": 984
     }
   }
 }

@@ -1511,7 +1511,7 @@ const cuePcmCache = new Map();
 /**
  * Synthesize raw 16-bit mono PCM samples (`Int16Array`) for a timer ding/chime profile at `sampleRate`.
  */
-export function synthesizeCuePcmInt16(cueType = 'work-start', sampleRate = 16000) {
+export function synthesizeCuePcmInt16(cueType = 'work-start', sampleRate = 24000) {
   const cacheKey = `${cueType}@${sampleRate}`;
   if (cuePcmCache.has(cacheKey)) {
     return cuePcmCache.get(cacheKey);
@@ -1727,7 +1727,7 @@ export function buildMasterTimelineWavBytes({
   startOffsetSec = 0,
   maxWindowSec = 3600,
   speechPcmMap = null,
-  sampleRate = 16000
+  sampleRate = 24000
 } = {}) {
   const tailPadSec = 0.85;
   const remainingTotalSec = Math.max(0.5, totalDurationSec + tailPadSec - startOffsetSec);
