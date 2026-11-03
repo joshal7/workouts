@@ -67,6 +67,10 @@ import {
   synthesizeCuePcmInt16,
   buildRemainingTimelineCues,
   buildRemainingAudioEvents,
+  applySpeechPresenceGain,
+  resolveSpeechPcmSamples,
+  buildSingleCueWavBytes,
+  computeTimelineTargetScrollLeft,
   buildMasterTimelineWavBytes,
   encodeWavBytesToDataUri
 } from '../src/engine/timerEngine.js';
@@ -2213,6 +2217,104 @@ test('iPhone Safari Shortcut & Mobile Chrome (CriOS): full 36-min workout synthe
     if (prevWin === undefined) delete globalThis.window;
     else globalThis.window = prevWin;
   }
+});
+
+// ----------------------------------------------------------------------------
+// 21. MUSIC/PODCAST MIXING, EARBUD ROUTE RECOVERY & TIMELINE AUTO-SHIFT MATH
+// ----------------------------------------------------------------------------
+console.log('\n21. Music/Podcast Mixing, Earbud Route Recovery & Timeline Auto-Shift Math');
+
+test('computeTimelineTargetScrollLeft keeps active step in lower-left until last step reaches bottom-right, then advances highlight across bottom', () => {
+  // Non-overflowing timeline (all chips fit on screen) -> always scrollLeft = 0
+  assert.equal(
+    computeTimelineTargetScrollLeft({
+      chipOffsetLeft: 180,
+      leadingInset: 4,
+      scrollWidth: 320,
+      clientWidth: 358
+    }),
+    0
+  );
+
+  // 13 chips, each 85px wide with 5px gap (stride = 90px), 4px left & right padding:
+  // chip[i].offsetLeft = 4 + i * 90; scrollWidth = 4 + 13 * 85 + 12 * 5 + 4 = 1173; clientWidth = 358 -> maxScrollLeft = 815
+  const leadingInset = 4;
+  const scrollWidth = 1173;
+  const clientWidth = 358;
+  const maxScrollLeft = scrollWidth - clientWidth; // 815
+
+  const positions = [];
+  for (let i = 0; i < 13; i++) {
+    const chipOffsetLeft = leadingInset + i * 90;
+    const scrollLeft = computeTimelineTargetScrollLeft({
+      chipOffsetLeft,
+      leadingInset,
+      scrollWidth,
+      clientWidth
+    });
+    const visualLeftInBar = chipOffsetLeft - scrollLeft;
+    const lastChipRightInBar = 4 + 12 * 90 + 85 - scrollLeft;
+    positions.push({ i, scrollLeft, visualLeftInBar, lastChipRightInBar });
+  }
+
+  // Steps 0..9: chipOffsetLeft - 4 <= 810 <= 815 -> active chip sits right at lower-left (visualLeftInBar === 4)
+  for (let i = 0; i <= 9; i++) {
+    assert.equal(
+      positions[i].visualLeftInBar,
+      leadingInset,
+      `Step ${i} should sit in lower-left (${leadingInset}px), got ${positions[i].visualLeftInBar}px`
+    );
+  }
+
+  // Steps 10..12: last chip has reached bottom-right (lastChipRightInBar === clientWidth - 4 = 354),
+  // scrollLeft stays pinned at maxScrollLeft (815), and active chip moves across bottom row until Step 12 is highlighted!
+  for (let i = 10; i <= 12; i++) {
+    assert.equal(positions[i].scrollLeft, maxScrollLeft, `Step ${i} should clamp at maxScrollLeft`);
+    assert.equal(
+      positions[i].lastChipRightInBar,
+      clientWidth - 4,
+      `Last chip should sit at bottom-right on Step ${i}`
+    );
+    if (i > 10) {
+      assert.ok(
+        positions[i].visualLeftInBar > positions[i - 1].visualLeftInBar,
+        `Highlight must advance right across bottom row from Step ${i - 1} to Step ${i}`
+      );
+    }
+  }
+});
+
+test('Mixable AudioSession (never exclusive playback), vocal presence shaper, and speaker-bridge WAV helpers', () => {
+  const appJs = fs.readFileSync(path.join(rootDir, 'src', 'app.js'), 'utf8');
+  assert.ok(
+    !/audioSession\.type\s*=\s*['"]playback['"]/.test(appJs),
+    'src/app.js must NEVER assign exclusive navigator.audioSession.type = "playback" (breaks music/podcasts & earbud recovery)'
+  );
+  assert.ok(
+    appJs.includes("'transient'") && appJs.includes("'ambient'"),
+    'src/app.js must use mixable transient/ambient AudioSession switching'
+  );
+  assert.ok(
+    appJs.includes('devicechange') && appJs.includes("ctx.state === 'interrupted'"),
+    'src/app.js must handle mediaDevices devicechange and iOS WebKit interrupted AudioContext recovery'
+  );
+
+  // Presence shaper boosts mid-level speech clarity without exceeding [-1, 1]
+  const boostedMid = applySpeechPresenceGain(0.4, 1.45);
+  assert.ok(boostedMid > 0.48 && boostedMid < 0.7, `Expected boosted mid-level speech sample, got ${boostedMid}`);
+  assert.ok(Math.abs(applySpeechPresenceGain(1.0, 1.45) - 1.0) < 1e-6);
+  assert.ok(Math.abs(applySpeechPresenceGain(-1.0, 1.45) + 1.0) < 1e-6);
+
+  // resolveSpeechPcmSamples + buildSingleCueWavBytes produce valid single-cue WAV for speaker-bridge watchdog
+  const sampleMap = new Map([
+    ['Squats', new Int16Array([1000, -1000, 2000, -2000])],
+    ['in', new Int16Array([500, -500])]
+  ]);
+  const combined = resolveSpeechPcmSamples('Squats in', sampleMap, 24000);
+  assert.ok(combined && combined.length > 6, 'Expected combined "Squats" + 45ms gap + "in" PCM');
+  const cueWav = buildSingleCueWavBytes(combined, 24000, 1.15);
+  assert.equal(Buffer.from(cueWav.buffer, 0, 4).toString('ascii'), 'RIFF');
+  assert.equal(cueWav.byteLength, 44 + combined.length * 2);
 });
 
 console.log(`\n🎉 ALL ${passed} QA TEST SUITES PASSED SUCCESSFULLY!`);

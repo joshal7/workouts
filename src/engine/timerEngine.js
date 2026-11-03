@@ -911,8 +911,8 @@ export const TIMER_SOUND_PROFILES = {
     label: 'Exercise Block Start Ding',
     durationSec: 0.44,
     notes: [
-      { startSec: 0.0, durationSec: 0.16, freq: 880.0, overtoneFreq: 1760.0, gain: 0.42 },
-      { startSec: 0.14, durationSec: 0.30, freq: 1318.5, overtoneFreq: 2637.0, gain: 0.48 }
+      { startSec: 0.0, durationSec: 0.16, freq: 880.0, overtoneFreq: 1760.0, gain: 0.58 },
+      { startSec: 0.14, durationSec: 0.30, freq: 1318.5, overtoneFreq: 2637.0, gain: 0.68 }
     ]
   },
   'rest-start': {
@@ -920,8 +920,8 @@ export const TIMER_SOUND_PROFILES = {
     label: 'Rest Block Start Chime',
     durationSec: 0.50,
     notes: [
-      { startSec: 0.0, durationSec: 0.20, freq: 783.99, overtoneFreq: 1174.66, gain: 0.38 },
-      { startSec: 0.18, durationSec: 0.32, freq: 523.25, overtoneFreq: 1046.5, gain: 0.42 }
+      { startSec: 0.0, durationSec: 0.20, freq: 783.99, overtoneFreq: 1174.66, gain: 0.54 },
+      { startSec: 0.18, durationSec: 0.32, freq: 523.25, overtoneFreq: 1046.5, gain: 0.60 }
     ]
   },
   'transition-pulse': {
@@ -929,7 +929,7 @@ export const TIMER_SOUND_PROFILES = {
     label: 'Steady Light Transition Pulse',
     durationSec: 0.12,
     notes: [
-      { startSec: 0.0, durationSec: 0.12, freq: 587.33, overtoneFreq: 880.0, gain: 0.16 }
+      { startSec: 0.0, durationSec: 0.12, freq: 587.33, overtoneFreq: 880.0, gain: 0.26 }
     ]
   },
   'workout-complete': {
@@ -937,9 +937,9 @@ export const TIMER_SOUND_PROFILES = {
     label: 'Workout Complete Fanfare',
     durationSec: 0.65,
     notes: [
-      { startSec: 0.0, durationSec: 0.16, freq: 523.25, overtoneFreq: 1046.5, gain: 0.38 },
-      { startSec: 0.16, durationSec: 0.16, freq: 659.25, overtoneFreq: 1318.5, gain: 0.40 },
-      { startSec: 0.32, durationSec: 0.33, freq: 1046.5, overtoneFreq: 2093.0, gain: 0.46 }
+      { startSec: 0.0, durationSec: 0.16, freq: 523.25, overtoneFreq: 1046.5, gain: 0.54 },
+      { startSec: 0.16, durationSec: 0.16, freq: 659.25, overtoneFreq: 1318.5, gain: 0.58 },
+      { startSec: 0.32, durationSec: 0.33, freq: 1046.5, overtoneFreq: 2093.0, gain: 0.66 }
     ]
   }
 };
@@ -1688,7 +1688,17 @@ export function buildRemainingAudioEvents(
   };
 }
 
-function resolveSpeechPcmSamples(text, speechPcmMap, sampleRate) {
+/**
+ * Soft-knee vocal presence shaper so 24kHz spoken exercise names and countdown digits
+ * cut cleanly through background music/podcasts without digital clipping.
+ */
+export function applySpeechPresenceGain(sampleNormalized, drive = 1.45) {
+  const x = Math.max(-1, Math.min(1, Number(sampleNormalized) || 0));
+  if (drive <= 1.001) return x;
+  return Math.tanh(x * drive) / Math.tanh(drive);
+}
+
+export function resolveSpeechPcmSamples(text, speechPcmMap, sampleRate = 24000) {
   if (!speechPcmMap || typeof speechPcmMap.get !== 'function') return null;
   const formatted = formatExerciseNameForSpeech(text);
   if (speechPcmMap.has(formatted)) {
@@ -1707,6 +1717,63 @@ function resolveSpeechPcmSamples(text, speechPcmMap, sampleRate) {
     }
   }
   return null;
+}
+
+/**
+ * Build a compact 16-bit mono RIFF WAVE byte buffer (`Uint8Array`) for a single PCM cue
+ * (used for route-change watchdog speaker bridge fallback).
+ */
+export function buildSingleCueWavBytes(pcmInt16, sampleRate = 24000, gainScale = 1.0) {
+  const numSamples = pcmInt16 && pcmInt16.length > 0 ? pcmInt16.length : 1;
+  const buffer = new ArrayBuffer(44 + numSamples * 2);
+  const view = new DataView(buffer);
+  const writeStr = (offset, str) => {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset + i, str.charCodeAt(i));
+    }
+  };
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + numSamples * 2, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, 'data');
+  view.setUint32(40, numSamples * 2, true);
+
+  const out = new Int16Array(buffer, 44, numSamples);
+  const safeScale = Math.max(0.05, Math.min(2.0, Number(gainScale) || 1.0));
+  if (pcmInt16 && pcmInt16.length > 0) {
+    for (let i = 0; i < numSamples; i++) {
+      const scaled = Math.round(pcmInt16[i] * safeScale);
+      out[i] = scaled > 32767 ? 32767 : scaled < -32768 ? -32768 : scaled;
+    }
+  }
+  return new Uint8Array(buffer);
+}
+
+/**
+ * Compute the horizontal `scrollLeft` target for `#timerSequenceTimeline` so the active
+ * exercise chip sits aligned in the lower-left of the timeline strip until the final chip
+ * reaches the bottom-right edge (`maxScrollLeft = scrollWidth - clientWidth`), after which
+ * `scrollLeft` stays pinned at `maxScrollLeft` and the highlight moves across the bottom row
+ * until the last item is highlighted.
+ */
+export function computeTimelineTargetScrollLeft({
+  chipOffsetLeft = 0,
+  leadingInset = 0,
+  scrollWidth = 0,
+  clientWidth = 0
+} = {}) {
+  const maxScrollLeft = Math.max(0, Number(scrollWidth || 0) - Number(clientWidth || 0));
+  if (maxScrollLeft <= 0) return 0;
+  const desired = Math.max(0, Number(chipOffsetLeft || 0) - Math.max(0, Number(leadingInset || 0)));
+  return Math.min(desired, maxScrollLeft);
 }
 
 export function encodeWavBytesToDataUri(wavBytes) {

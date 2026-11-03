@@ -1161,11 +1161,16 @@ async function runBrowserCDPTests(wsUrl) {
           const stillRunningCleanly = activeDuringBeep && ts.isRunning === true;
           document.getElementById('timerStartPauseBtn').click(); // Pause
 
-          const loggedCueTypes = ts.soundLog.map(s => s.cueType);
+          const loggedCueTypes = ts.soundLog.map(c => c.cueType);
           const hasTransitionPulseCue = loggedCueTypes.includes('transition-pulse');
           const hasWorkStartCue = loggedCueTypes.includes('work-start');
           const hasRestStartCue = loggedCueTypes.includes('rest-start');
-          const audioSessionConfigured = String(ts.audioSessionType || '').startsWith('playback');
+          const audioSessionConfigured =
+            ts.audioSessionType === 'auto' ||
+            ts.audioSessionType === 'ambient' ||
+            ts.audioSessionType === 'transient' ||
+            ts.audioSessionType === 'ambient-webaudio-mix' ||
+            ts.audioSessionType === 'transient-webaudio-mix';
           const mediaSessionUntouched = !navigator.mediaSession?.metadata;
 
           document.getElementById('closeTimerModalBtn').click();
@@ -1502,12 +1507,13 @@ async function runBrowserCDPTests(wsUrl) {
           ts.soundLog = [];
           ts.speechLog = [];
 
-          // Start timer from user gesture -> unlocks Master <audio> WAV on 'playback' channel (Silent-switch bypass)
+          // Start timer from user gesture -> foreground runs mixable WebAudio ('transient' <-> 'ambient', never exclusive 'playback')
           document.getElementById('timerStartPauseBtn').click();
           await new Promise(r => setTimeout(r, 120));
 
-          const masterStateOnStart = ts.getMasterAudioState();
-          const playbackSessionActive = String(ts.audioSessionType || '').startsWith('playback');
+          const fgWebAudioRunning = ts.getAudioContextState() === 'running';
+          const fgMasterIdle = ts.isMasterAudioPlaying() === false;
+          const mixableSessionActive = !String(ts.audioSessionType || '').startsWith('playback');
 
           // Simulate switching to another app on the phone (document hidden + pagehide + window blur)
           const origHiddenDesc = Object.getOwnPropertyDescriptor( Document.prototype, 'hidden' );
@@ -1517,18 +1523,20 @@ async function runBrowserCDPTests(wsUrl) {
           document.dispatchEvent(new Event('visibilitychange'));
           window.dispatchEvent(new Event('pagehide'));
           window.dispatchEvent(new Event('blur'));
+          await new Promise(r => setTimeout(r, 80));
 
-          // Stay in the "other app" for 2.15 seconds while Step 0 finishes ("2", "1" + ducked dings)
+          // Stay in the "other app" for 2.10 seconds while Step 0 finishes ("2", "1" + ducked dings)
           // and transitions into Step 1 (Exercise 'work-start' ding)!
+          const masterStateInBg = ts.getMasterAudioState();
           const stillRunningImmediatelyOnSwitch = ts.isRunning === true;
           const audioStillPlayingInOtherApp = ts.isMasterAudioPlaying() === true;
-          await new Promise(r => setTimeout(r, 2150));
+          await new Promise(r => setTimeout(r, 2100));
 
           const stepWhileStillInOtherApp = ts.currentStepIndex;
           const runningAfterIntervalInOtherApp = ts.isRunning === true;
           const masterStillPlayingAfterTransition = ts.isMasterAudioPlaying() === true;
 
-          // Switch back to the Workout app
+          // Switch back to the Workout app -> stops Master <audio> and returns to mixable foreground WebAudio
           if (origHiddenDesc) Object.defineProperty(document, 'hidden', origHiddenDesc);
           else delete document.hidden;
           if (origVisDesc) Object.defineProperty(document, 'visibilityState', origVisDesc);
@@ -1538,13 +1546,15 @@ async function runBrowserCDPTests(wsUrl) {
           window.dispatchEvent(new Event('focus'));
 
           await new Promise(r => setTimeout(r, 80));
+          const fgResumedWithoutMasterContention =
+            ts.isMasterAudioPlaying() === false && ts.getAudioContextState() === 'running';
           const clockAfterReturn = document.getElementById('timerClockDisplay').innerText.trim();
           const speechFiredInBackground = ts.speechLog.map(s => s.text);
           const workDingFiredInBackground = ts.soundLog.some(
             s => s.stepIndex === 1 && s.cueType === 'work-start'
           );
 
-          // Pause timer and verify Master <audio> releases cleanly when stopped
+          // Pause timer and verify audio session & context release cleanly when stopped
           document.getElementById('timerStartPauseBtn').click();
           const stoppedCleanlyOnPause = ts.isRunning === false && ts.isMasterAudioPlaying() === false;
           document.getElementById('resetStockTimerBtn').click();
@@ -1553,13 +1563,16 @@ async function runBrowserCDPTests(wsUrl) {
           return {
             speechPackLoaded: ts.speechPackLoaded,
             speechPackClipCount: ts.speechPackClipCount,
-            playbackSessionActive,
-            masterStateOnStart,
+            fgWebAudioRunning,
+            fgMasterIdle,
+            mixableSessionActive,
+            masterStateInBg,
             stillRunningImmediatelyOnSwitch,
             audioStillPlayingInOtherApp,
             stepWhileStillInOtherApp,
             runningAfterIntervalInOtherApp,
             masterStillPlayingAfterTransition,
+            fgResumedWithoutMasterContention,
             clockAfterReturn,
             speechFiredInBackground,
             workDingFiredInBackground,
@@ -1569,17 +1582,20 @@ async function runBrowserCDPTests(wsUrl) {
         if (
           !bgAndSilentCheck.speechPackLoaded ||
           bgAndSilentCheck.speechPackClipCount < 190 ||
-          !bgAndSilentCheck.playbackSessionActive ||
-          !bgAndSilentCheck.masterStateOnStart.playing ||
-          !bgAndSilentCheck.masterStateOnStart.inSync ||
-          bgAndSilentCheck.masterStateOnStart.muted !== false ||
-          bgAndSilentCheck.masterStateOnStart.volume !== 1 ||
-          bgAndSilentCheck.masterStateOnStart.bakedSpeechCount < 2 ||
+          !bgAndSilentCheck.fgWebAudioRunning ||
+          !bgAndSilentCheck.fgMasterIdle ||
+          !bgAndSilentCheck.mixableSessionActive ||
+          !bgAndSilentCheck.masterStateInBg.playing ||
+          !bgAndSilentCheck.masterStateInBg.inSync ||
+          bgAndSilentCheck.masterStateInBg.muted !== false ||
+          bgAndSilentCheck.masterStateInBg.volume !== 1 ||
+          bgAndSilentCheck.masterStateInBg.bakedSpeechCount < 1 ||
           !bgAndSilentCheck.stillRunningImmediatelyOnSwitch ||
           !bgAndSilentCheck.audioStillPlayingInOtherApp ||
           bgAndSilentCheck.stepWhileStillInOtherApp !== 1 ||
           !bgAndSilentCheck.runningAfterIntervalInOtherApp ||
           !bgAndSilentCheck.masterStillPlayingAfterTransition ||
+          !bgAndSilentCheck.fgResumedWithoutMasterContention ||
           !bgAndSilentCheck.speechFiredInBackground.includes('1') ||
           !bgAndSilentCheck.workDingFiredInBackground ||
           !bgAndSilentCheck.stoppedCleanlyOnPause
@@ -1589,7 +1605,7 @@ async function runBrowserCDPTests(wsUrl) {
           );
         }
         console.log(
-          `  ✅ PASS: App-switch non-pause & Silent-mode Media Playback verified (${bgAndSilentCheck.speechPackClipCount} voice clips decoded, Master <audio> active across hidden transition)`
+          `  ✅ PASS: Foreground mixable WebAudio + Background Master <audio> handoff verified (${bgAndSilentCheck.speechPackClipCount} voice clips decoded)`
         );
 
         console.log('\n--- 11d. Dual iPhone Profile E2E: (A) Safari Home Screen Shortcut Standalone & (B) iPhone Mobile Chrome (CriOS) ---');
@@ -1734,9 +1750,10 @@ async function runBrowserCDPTests(wsUrl) {
         const safariShortcutResult = await evalInPage(async () => {
           const ts = window.__workoutTimerState;
           const trustedClick = window.__lastSafariTrustedClick();
-          const masterOnStart = ts.getMasterAudioState();
           const audioSessionOnStart = navigator.audioSession?.type;
-          const webAudioNotContending = ts.getAudioContextState() !== 'running';
+          const fgWebAudioRunning = ts.getAudioContextState() === 'running';
+          const fgMasterIdle = ts.isMasterAudioPlaying() === false;
+          const neverUsedExclusivePlayback = !(window.__iosAudioSessionHistory || []).includes('playback');
 
           // Switch away from Safari Shortcut app to another iPhone app across Step 0 -> Step 1 transition
           const origHidden = Object.getOwnPropertyDescriptor(Document.prototype, 'hidden');
@@ -1746,8 +1763,10 @@ async function runBrowserCDPTests(wsUrl) {
           document.dispatchEvent(new Event('visibilitychange'));
           window.dispatchEvent(new Event('pagehide'));
           window.dispatchEvent(new Event('blur'));
+          await new Promise(r => setTimeout(r, 80));
 
-          await new Promise(r => setTimeout(r, 2100));
+          const masterInBg = ts.getMasterAudioState();
+          await new Promise(r => setTimeout(r, 2050));
           const stepInBg = ts.currentStepIndex;
           const playingInBg = ts.isMasterAudioPlaying() && ts.isRunning;
 
@@ -1761,9 +1780,11 @@ async function runBrowserCDPTests(wsUrl) {
 
           return {
             trustedClick,
-            masterOnStart,
+            masterInBg,
             audioSessionOnStart,
-            webAudioNotContending,
+            fgWebAudioRunning,
+            fgMasterIdle,
+            neverUsedExclusivePlayback,
             stepInBg,
             playingInBg,
             speechInBg: ts.speechLog.map(s => s.text),
@@ -1775,9 +1796,10 @@ async function runBrowserCDPTests(wsUrl) {
         await trustedTouchTap('#timerStartPauseBtn');
         const safariReleasedToAuto = await evalInPage(() => {
           const released = navigator.audioSession?.type === 'auto';
+          const neverUsedPlayback = !(window.__iosAudioSessionHistory || []).includes('playback');
           document.getElementById('resetStockTimerBtn').click();
           document.getElementById('closeTimerModalBtn').click();
-          return released;
+          return released && neverUsedPlayback;
         });
 
         if (
@@ -1790,13 +1812,15 @@ async function runBrowserCDPTests(wsUrl) {
           !safariShortcutPrep.swCachedSpeechPack ||
           !safariShortcutPrep.noOverflow ||
           !safariShortcutResult.trustedClick ||
-          safariShortcutResult.audioSessionOnStart !== 'playback' ||
-          !safariShortcutResult.webAudioNotContending ||
-          !safariShortcutResult.masterOnStart.playing ||
-          !safariShortcutResult.masterOnStart.inDom ||
-          !safariShortcutResult.masterOnStart.playsInline ||
-          safariShortcutResult.masterOnStart.hasMoreSegments !== false ||
-          safariShortcutResult.masterOnStart.lastBuildLatencyMs > 180 ||
+          safariShortcutResult.audioSessionOnStart !== 'transient' ||
+          !safariShortcutResult.fgWebAudioRunning ||
+          !safariShortcutResult.fgMasterIdle ||
+          !safariShortcutResult.neverUsedExclusivePlayback ||
+          !safariShortcutResult.masterInBg.playing ||
+          !safariShortcutResult.masterInBg.inDom ||
+          !safariShortcutResult.masterInBg.playsInline ||
+          safariShortcutResult.masterInBg.hasMoreSegments !== false ||
+          safariShortcutResult.masterInBg.lastBuildLatencyMs > 180 ||
           safariShortcutResult.stepInBg !== 1 ||
           !safariShortcutResult.playingInBg ||
           !safariShortcutResult.speechInBg.includes('1') ||
@@ -1809,7 +1833,7 @@ async function runBrowserCDPTests(wsUrl) {
           );
         }
         console.log(
-          `  ✅ PASS: [Profile A — iPhone Safari Home Screen Shortcut] Standalone safe-area, offline SW voice cache, trusted touch Start (${safariShortcutResult.masterOnStart.lastBuildLatencyMs}ms single-WAV), Silent-mode 'playback' & background transition verified`
+          `  ✅ PASS: [Profile A — iPhone Safari Home Screen Shortcut] Standalone safe-area, offline SW voice cache, mixable 'transient' ducking (0 'playback'), & background single-WAV (${safariShortcutResult.masterInBg.lastBuildLatencyMs}ms) verified`
         );
 
         // =========================================================================
@@ -1878,9 +1902,9 @@ async function runBrowserCDPTests(wsUrl) {
         const chromeIosResult = await evalInPage(async () => {
           const ts = window.__workoutTimerState;
           const trustedClick = window.__lastCriOSTrustedClick();
-          const masterBlobState = ts.getMasterAudioState();
           const audioSessionFallback = ts.audioSessionType;
-          const webAudioNotContending = ts.getAudioContextState() !== 'running';
+          const fgWebAudioRunning = ts.getAudioContextState() === 'running';
+          const fgMasterIdle = ts.isMasterAudioPlaying() === false;
 
           // Switch from Mobile Chrome to another iPhone app across Step 0 -> Step 1 transition
           const origHidden = Object.getOwnPropertyDescriptor(Document.prototype, 'hidden');
@@ -1890,10 +1914,20 @@ async function runBrowserCDPTests(wsUrl) {
           document.dispatchEvent(new Event('visibilitychange'));
           window.dispatchEvent(new Event('pagehide'));
           window.dispatchEvent(new Event('blur'));
+          await new Promise(r => setTimeout(r, 80));
 
-          await new Promise(r => setTimeout(r, 2100));
+          const masterBlobState = ts.getMasterAudioState();
+          await new Promise(r => setTimeout(r, 2050));
           const stepInBg = ts.currentStepIndex;
           const playingInBg = ts.isMasterAudioPlaying() && ts.isRunning;
+
+          // Also verify WKWebView data:audio/wav;base64 fallback resilience while backgrounded in CriOS
+          ts.setPreferDataUriMode(true);
+          document.dispatchEvent(new Event('visibilitychange'));
+          document.getElementById('timerStartPauseBtn').click(); // Pause
+          document.getElementById('timerStartPauseBtn').click(); // Resume while hidden in data-uri mode
+          await new Promise(r => setTimeout(r, 100));
+          const masterDataUriState = ts.getMasterAudioState();
 
           if (origHidden) Object.defineProperty(document, 'hidden', origHidden);
           else delete document.hidden;
@@ -1906,12 +1940,6 @@ async function runBrowserCDPTests(wsUrl) {
           const speechInBg = ts.speechLog.map(s => s.text);
           const workDingInBg = ts.soundLog.some(s => s.stepIndex === 1 && s.cueType === 'work-start');
 
-          // Also verify WKWebView data:audio/wav;base64 fallback resilience in CriOS
-          document.getElementById('timerStartPauseBtn').click(); // Pause
-          ts.setPreferDataUriMode(true);
-          document.getElementById('timerStartPauseBtn').click(); // Resume in data-uri mode
-          await new Promise(r => setTimeout(r, 100));
-          const masterDataUriState = ts.getMasterAudioState();
           document.getElementById('timerStartPauseBtn').click(); // Pause
           ts.setPreferDataUriMode(false);
 
@@ -1921,7 +1949,8 @@ async function runBrowserCDPTests(wsUrl) {
           return {
             trustedClick,
             audioSessionFallback,
-            webAudioNotContending,
+            fgWebAudioRunning,
+            fgMasterIdle,
             masterBlobState,
             stepInBg,
             playingInBg,
@@ -1952,8 +1981,9 @@ async function runBrowserCDPTests(wsUrl) {
           !chromeIosPrep.noHorizontalOverflow ||
           !chromeIosPrep.controlsVisibleWithoutScroll ||
           !chromeIosResult.trustedClick ||
-          chromeIosResult.audioSessionFallback !== 'playback-html5-media' ||
-          !chromeIosResult.webAudioNotContending ||
+          chromeIosResult.audioSessionFallback !== 'transient-webaudio-mix' ||
+          !chromeIosResult.fgWebAudioRunning ||
+          !chromeIosResult.fgMasterIdle ||
           !chromeIosResult.masterBlobState.playing ||
           !chromeIosResult.masterBlobState.inDom ||
           !chromeIosResult.masterBlobState.playsInline ||
@@ -1970,7 +2000,241 @@ async function runBrowserCDPTests(wsUrl) {
           );
         }
         console.log(
-          `  ✅ PASS: [Profile B — iPhone Mobile Chrome (CriOS)] 390x690 toolbar fit (Start btn y=${chromeIosPrep.playBtnBottom}px <= 690px), WKWebView HTML5 <audio playsinline>, data-URI fallback & background transition verified`
+          `  ✅ PASS: [Profile B — iPhone Mobile Chrome (CriOS)] 390x690 toolbar fit (Start btn y=${chromeIosPrep.playBtnBottom}px <= 690px), mixable foreground WebAudio, data-URI fallback & background transition verified`
+        );
+
+        console.log('\n--- 11e. Bug 1, Bug 2 & Bug 3 Regression Suite (Music/Podcast Ducking, Earbud Disconnect -> Phone Speaker Recovery & Bottom Timeline Scroll Bar) ---');
+        const bugsRegressionCheck = await evalInPage(async () => {
+          // Setup mock iOS navigator.audioSession to inspect exact category transitions
+          let currentSession = 'auto';
+          const sessionTransitions = [];
+          Object.defineProperty(navigator, 'audioSession', {
+            configurable: true,
+            value: {
+              get type() {
+                return currentSession;
+              },
+              set type(v) {
+                currentSession = String(v);
+                sessionTransitions.push(currentSession);
+              }
+            }
+          });
+
+          const typeSelect = document.getElementById('workoutTypeSelect');
+          typeSelect.value = 'Timed Duos (40/20)';
+          typeSelect.dispatchEvent(new Event('change'));
+          document.getElementById('generateWorkoutBtn').click();
+          document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
+
+          const ts = window.__workoutTimerState;
+          const timeline = document.getElementById('timerSequenceTimeline');
+
+          // ===================================================================
+          // BUG 1 CHECK: Music / Podcast on -> Foreground plays BOTH dings AND
+          // 24kHz neural voice via WebAudio ('transient' during cue -> 'ambient'
+          // between cues so music restores to 100% volume; NEVER 'playback')
+          // ===================================================================
+          const engineBefore = ts.getAudioEngineState();
+          // Jump to Step 2 (20s Rest -> Step 3 Work) at 4.0s remaining so it speaks "[Exercise] in", "3", "2", "1" -> 'work-start' ding!
+          ts.steps[3].exerciseName = 'Squats';
+          document.querySelector('[data-action="jump-timer-step"][data-step-index="2"]').click();
+          ts.remainingSeconds = 4;
+          ts.remainingMs = 3950;
+          sessionTransitions.length = 0;
+
+          document.getElementById('timerStartPauseBtn').click();
+          await new Promise(r => setTimeout(r, 140)); // Fires "Squats in" on WebAudio under 'transient'
+          const sessionDuringVoiceCue = navigator.audioSession.type;
+          const engineDuringVoice = ts.getAudioEngineState();
+
+          // Advance into Step 3 (40s Work) -> fires standalone 'work-start' ding (0.44s), then idle stretch!
+          ts.remainingSeconds = 1;
+          ts.remainingMs = 60;
+          await new Promise(r => setTimeout(r, 150));
+          const sessionDuringWorkStartDing = navigator.audioSession.type;
+          const engineAfterDing = ts.getAudioEngineState();
+
+          // Wait ~850ms for 'work-start' ding hold window to finish -> session must restore to 'ambient' (100% music volume!)
+          await new Promise(r => setTimeout(r, 850));
+          const sessionDuringIdleWork = navigator.audioSession.type;
+          const neverUsedPlaybackInBug1 = !sessionTransitions.includes('playback');
+          const webAudioPlayedVoiceAndDing =
+            engineDuringVoice.webAudioSpeechCount > engineBefore.webAudioSpeechCount &&
+            engineAfterDing.webAudioDingCount > engineBefore.webAudioDingCount;
+
+          // ===================================================================
+          // BUG 2 CHECK: User puts in earbuds + starts music, then stops music +
+          // removes earbuds -> Phone speaker immediately plays dings & voice
+          // without putting earbuds back in or reopening the app!
+          // ===================================================================
+          // 1) Simulate earbud insert + music route event, then stop music + earbud removal ('devicechange')
+          const beforeRouteState = ts.getAudioEngineState();
+          sessionTransitions.length = 0;
+          if (navigator.mediaDevices?.dispatchEvent) {
+            navigator.mediaDevices.dispatchEvent(new Event('devicechange'));
+          } else {
+            await ts.simulateRouteChange();
+          }
+          await new Promise(r => setTimeout(r, 160));
+          const afterEarbudRemovalState = ts.getAudioEngineState();
+          const flushedSessionViaAutoOnRouteChange = sessionTransitions.includes('auto');
+
+          // Trigger both a step-start ding ('rest-start' into Step 4 Rest) AND spoken countdown ('2' in Step 4 Rest -> Step 5 Work)
+          // on the phone speaker right after earbud removal — with zero app reopen and zero user tap!
+          ts.remainingSeconds = 1;
+          ts.remainingMs = 70;
+          await new Promise(r => setTimeout(r, 140)); // Advances Step 3 (Work) -> Step 4 (Rest): plays 'rest-start' ding!
+          ts.remainingSeconds = 3;
+          ts.remainingMs = 2050;
+          await new Promise(r => setTimeout(r, 120)); // Crosses 2000ms in Step 4 (Rest -> Work): speaks '2'!
+          const afterPhoneSpeakerCueState = ts.getAudioEngineState();
+          const phoneSpeakerPlayedAfterEarbudRemoval =
+            afterEarbudRemovalState.routeChangeCount > beforeRouteState.routeChangeCount &&
+            afterEarbudRemovalState.contextRefreshCount > beforeRouteState.contextRefreshCount &&
+            afterPhoneSpeakerCueState.audioContextState === 'running' &&
+            afterPhoneSpeakerCueState.webAudioDingCount > afterEarbudRemovalState.webAudioDingCount &&
+            afterPhoneSpeakerCueState.webAudioSpeechCount > afterEarbudRemovalState.webAudioSpeechCount;
+
+          // 2) Also simulate worst-case frozen WebKit AudioContext clock on earbud yank -> verify 110ms watchdog speaker bridge fires!
+          await ts.simulateRouteChange({ simulateStalledContext: true });
+          const beforeWatchdogCount = ts.getAudioEngineState().watchdogFallbackCount;
+          ts.remainingSeconds = 2;
+          ts.remainingMs = 1050;
+          await new Promise(r => setTimeout(r, 320)); // Crosses 1000ms ('1') + 110ms watchdog + 35ms AudioContext refresh
+          const afterWatchdogState = ts.getAudioEngineState();
+          const watchdogSpeakerBridgeRecovered =
+            afterWatchdogState.watchdogFallbackCount > beforeWatchdogCount &&
+            afterWatchdogState.audioContextState === 'running';
+
+          document.getElementById('timerStartPauseBtn').click(); // Pause
+          delete navigator.audioSession;
+
+          // ===================================================================
+          // BUG 3 CHECK: #timerSequenceTimeline automatically shifts scrollLeft
+          // on EVERY step snap (both live timer progression and Next/Prev/Reset)
+          // so the highlighted exercise sits in the lower-left until the last
+          // exercise reaches the bottom-right, after which the highlight moves
+          // across the bottom row until the last exercise is highlighted!
+          // ===================================================================
+          // Restore clean Round 1 sequence of Timed Duos (40/20) -> 13 steps
+          document.getElementById('closeTimerModalBtn').click();
+          document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
+
+          const measureTimelineStep = stepIdx => {
+            const tl = document.getElementById('timerSequenceTimeline');
+            const chips = Array.from(tl.querySelectorAll('.timer-seq-chip'));
+            const activeChip = tl.querySelector('.timer-seq-chip.active');
+            const lastChip = chips[chips.length - 1];
+            const firstChip = chips[0];
+            const leadingInset = firstChip ? firstChip.offsetLeft : 4;
+            const maxScrollLeft = Math.max(0, tl.scrollWidth - tl.clientWidth);
+            const desiredLeft = Math.max(0, chips[stepIdx].offsetLeft - leadingInset);
+            const expectedScrollLeft = Math.min(desiredLeft, maxScrollLeft);
+            const tlRect = tl.getBoundingClientRect();
+            const actRect = activeChip.getBoundingClientRect();
+            const lastRect = lastChip.getBoundingClientRect();
+            return {
+              stepIdx,
+              activeIndexAttr: Number(activeChip?.getAttribute('data-step-index')),
+              scrollLeft: tl.scrollLeft,
+              maxScrollLeft,
+              expectedScrollLeft,
+              scrollErrorPx: Math.abs(tl.scrollLeft - expectedScrollLeft),
+              activeLeftOffsetInBar: Math.round(actRect.left - tlRect.left),
+              lastRightGapInBar: Math.round(tlRect.right - lastRect.right),
+              pinnedAtEnd: desiredLeft >= maxScrollLeft - 0.5
+            };
+          };
+
+          const timelineMeasurements = [];
+          // Step 0 initial measurement on modal open
+          timelineMeasurements.push(measureTimelineStep(0));
+
+          // Advance Step 0 -> Step 1 -> Step 2 via real running timer progression!
+          ts.remainingSeconds = 1;
+          ts.remainingMs = 70;
+          document.getElementById('timerStartPauseBtn').click();
+          await new Promise(r => setTimeout(r, 140)); // Snaps to Step 1
+          timelineMeasurements.push(measureTimelineStep(1));
+
+          ts.remainingSeconds = 1;
+          ts.remainingMs = 70;
+          await new Promise(r => setTimeout(r, 140)); // Snaps to Step 2
+          document.getElementById('timerStartPauseBtn').click(); // Pause
+          timelineMeasurements.push(measureTimelineStep(2));
+
+          // Snap through remaining steps 3..12
+          for (let s = 3; s < ts.steps.length; s++) {
+            document.getElementById('timerNextStepBtn').click();
+            timelineMeasurements.push(measureTimelineStep(s));
+          }
+
+          // Verify Reset snaps back to Step 0 at scrollLeft === 0
+          document.getElementById('timerResetBtn').click();
+          const resetMeasurement = measureTimelineStep(0);
+          document.getElementById('closeTimerModalBtn').click();
+
+          const timelineOverflowed = timelineMeasurements[0].maxScrollLeft > 200;
+          const everyStepScrolledExact = timelineMeasurements.every(
+            m => m.activeIndexAttr === m.stepIdx && m.scrollErrorPx <= 1.5
+          );
+          const unpinnedSteps = timelineMeasurements.filter(m => !m.pinnedAtEnd);
+          const pinnedSteps = timelineMeasurements.filter(m => m.pinnedAtEnd);
+
+          // Note: .active has transform: scale(1.03), shifting visual rect.left by ~-1px from 4px padding -> ~2..5px
+          const unpinnedInLowerLeft =
+            unpinnedSteps.length >= 6 &&
+            unpinnedSteps.every(m => m.activeLeftOffsetInBar >= 1 && m.activeLeftOffsetInBar <= 8);
+
+          const pinnedLastInBottomRight =
+            pinnedSteps.length >= 2 &&
+            pinnedSteps.every(
+              (m, i) =>
+                Math.abs(m.scrollLeft - m.maxScrollLeft) <= 1.5 &&
+                Math.abs(m.lastRightGapInBar) <= 8 &&
+                (i === 0 || m.activeLeftOffsetInBar > pinnedSteps[i - 1].activeLeftOffsetInBar)
+            );
+
+          return {
+            sessionDuringVoiceCue,
+            sessionDuringWorkStartDing,
+            sessionDuringIdleWork,
+            neverUsedPlaybackInBug1,
+            webAudioPlayedVoiceAndDing,
+            flushedSessionViaAutoOnRouteChange,
+            phoneSpeakerPlayedAfterEarbudRemoval,
+            watchdogSpeakerBridgeRecovered,
+            timelineOverflowed,
+            everyStepScrolledExact,
+            unpinnedInLowerLeft,
+            pinnedLastInBottomRight,
+            resetBackToZero: resetMeasurement.scrollLeft === 0 && resetMeasurement.activeIndexAttr === 0,
+            sampleMeasurements: timelineMeasurements
+          };
+        });
+
+        if (
+          bugsRegressionCheck.sessionDuringVoiceCue !== 'transient' ||
+          bugsRegressionCheck.sessionDuringWorkStartDing !== 'transient' ||
+          bugsRegressionCheck.sessionDuringIdleWork !== 'ambient' ||
+          !bugsRegressionCheck.neverUsedPlaybackInBug1 ||
+          !bugsRegressionCheck.webAudioPlayedVoiceAndDing ||
+          !bugsRegressionCheck.flushedSessionViaAutoOnRouteChange ||
+          !bugsRegressionCheck.phoneSpeakerPlayedAfterEarbudRemoval ||
+          !bugsRegressionCheck.watchdogSpeakerBridgeRecovered ||
+          !bugsRegressionCheck.timelineOverflowed ||
+          !bugsRegressionCheck.everyStepScrolledExact ||
+          !bugsRegressionCheck.unpinnedInLowerLeft ||
+          !bugsRegressionCheck.pinnedLastInBottomRight ||
+          !bugsRegressionCheck.resetBackToZero
+        ) {
+          throw new Error(
+            'Bug 1 / Bug 2 / Bug 3 E2E regression check failed: ' + JSON.stringify(bugsRegressionCheck)
+          );
+        }
+        console.log(
+          '  ✅ PASS: Bug 1 (music/podcast mix + ducking), Bug 2 (earbud disconnect -> phone speaker auto-recovery & watchdog), and Bug 3 (bottom timeline lower-left shift -> bottom-right clamp) all verified E2E!'
         );
 
         console.log('\n--- 12. Drag-and-Drop Rounds, Intra-Round Reorder & Cross-Round Exercise Swap ---');

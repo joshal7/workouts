@@ -1853,10 +1853,11 @@ html, body {
 
 /* Sequence Timeline Strip */
 .timer-sequence-timeline {
+  position: relative;
   display: flex;
   gap: 5px;
   overflow-x: auto;
-  padding: 4px 2px 6px;
+  padding: 4px 4px 6px;
 }
 
 .timer-seq-chip {
