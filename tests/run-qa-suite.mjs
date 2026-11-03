@@ -2317,4 +2317,67 @@ test('Mixable AudioSession (never exclusive playback), vocal presence shaper, an
   assert.equal(cueWav.byteLength, 44 + combined.length * 2);
 });
 
+// ----------------------------------------------------------------------------
+// 22. MULTI-CONDITION MUSIC / PODCAST COEXISTENCE, SILENT MODE & HANDOFF UNIT CHECKS
+// ----------------------------------------------------------------------------
+console.log('\n22. Multi-Condition Music / Podcast Coexistence, Silent Mode & Handoff Unit Checks');
+
+test('buildRemainingAudioEvents deduplicates completed foreground speech on app switch while preserving interrupted mid-word cues', () => {
+  const sampleSteps = [
+    { id: 's0', type: 'rest', duration: 20, color: 'blue', exerciseName: 'Rest' },
+    { id: 's1', type: 'work', duration: 40, color: 'green', exerciseName: 'Bench Press' }
+  ];
+
+  const plan = buildStepSpeechPlan(sampleSteps, 0, { spokenExerciseNames: true });
+  const introCue = plan.cues.find(c => c.id === 'pre-exercise-intro');
+  assert.ok(introCue, 'Expected pre-exercise-intro cue in Rest -> Work speech plan');
+
+  // Case A: User switches apps 20ms AFTER "Bench Press in" already finished in foreground -> must NOT repeat!
+  const remAfterIntroStart = introCue.triggerRemainingMs - 20;
+  const dedupedTimeline = buildRemainingAudioEvents(sampleSteps, 0, remAfterIntroStart, {
+    spokenExerciseNames: true,
+    completedSpeechIds: new Set(['pre-exercise-intro'])
+  });
+  const dedupedStep0Speech = dedupedTimeline.events
+    .filter(e => e.kind === 'speech' && e.stepIndex === 0)
+    .map(e => e.text);
+  assert.deepEqual(
+    dedupedStep0Speech,
+    ['3', '2', '1'],
+    `Completed intro must not double-fire on app switch, got ${JSON.stringify(dedupedStep0Speech)}`
+  );
+
+  // Case B: User locks screen 350ms INTO "Bench Press in" while still above minRemainingMs -> re-bakes cleanly at offset 0!
+  const remMidIntro = Math.max(introCue.minRemainingMs + 100, introCue.triggerRemainingMs - 350);
+  const continuedTimeline = buildRemainingAudioEvents(sampleSteps, 0, remMidIntro, {
+    spokenExerciseNames: true,
+    completedSpeechIds: new Set(),
+    interruptedSpeechId: 'pre-exercise-intro'
+  });
+  const continuedIntro = continuedTimeline.events.find(
+    e => e.kind === 'speech' && e.stepIndex === 0 && e.id === 'pre-exercise-intro'
+  );
+  assert.ok(continuedIntro, 'Mid-word interrupted intro should continue seamlessly on background stream');
+  assert.equal(continuedIntro.offsetSec, 0);
+});
+
+test('Audio engine enforces Silent-Mode IPC lead, MediaSession non-hijack, epoch-guarded teardown, and background pause recovery', () => {
+  const appJs = fs.readFileSync(path.join(rootDir, 'src', 'app.js'), 'utf8');
+  assert.ok(
+    !/mediaSession\.metadata\s*=/.test(appJs) && !/mediaSession\.setActionHandler/.test(appJs),
+    'src/app.js must NEVER hijack navigator.mediaSession (AirPods / Lock Screen controls must stay bound to music/podcast)'
+  );
+  assert.ok(
+    appJs.includes('recoverInterruptedMasterTimelineAudio') &&
+      appJs.includes('resumeContextOrPlayCueBridge') &&
+      appJs.includes('suspendAudioContextAndReleaseSession') &&
+      appJs.includes('audioLifecycleEpoch'),
+    'src/app.js must include background pause auto-recovery, hanging-resume bridge fallback, and epoch-guarded session step-down'
+  );
+  assert.ok(
+    appJs.includes('0.045'),
+    'src/app.js must include 45ms IPC lead on ambient -> transient switch so iPhone Silent Mode never clips attack transients'
+  );
+});
+
 console.log(`\n🎉 ALL ${passed} QA TEST SUITES PASSED SUCCESSFULLY!`);

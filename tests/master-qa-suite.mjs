@@ -122,10 +122,10 @@ async function runBrowserCDPTests(wsUrl) {
   const ws = new WebSocket(wsUrl);
   let id = 1;
 
-  function send(method, params = {}) {
+  function send(method, params = {}, timeoutMs = 12000) {
     return new Promise((resolve, reject) => {
       const msgId = id++;
-      const timer = setTimeout(() => reject(new Error('Timeout ' + method)), 8000);
+      const timer = setTimeout(() => reject(new Error('Timeout ' + method)), timeoutMs);
       const handler = (evt) => {
         const msg = JSON.parse(evt.data);
         if (msg.id === msgId) {
@@ -140,12 +140,16 @@ async function runBrowserCDPTests(wsUrl) {
     });
   }
 
-  async function evalInPage(fnStr) {
-    const res = await send('Runtime.evaluate', {
-      expression: `(${fnStr})()`,
-      returnByValue: true,
-      awaitPromise: true
-    });
+  async function evalInPage(fnStr, timeoutMs = 12000) {
+    const res = await send(
+      'Runtime.evaluate',
+      {
+        expression: `(${fnStr})()`,
+        returnByValue: true,
+        awaitPromise: true
+      },
+      timeoutMs
+    );
     if (res.exceptionDetails) {
       throw new Error(JSON.stringify(res.exceptionDetails));
     }
@@ -2235,6 +2239,659 @@ async function runBrowserCDPTests(wsUrl) {
         }
         console.log(
           '  ✅ PASS: Bug 1 (music/podcast mix + ducking), Bug 2 (earbud disconnect -> phone speaker auto-recovery & watchdog), and Bug 3 (bottom timeline lower-left shift -> bottom-right clamp) all verified E2E!'
+        );
+
+        console.log('\n--- 11f. Comprehensive Multi-Condition Timer + Music/Podcast + Silent Mode + App-Switch Coexistence Matrix ---');
+        const multiConditionAudioCheck = await evalInPage(async () => {
+          const wait = ms => new Promise(r => setTimeout(r, ms));
+          const ts = window.__workoutTimerState;
+
+          // Virtual iOS AVAudioSession + External Music/Podcast Player + Hardware Silent Switch
+          const env = {
+            currentSession: 'auto',
+            silentSwitchOn: false,
+            sessionLog: [],
+            mutedBySilentSwitchCount: 0,
+            oscillatorStarts: 0,
+            voiceBufferStarts: 0,
+            masterAudioPlays: 0,
+            cueBridgePlays: 0,
+            mediaSessionHijacked: false,
+            externalPlayer: {
+              playing: false,
+              volume: 1.0,
+              pausedByConflict: false,
+              duckCount: 0,
+              restoreFullVolumeCount: 0,
+              start() {
+                this.playing = true;
+                this.volume = env.currentSession === 'transient' ? 0.25 : 1.0;
+              },
+              pause() {
+                this.playing = false;
+              }
+            }
+          };
+
+          Object.defineProperty(navigator, 'audioSession', {
+            configurable: true,
+            value: {
+              get type() {
+                return env.currentSession;
+              },
+              set type(val) {
+                const next = String(val);
+                env.currentSession = next;
+                env.sessionLog.push(next);
+                // On iOS, 'playback' steals the exclusive AVAudioSession and pauses external music/podcasts!
+                if (next === 'playback' && env.externalPlayer.playing) {
+                  env.externalPlayer.playing = false;
+                  env.externalPlayer.pausedByConflict = true;
+                } else if (next === 'transient') {
+                  if (env.externalPlayer.playing) {
+                    env.externalPlayer.volume = 0.25;
+                    env.externalPlayer.duckCount += 1;
+                  }
+                } else if (next === 'ambient' || next === 'auto') {
+                  if (env.externalPlayer.playing) {
+                    env.externalPlayer.volume = 1.0;
+                    env.externalPlayer.restoreFullVolumeCount += 1;
+                  }
+                }
+              }
+            }
+          });
+
+          // Monitor real WebAudio & HTML5 <audio> hardware emissions to confirm Silent Mode & session state
+          const origOscStart = OscillatorNode.prototype.start;
+          const origBufStart = AudioBufferSourceNode.prototype.start;
+          const origMediaPlay = HTMLMediaElement.prototype.play;
+          const origHiddenDesc = Object.getOwnPropertyDescriptor(Document.prototype, 'hidden');
+          const origVisDesc = Object.getOwnPropertyDescriptor(Document.prototype, 'visibilityState');
+
+          const setAppHidden = hidden => {
+            if (hidden) {
+              Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+              Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+              document.dispatchEvent(new Event('visibilitychange'));
+              window.dispatchEvent(new Event('pagehide'));
+              window.dispatchEvent(new Event('blur'));
+            } else {
+              if (origHiddenDesc) Object.defineProperty(document, 'hidden', origHiddenDesc);
+              else delete document.hidden;
+              if (origVisDesc) Object.defineProperty(document, 'visibilityState', origVisDesc);
+              else delete document.visibilityState;
+              document.dispatchEvent(new Event('visibilitychange'));
+              window.dispatchEvent(new Event('pageshow'));
+              window.dispatchEvent(new Event('focus'));
+            }
+          };
+
+          OscillatorNode.prototype.start = function (...args) {
+            env.oscillatorStarts += 1;
+            // On iOS, 'ambient' is silenced when the hardware Silent switch is ON; 'transient' plays!
+            if (env.silentSwitchOn && env.currentSession !== 'transient') {
+              env.mutedBySilentSwitchCount += 1;
+            }
+            return origOscStart.apply(this, args);
+          };
+
+          AudioBufferSourceNode.prototype.start = function (...args) {
+            // Exclude 1-frame silent unlock buffer
+            if (this.buffer && this.buffer.length > 10) {
+              env.voiceBufferStarts += 1;
+              if (env.silentSwitchOn && env.currentSession !== 'transient') {
+                env.mutedBySilentSwitchCount += 1;
+              }
+            }
+            return origBufStart.apply(this, args);
+          };
+
+          HTMLMediaElement.prototype.play = function (...args) {
+            if (!this.muted && this.volume >= 0.05) {
+              if (this.id === 'masterWorkoutTimelineAudio') env.masterAudioPlays += 1;
+              if (this.id === 'workoutCueBridgeAudio') env.cueBridgePlays += 1;
+              if (env.silentSwitchOn && env.currentSession !== 'transient') {
+                env.mutedBySilentSwitchCount += 1;
+              }
+            }
+            return origMediaPlay.apply(this, args);
+          };
+
+          if (navigator.mediaSession && navigator.mediaSession.metadata !== null) {
+            env.mediaSessionHijacked = true;
+          }
+
+          const results = {};
+
+          try {
+            // Prepare clean Timed Duos (40/20) workout
+            const typeSelect = document.getElementById('workoutTypeSelect');
+            typeSelect.value = 'Timed Duos (40/20)';
+            typeSelect.dispatchEvent(new Event('change'));
+            document.getElementById('generateWorkoutBtn').click();
+
+            // =================================================================
+            // CASE 1: Silent Mode ON & OFF (Music Off) -> Both timer dings & voice
+            // bypass Silent switch via 'transient', return to 'ambient' between
+            // cues, and release to 'auto' when paused
+            // =================================================================
+            for (const silentMode of [true, false]) {
+              env.silentSwitchOn = silentMode;
+              env.externalPlayer.pause();
+              document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
+              ts.steps[3].exerciseName = 'Bench Press';
+              document.querySelector('[data-action="jump-timer-step"][data-step-index="2"]').click();
+              ts.remainingSeconds = 4;
+              ts.remainingMs = 3950;
+              const oscBefore = env.oscillatorStarts;
+              const voiceBefore = env.voiceBufferStarts;
+
+              document.getElementById('timerStartPauseBtn').click();
+              await wait(140); // Speaks "Bench Press in"
+              const sessionOnSpeech = env.currentSession;
+
+              ts.remainingSeconds = 1;
+              ts.remainingMs = 60;
+              await wait(150); // Advances Step 2 -> Step 3 Work: plays 'work-start' ding!
+              const sessionOnDing = env.currentSession;
+
+              await wait(850); // Cue hold expires -> returns to 'ambient'
+              const sessionIdle = env.currentSession;
+
+              document.getElementById('timerStartPauseBtn').click(); // Pause
+              await wait(110); // Step-down 'ambient' -> 'auto'
+              const sessionPaused = env.currentSession;
+              document.getElementById('closeTimerModalBtn').click();
+
+              results[silentMode ? 'case1_silentOn' : 'case1_silentOff'] = {
+                sessionOnSpeech,
+                sessionOnDing,
+                sessionIdle,
+                sessionPaused,
+                oscFired: env.oscillatorStarts > oscBefore,
+                voiceFired: env.voiceBufferStarts > voiceBefore,
+                mutedBySilent: env.mutedBySilentSwitchCount
+              };
+            }
+
+            // =================================================================
+            // CASE 2: Starting Timer WITH Music / Podcast ALREADY Playing
+            // (Both Silent Mode ON and Silent Mode OFF)
+            // =================================================================
+            for (const silentMode of [true, false]) {
+              env.silentSwitchOn = silentMode;
+              env.externalPlayer.start(); // Podcast/music already playing BEFORE opening timer!
+              document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
+              const musicUnpausedOnOpen = env.externalPlayer.playing && !env.externalPlayer.pausedByConflict;
+
+              ts.steps[3].exerciseName = 'Squats';
+              document.querySelector('[data-action="jump-timer-step"][data-step-index="2"]').click();
+              ts.remainingSeconds = 4;
+              ts.remainingMs = 3950;
+              const oscBefore = env.oscillatorStarts;
+              const voiceBefore = env.voiceBufferStarts;
+
+              document.getElementById('timerStartPauseBtn').click(); // Start timer with music playing!
+              await wait(140); // Voice cue -> music ducks to 0.25, stays playing!
+              const musicDuckedDuringVoice =
+                env.externalPlayer.playing && env.externalPlayer.volume === 0.25;
+
+              ts.remainingSeconds = 1;
+              ts.remainingMs = 60;
+              await wait(150); // 'work-start' ding -> music still playing!
+              const musicPlayingDuringDing = env.externalPlayer.playing;
+
+              await wait(850); // Idle work -> music restores to 1.0 full volume!
+              const musicRestoredFullVolume =
+                env.externalPlayer.playing && env.externalPlayer.volume === 1.0;
+
+              document.getElementById('timerStartPauseBtn').click(); // Pause timer -> music MUST continue unpaused!
+              await wait(110);
+              const musicUnpausedAfterTimerPause =
+                env.externalPlayer.playing &&
+                !env.externalPlayer.pausedByConflict &&
+                env.externalPlayer.volume === 1.0;
+              document.getElementById('closeTimerModalBtn').click();
+
+              results[silentMode ? 'case2_startWithMusic_silentOn' : 'case2_startWithMusic_silentOff'] = {
+                musicUnpausedOnOpen,
+                musicDuckedDuringVoice,
+                musicPlayingDuringDing,
+                musicRestoredFullVolume,
+                musicUnpausedAfterTimerPause,
+                timerPlayedBothVoiceAndDing:
+                  env.oscillatorStarts > oscBefore && env.voiceBufferStarts > voiceBefore,
+                mutedBySilent: env.mutedBySilentSwitchCount
+              };
+            }
+
+            // =================================================================
+            // CASE 3: Starting Timer With Audio OFF -> Then Starting Music Mid-Timer
+            // (Both during idle work AND mid-countdown, Control Center blur/focus,
+            // Silent Mode ON & OFF)
+            // =================================================================
+            for (const silentMode of [true, false]) {
+              env.silentSwitchOn = silentMode;
+              env.externalPlayer.pause(); // Audio OFF initially
+              document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
+              document.querySelector('[data-action="jump-timer-step"][data-step-index="1"]').click(); // 40s Work
+              document.getElementById('timerStartPauseBtn').click(); // Start timer with music OFF!
+              await wait(900); // Idle work ('ambient')
+
+              // User swipes Control Center / taps AirPods to start music while timer is running!
+              window.dispatchEvent(new Event('blur'));
+              env.externalPlayer.start();
+              window.dispatchEvent(new Event('focus'));
+              await wait(80);
+              const bothRunningAfterStartMidWork =
+                ts.isRunning && env.externalPlayer.playing && env.externalPlayer.volume === 1.0;
+
+              // Now advance into Rest -> Work countdown while music continues playing
+              ts.steps[3].exerciseName = 'Lunges';
+              ts.remainingSeconds = 1;
+              ts.remainingMs = 60;
+              await wait(150); // Step 1 -> Step 2 (Rest): plays 'rest-start' chime!
+              const oscAfterRestChime = env.oscillatorStarts;
+
+              // Pause music briefly, then start music AGAIN right in the middle of "3, 2, 1" countdown!
+              env.externalPlayer.pause();
+              ts.remainingSeconds = 3;
+              ts.remainingMs = 2950;
+              await wait(120); // Speaks '3'
+              env.externalPlayer.start(); // Start music mid-countdown!
+              ts.remainingSeconds = 2;
+              ts.remainingMs = 1950;
+              await wait(120); // Speaks '2' while music is playing (ducked to 0.25)!
+              const midCountdownMusicAndVoice =
+                ts.isRunning &&
+                env.externalPlayer.playing &&
+                env.externalPlayer.volume === 0.25 &&
+                ts.speechLog.some(s => s.text === '2');
+
+              document.getElementById('timerStartPauseBtn').click();
+              await wait(110);
+              document.getElementById('closeTimerModalBtn').click();
+
+              results[silentMode ? 'case3_startOffThenPlay_silentOn' : 'case3_startOffThenPlay_silentOff'] = {
+                bothRunningAfterStartMidWork,
+                restChimePlayed: oscAfterRestChime > 0,
+                midCountdownMusicAndVoice,
+                mutedBySilent: env.mutedBySilentSwitchCount
+              };
+            }
+
+            // =================================================================
+            // CASE 4: Switching Between Apps (Foreground <-> Background)
+            // - With music playing & Silent Mode ON/OFF
+            // - Pausing music in the other app (timer continues unpaused)
+            // - Starting/unpausing music in the other app (even when iOS pauses
+            //   masterTimelineAudio -> recoverInterruptedMasterTimelineAudio
+            //   auto-resumes in <200ms at exact wall-clock offset!)
+            // - Deduping already-spoken foreground intro on app switch
+            // =================================================================
+            env.silentSwitchOn = true;
+            env.externalPlayer.start();
+            document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
+            ts.steps[3].exerciseName = 'Curls';
+            document.querySelector('[data-action="jump-timer-step"][data-step-index="2"]').click();
+            ts.remainingSeconds = 2;
+            ts.remainingMs = 1550;
+            ts.speechLog = [];
+            ts.soundLog = [];
+
+            document.getElementById('timerStartPauseBtn').click();
+            await wait(80);
+
+            // Switch to Spotify / Podcasts app (document.hidden = true)
+            setAppHidden(true);
+            await wait(100);
+            const bgMasterPlayingInitial = ts.isMasterAudioPlaying() && env.externalPlayer.playing;
+
+            // User pauses music inside Spotify while Workout app is in background -> timer MUST keep running!
+            env.externalPlayer.pause();
+            await wait(100);
+            const timerContinuesWhenMusicPausedInBg = ts.isRunning && ts.isMasterAudioPlaying();
+
+            // User hits Play in Spotify while Workout app is in background -> simulate iOS pausing background <audio>!
+            const bgRecoveriesBefore = ts.getAudioEngineState().bgPauseRecoveryCount;
+            const masterEl = document.getElementById('masterWorkoutTimelineAudio');
+            env.externalPlayer.start();
+            masterEl.pause(); // Triggers 'pause' listener -> recoverInterruptedMasterTimelineAudio()!
+            await wait(220);
+            const bgRecoveredAfterExternalMusicStart =
+              ts.isRunning &&
+              ts.isMasterAudioPlaying() &&
+              ts.getAudioEngineState().bgPauseRecoveryCount > bgRecoveriesBefore &&
+              env.externalPlayer.playing &&
+              !env.externalPlayer.pausedByConflict;
+
+            // Let background timer naturally cross Step 2 -> Step 3 ('work-start') while still hidden with music playing!
+            await wait(1200);
+            const stepAdvancedInBg =
+              ts.currentStepIndex === 3 &&
+              ts.isMasterAudioPlaying() &&
+              ts.soundLog.some(c => c.stepIndex === 3 && c.cueType === 'work-start');
+
+            // Switch back to Workout app (document.hidden = false) -> master <audio> stops, foreground WebAudio resumes, music restores to 1.0!
+            setAppHidden(false);
+            await wait(140);
+            const fgHandbackClean =
+              ts.isRunning &&
+              !ts.isMasterAudioPlaying() &&
+              ts.getAudioEngineState().audioContextState === 'running' &&
+              env.externalPlayer.playing &&
+              env.externalPlayer.volume === 1.0;
+
+            document.getElementById('timerStartPauseBtn').click();
+            await wait(110);
+            document.getElementById('closeTimerModalBtn').click();
+
+            results.case4_appSwitching = {
+              bgMasterPlayingInitial,
+              timerContinuesWhenMusicPausedInBg,
+              bgRecoveredAfterExternalMusicStart,
+              stepAdvancedInBg,
+              fgHandbackClean,
+              mutedBySilent: env.mutedBySilentSwitchCount
+            };
+
+            // =================================================================
+            // CASE 5: Stopping / Pausing the Timer & Starting It Again With Music Playing
+            // - Pause mid-cue -> oscillators & speech stop cleanly, music stays unpaused at 1.0
+            // - Start again -> music stays unpaused, timer cues fire cleanly
+            // - Rapid Start -> Pause -> Start (35ms) -> lifecycleEpoch prevents stale suspend!
+            // - Reset -> Start with music playing
+            // - Complete workout at 00:00 -> fanfare plays -> music restores -> Start restarts Step 0!
+            // =================================================================
+            env.silentSwitchOn = true;
+            env.externalPlayer.start();
+            document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
+            document.getElementById('timerStartPauseBtn').click(); // Start (plays Step 0 pulse)
+            await wait(60);
+
+            // Pause mid-ding while music is playing!
+            document.getElementById('timerStartPauseBtn').click();
+            await wait(110);
+            const afterMidCuePause = ts.getAudioEngineState();
+            const cleanMidCueStop =
+              !ts.isRunning &&
+              afterMidCuePause.activeOscillatorCount === 0 &&
+              !afterMidCuePause.activeSpeechPlaying &&
+              afterMidCuePause.navigatorAudioSessionType === 'auto' &&
+              env.externalPlayer.playing &&
+              env.externalPlayer.volume === 1.0 &&
+              !env.externalPlayer.pausedByConflict;
+
+            // Start again with music playing, then test rapid Pause -> Start within 30ms!
+            document.getElementById('timerStartPauseBtn').click(); // Start
+            await wait(30);
+            document.getElementById('timerStartPauseBtn').click(); // Pause
+            await wait(25);
+            document.getElementById('timerStartPauseBtn').click(); // Immediate Start!
+            await wait(160); // Wait past 65ms suspend finalize timeout!
+            const afterRapidRestart = ts.getAudioEngineState();
+            const rapidRestartHealthy =
+              ts.isRunning &&
+              afterRapidRestart.audioContextState === 'running' &&
+              afterRapidRestart.navigatorAudioSessionType !== 'auto' &&
+              env.externalPlayer.playing &&
+              !env.externalPlayer.pausedByConflict;
+
+            // Reset timer while music is playing, then Start again
+            document.getElementById('timerResetBtn').click();
+            await wait(90);
+            const musicUnpausedAfterReset = env.externalPlayer.playing && env.externalPlayer.volume === 1.0;
+            document.getElementById('timerStartPauseBtn').click();
+            await wait(90);
+            const runningAfterResetStart = ts.isRunning && env.externalPlayer.playing;
+
+            // Jump to final step (Step 12), set 120ms remaining, and tap Start -> let workout complete naturally!
+            const lastIdx = ts.steps.length - 1;
+            document.querySelector(`[data-action="jump-timer-step"][data-step-index="${lastIdx}"]`).click();
+            ts.remainingSeconds = 1;
+            ts.remainingMs = 120;
+            document.getElementById('timerStartPauseBtn').click();
+            await wait(220); // Crosses 00:00 -> 'workout-complete' fanfare!
+            const completedAtZero =
+              !ts.isRunning &&
+              ts.currentStepIndex === lastIdx &&
+              ts.remainingSeconds === 0 &&
+              ts.soundLog.some(c => c.cueType === 'workout-complete') &&
+              env.externalPlayer.playing;
+
+            await wait(980); // Wait for 920ms completion fanfare tail -> music restores to 1.0 & 'auto'!
+            const fanfareTailRestored =
+              env.externalPlayer.playing &&
+              env.externalPlayer.volume === 1.0 &&
+              env.currentSession === 'auto';
+
+            // Tap ▶ Start right after workout completion while music is playing -> must restart at Step 0!
+            document.getElementById('timerStartPauseBtn').click();
+            await wait(100);
+            const restartedFromCompletionCleanly =
+              ts.isRunning &&
+              ts.currentStepIndex === 0 &&
+              env.externalPlayer.playing &&
+              !env.externalPlayer.pausedByConflict;
+
+            document.getElementById('timerStartPauseBtn').click();
+            await wait(110);
+            document.getElementById('closeTimerModalBtn').click();
+
+            results.case5_stopAndRestartWithMusic = {
+              cleanMidCueStop,
+              rapidRestartHealthy,
+              musicUnpausedAfterReset,
+              runningAfterResetStart,
+              completedAtZero,
+              fanfareTailRestored,
+              restartedFromCompletionCleanly,
+              mutedBySilent: env.mutedBySilentSwitchCount
+            };
+
+            // =================================================================
+            // CASE 6: Starting & Stopping Music Repeatedly With Timer ON
+            // + Hanging WebKit AudioContext.resume() 95ms Cue-Bridge Fallback
+            // =================================================================
+            env.silentSwitchOn = true;
+            env.externalPlayer.pause();
+            document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
+            ts.steps[3].exerciseName = 'Deadlifts';
+            document.querySelector('[data-action="jump-timer-step"][data-step-index="2"]').click();
+            ts.remainingSeconds = 5;
+            ts.remainingMs = 4900;
+            document.getElementById('timerStartPauseBtn').click();
+
+            // Repeatedly start & stop external music while timer runs across voice + ding!
+            for (let cycle = 0; cycle < 4; cycle++) {
+              env.externalPlayer.start();
+              window.dispatchEvent(new Event('blur'));
+              await wait(45);
+              window.dispatchEvent(new Event('focus'));
+              env.externalPlayer.pause();
+              await wait(45);
+            }
+            env.externalPlayer.start(); // Leave music ON
+            ts.remainingSeconds = 3;
+            ts.remainingMs = 2050;
+            await wait(130); // Fires spoken '2'
+            const timerAndMusicSurvivedCycling =
+              ts.isRunning &&
+              env.externalPlayer.playing &&
+              !env.externalPlayer.pausedByConflict &&
+              ts.speechLog.some(s => s.text === '2');
+
+            // Simulate worst-case iOS WebKit bug where external music interruption leaves
+            // AudioContext suspended AND ctx.resume() hangs pending without resolving:
+            // verify 95ms resumeContextOrPlayCueBridge plays the cue via cueBridgeAudioEl under 'transient'!
+            const cueBridgeBefore = env.cueBridgePlays;
+            const watchdogBefore = ts.getAudioEngineState().watchdogFallbackCount;
+            ts.simulateHangingResume(true);
+            // Force sharedAudioCtx into suspended state by briefly pausing & resuming only via simulated hang
+            document.getElementById('timerStartPauseBtn').click(); // Pause (suspends ctx)
+            await wait(80);
+            document.getElementById('timerStartPauseBtn').click(); // Start while simulateHangingResume === true!
+            ts.remainingSeconds = 2;
+            ts.remainingMs = 1050;
+            await wait(240); // Crosses 1000ms ('1') + 95ms hanging-resume timeout -> cueBridge plays!
+            const hangingResumeRecoveredViaBridge =
+              env.cueBridgePlays > cueBridgeBefore &&
+              ts.getAudioEngineState().watchdogFallbackCount > watchdogBefore &&
+              env.externalPlayer.playing &&
+              !env.externalPlayer.pausedByConflict;
+            ts.simulateHangingResume(false);
+
+            document.getElementById('timerStartPauseBtn').click();
+            await wait(110);
+            document.getElementById('closeTimerModalBtn').click();
+
+            results.case6_toggleMusicWhileTimerOn = {
+              timerAndMusicSurvivedCycling,
+              hangingResumeRecoveredViaBridge,
+              mutedBySilent: env.mutedBySilentSwitchCount
+            };
+
+            // =================================================================
+            // CASE 7: Full Combined Gym Chaos Matrix
+            // Open timer paused (Silent OFF, music OFF) -> switch apps while paused to start
+            // podcast -> return & start timer -> flip Silent Switch ON mid-workout ->
+            // switch apps -> pause podcast -> switch back -> unpause podcast ->
+            // pull out earbuds ('devicechange') -> verify phone speaker cue & podcast unpaused!
+            // =================================================================
+            env.silentSwitchOn = false;
+            env.externalPlayer.pause();
+            document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
+            // Switch apps while timer is STILL PAUSED to start a podcast
+            setAppHidden(true);
+            env.externalPlayer.start();
+            await wait(80);
+            const pausedAppSwitchDidNotStartBgAudio = !ts.isMasterAudioPlaying() && env.externalPlayer.playing;
+
+            // Return to Workout app & tap Start
+            setAppHidden(false);
+            ts.steps[3].exerciseName = 'Burpees';
+            document.querySelector('[data-action="jump-timer-step"][data-step-index="2"]').click();
+            ts.remainingSeconds = 4;
+            ts.remainingMs = 3950;
+            document.getElementById('timerStartPauseBtn').click();
+            await wait(130); // Speaks "Burpees in" with Silent OFF + podcast playing
+
+            // User flips hardware Silent Switch ON mid-workout, then switches to Messages app!
+            env.silentSwitchOn = true;
+            setAppHidden(true);
+            await wait(120);
+            const silentOnBgPlaying = ts.isMasterAudioPlaying() && env.currentSession === 'transient';
+
+            // User pauses podcast, returns to Workout app, then unpauses podcast via AirPods stem!
+            env.externalPlayer.pause();
+            setAppHidden(false);
+            await wait(100);
+            env.externalPlayer.start();
+
+            // User pulls out one earbud ('devicechange') and advances to Step 3 ('work-start' ding)!
+            const dingCountBeforeChaosEnd = ts.getAudioEngineState().webAudioDingCount;
+            if (navigator.mediaDevices?.dispatchEvent) {
+              navigator.mediaDevices.dispatchEvent(new Event('devicechange'));
+            } else {
+              await ts.simulateRouteChange();
+            }
+            await wait(140);
+            ts.remainingSeconds = 1;
+            ts.remainingMs = 60;
+            await wait(160); // Advances Step 2 -> Step 3: 'work-start' ding on speaker!
+            const chaosEndEngine = ts.getAudioEngineState();
+
+            document.getElementById('timerStartPauseBtn').click();
+            await wait(110);
+            document.getElementById('closeTimerModalBtn').click();
+
+            results.case7_combinedGymChaos = {
+              pausedAppSwitchDidNotStartBgAudio,
+              silentOnBgPlaying,
+              finalDingPlayed: chaosEndEngine.webAudioDingCount > dingCountBeforeChaosEnd,
+              podcastStillPlayingUnpaused:
+                env.externalPlayer.playing && !env.externalPlayer.pausedByConflict,
+              neverUsedExclusivePlayback: !env.sessionLog.includes('playback'),
+              mediaSessionHijacked: env.mediaSessionHijacked,
+              totalMutedBySilentSwitch: env.mutedBySilentSwitchCount,
+              duckCount: env.externalPlayer.duckCount,
+              restoreFullVolumeCount: env.externalPlayer.restoreFullVolumeCount
+            };
+          } finally {
+            ts.simulateHangingResume(false);
+            setAppHidden(false);
+            OscillatorNode.prototype.start = origOscStart;
+            AudioBufferSourceNode.prototype.start = origBufStart;
+            HTMLMediaElement.prototype.play = origMediaPlay;
+            delete navigator.audioSession;
+          }
+
+          return results;
+        }, 30000);
+
+        const c1On = multiConditionAudioCheck.case1_silentOn;
+        const c1Off = multiConditionAudioCheck.case1_silentOff;
+        const c2On = multiConditionAudioCheck.case2_startWithMusic_silentOn;
+        const c2Off = multiConditionAudioCheck.case2_startWithMusic_silentOff;
+        const c3On = multiConditionAudioCheck.case3_startOffThenPlay_silentOn;
+        const c3Off = multiConditionAudioCheck.case3_startOffThenPlay_silentOff;
+        const c4 = multiConditionAudioCheck.case4_appSwitching;
+        const c5 = multiConditionAudioCheck.case5_stopAndRestartWithMusic;
+        const c6 = multiConditionAudioCheck.case6_toggleMusicWhileTimerOn;
+        const c7 = multiConditionAudioCheck.case7_combinedGymChaos;
+
+        if (
+          c1On.sessionOnSpeech !== 'transient' ||
+          c1On.sessionOnDing !== 'transient' ||
+          c1On.sessionIdle !== 'ambient' ||
+          c1On.sessionPaused !== 'auto' ||
+          !c1On.oscFired ||
+          !c1On.voiceFired ||
+          c1Off.sessionOnSpeech !== 'transient' ||
+          c1Off.sessionIdle !== 'ambient' ||
+          !c2On.musicUnpausedOnOpen ||
+          !c2On.musicDuckedDuringVoice ||
+          !c2On.musicPlayingDuringDing ||
+          !c2On.musicRestoredFullVolume ||
+          !c2On.musicUnpausedAfterTimerPause ||
+          !c2On.timerPlayedBothVoiceAndDing ||
+          !c2Off.musicUnpausedAfterTimerPause ||
+          !c2Off.timerPlayedBothVoiceAndDing ||
+          !c3On.bothRunningAfterStartMidWork ||
+          !c3On.restChimePlayed ||
+          !c3On.midCountdownMusicAndVoice ||
+          !c3Off.bothRunningAfterStartMidWork ||
+          !c3Off.midCountdownMusicAndVoice ||
+          !c4.bgMasterPlayingInitial ||
+          !c4.timerContinuesWhenMusicPausedInBg ||
+          !c4.bgRecoveredAfterExternalMusicStart ||
+          !c4.stepAdvancedInBg ||
+          !c4.fgHandbackClean ||
+          !c5.cleanMidCueStop ||
+          !c5.rapidRestartHealthy ||
+          !c5.musicUnpausedAfterReset ||
+          !c5.runningAfterResetStart ||
+          !c5.completedAtZero ||
+          !c5.fanfareTailRestored ||
+          !c5.restartedFromCompletionCleanly ||
+          !c6.timerAndMusicSurvivedCycling ||
+          !c6.hangingResumeRecoveredViaBridge ||
+          !c7.pausedAppSwitchDidNotStartBgAudio ||
+          !c7.silentOnBgPlaying ||
+          !c7.finalDingPlayed ||
+          !c7.podcastStillPlayingUnpaused ||
+          !c7.neverUsedExclusivePlayback ||
+          c7.mediaSessionHijacked ||
+          c7.totalMutedBySilentSwitch !== 0
+        ) {
+          throw new Error(
+            'Multi-condition Timer + Music/Podcast + Silent Mode QA matrix failed: ' +
+              JSON.stringify(multiConditionAudioCheck, null, 2)
+          );
+        }
+        console.log(
+          `  ✅ PASS: All 7 multi-condition audio scenarios verified (Silent ON/OFF, start w/ music, start off -> play music, app switching + bg music pause/resume auto-recovery, stop/restart/rapid-toggle/completion-restart, repeated music start/stop + 95ms cue-bridge fallback, and full gym chaos; 0 Silent-Mode drops, ${c7.duckCount} smooth ducks & ${c7.restoreFullVolumeCount} full-volume restores)!`
         );
 
         console.log('\n--- 12. Drag-and-Drop Rounds, Intra-Round Reorder & Cross-Round Exercise Swap ---');

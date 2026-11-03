@@ -1554,7 +1554,14 @@ export function buildRemainingAudioEvents(
   steps,
   currentStepIndex = 0,
   remainingMs = null,
-  { spokenExerciseNames = true, durationLookupFn = null, rate = 1.0, calibration = 1.0 } = {}
+  {
+    spokenExerciseNames = true,
+    durationLookupFn = null,
+    rate = 1.0,
+    calibration = 1.0,
+    completedSpeechIds = null,
+    interruptedSpeechId = null
+  } = {}
 ) {
   if (!Array.isArray(steps) || steps.length === 0 || currentStepIndex >= steps.length) {
     return { totalDurationSec: 0, events: [] };
@@ -1602,11 +1609,19 @@ export function buildRemainingAudioEvents(
     }
   }
 
+  const doneSet =
+    completedSpeechIds instanceof Set
+      ? completedSpeechIds
+      : Array.isArray(completedSpeechIds)
+      ? new Set(completedSpeechIds)
+      : null;
+
   if (firstPlan && firstPlan.hasSpeech) {
     for (const cue of firstPlan.cues) {
+      if (doneSet && doneSet.has(cue.id)) continue;
       if (startRemainingMs >= cue.minRemainingMs) {
         const rawOffsetSec = (startRemainingMs - cue.triggerRemainingMs) / 1000;
-        if (rawOffsetSec >= -0.05) {
+        if (rawOffsetSec >= -0.05 || (interruptedSpeechId && cue.id === interruptedSpeechId)) {
           events.push({
             offsetSec: Number(Math.max(0, rawOffsetSec).toFixed(3)),
             kind: 'speech',
