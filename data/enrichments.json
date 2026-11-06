@@ -759,17 +759,17 @@
       "diagram": "diagrams/band-leg-kick-backs-and-diagonals.svg"
     },
     "frog-pumps": {
-      "summary": "High-rep supine glute bridge with the soles of your feet pressed together and knees butterflied open.",
+      "summary": "Banded glute bridge and butterfly abduction complex: with a resistance band around your thighs by your knees and soles of your feet pressed together, lift from flat to the full frog pump vertical bridge position, move your knees out against band resistance at the top, then reverse and repeat.",
       "steps": [
-        "Lie on your back, press the soles of your shoes together (like a frog or butterfly stretch), and pull your heels close to your glutes.",
-        "Tuck your chin slightly and drive through the outer edges of your feet to bridge your hips up.",
-        "Squeeze your glutes hard at the top and pump rhythmically while keeping your knees flared wide."
+        "Loop a resistance band around your thighs by your knees, lie flat on your back, and press the soles of your feet together in a frog stance with heels pulled close to your glutes.",
+        "Drive through the outer edges of your feet to lift your hips from flat on the mat up to the full vertical frog pump bridge position.",
+        "Hold at the top of the frog pump and perform a butterfly abduction by pressing your knees outward against the band resistance, bring your knees back in, lower your hips to flat, and repeat."
       ],
-      "formTip": "Tucking your chin and looking toward your knees helps lock your ribcage down for a stronger glute contraction.",
+      "formTip": "Keep your hips locked at the top of the bridge while moving your knees out and back in against the band before lowering back down.",
       "pose": "supine-bridge",
-      "equipVisual": "bodyweight",
-      "badge": "SOLES TOGETHER PUMP",
-      "frameCount": 2,
+      "equipVisual": "band-knees",
+      "badge": "FROG PUMP + BUTTERFLY",
+      "frameCount": 3,
       "diagram": "diagrams/frog-pumps.svg"
     },
     "squats": {
@@ -1373,6 +1373,20 @@
       "badge": "LATERAL / COSSACK LUNGE",
       "frameCount": 2,
       "diagram": "diagrams/landmine-lateral-cossack-lunge.svg"
+    },
+    "skater-hops": {
+      "summary": "Explosive lateral plyometric bound leaping side-to-side from one leg to the other like a speed skater to build single-leg power, outer glute drive, and lateral agility.",
+      "steps": [
+        "Start in an athletic speed-skater crouch loaded on your right leg with your left foot swept behind your right ankle and arms counter-balanced across your torso.",
+        "Push explosively off the outside edge of your right foot to bound laterally through the air to your left.",
+        "Land softly on your left foot with a bent knee and hinged hip while sweeping your right leg behind you, then immediately bound back to the right."
+      ],
+      "formTip": "Sink your hips back into each landing so your glute and quad absorb the force smoothly while keeping your chest proud.",
+      "pose": "lunge-split",
+      "equipVisual": "bodyweight",
+      "badge": "LATERAL PLYO BOUND",
+      "frameCount": 2,
+      "diagram": "diagrams/skater-hops.svg"
     }
   }
 }

@@ -65,7 +65,7 @@ export class DataService {
   /**
    * Load static JSON files (Option A) and merge enrichments with sheet rows.
    */
-  async init(sheetUrl = './data/sheet-data.json?v=29', enrichmentsUrl = './data/enrichments.json?v=29') {
+  async init(sheetUrl = './data/sheet-data.json?v=30', enrichmentsUrl = './data/enrichments.json?v=30') {
     const [sheetRes, enrichRes] = await Promise.all([
       fetch(sheetUrl, { cache: 'no-cache' }),
       fetch(enrichmentsUrl, { cache: 'no-cache' })

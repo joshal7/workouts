@@ -2407,3 +2407,53 @@ export function swapExercisesAcrossRounds(
   nextState.summaryText = formatWorkoutSummary(nextState);
   return nextState;
 }
+
+/**
+ * Create a custom write-in exercise object from user-typed text so users can
+ * manually write in any exercise when swapping a slot or selecting exercises.
+ */
+export function createCustomWriteInExercise(rawName) {
+  const cleanName = String(rawName || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!cleanName) return null;
+
+  const slug =
+    cleanName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'exercise';
+
+  return {
+    id: `custom-write-in-${slug}`,
+    name: cleanName,
+    isCustomWriteIn: true,
+    workoutCategory: 'Either',
+    equipment: 'Any',
+    muscles: {
+      Chest: '',
+      Biceps: '',
+      Triceps: '',
+      Shoulders: '',
+      Back: '',
+      Abs: '',
+      Glutes: '',
+      Quads: '',
+      Hamstrings: ''
+    },
+    bodyCategories: {
+      'Upper Body': '',
+      Core: '',
+      Legs: ''
+    },
+    enrichment: {
+      summary: `Custom write-in exercise: ${cleanName}.`,
+      steps: [
+        `Perform ${cleanName} with controlled form and full range of motion for the prescribed reps or timed interval.`
+      ],
+      formTip: 'Maintain a braced core and steady breathing throughout every repetition.',
+      diagram: './diagrams/app-icon.svg'
+    }
+  };
+}
+

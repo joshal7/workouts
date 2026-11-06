@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>90 Exercises &amp; Diagrams — Fact-Check &amp; QA Gallery</title>
-  <link rel="stylesheet" href="./src/styles.css?v=29" />
+  <title>91 Exercises &amp; Diagrams — Fact-Check &amp; QA Gallery</title>
+  <link rel="stylesheet" href="./src/styles.css?v=30" />
   <style>
     .qa-shell {
       max-width: 1180px;
@@ -68,14 +68,14 @@
     <header class="qa-header">
       <div>
         <span class="eyebrow-label">FACT-CHECK &amp; VISUAL DIAGRAM AUDIT</span>
-        <h1 style="margin:0;font-size:24px;">All 90 Exercises &amp; 11 Workout Formats</h1>
+        <h1 style="margin:0;font-size:24px;">All 91 Exercises &amp; 11 Workout Formats</h1>
       </div>
       <a href="./index.html" class="secondary-pill-btn">← Back to Workout Generator</a>
     </header>
 
     <div class="qa-filter-bar">
       <input id="qaSearch" type="search" placeholder="Search exercise, muscle, equipment, or pose..." class="search-input" style="max-width:300px;" />
-      <button class="secondary-pill-btn active" data-filter="all" type="button">All (90)</button>
+      <button class="secondary-pill-btn active" data-filter="all" type="button">All (91)</button>
       <button class="secondary-pill-btn" data-filter="Upper Body" type="button">Upper Body</button>
       <button class="secondary-pill-btn" data-filter="Core" type="button">Core</button>
       <button class="secondary-pill-btn" data-filter="Legs" type="button">Legs</button>
@@ -107,11 +107,11 @@
         refreshing = true;
         window.location.reload();
       });
-      navigator.serviceWorker.register('./sw.js?v=29', { updateViaCache: 'none' }).then(reg => reg.update()).catch(() => {});
+      navigator.serviceWorker.register('./sw.js?v=30', { updateViaCache: 'none' }).then(reg => reg.update()).catch(() => {});
     }
 
     const ds = new DataService();
-    await ds.init('./data/sheet-data.json?v=29', './data/enrichments.json?v=29');
+    await ds.init('./data/sheet-data.json?v=30', './data/enrichments.json?v=30');
 
     const totalExCount = ds.sheetData.exercises.length;
     const totalWkCount = ds.sheetData.workouts.length;

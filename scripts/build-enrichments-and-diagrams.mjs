@@ -941,19 +941,20 @@ const exerciseSpecs = {
     ]
   },
   'frog-pumps': {
-    summary: 'High-rep supine glute bridge with the soles of your feet pressed together and knees butterflied open.',
+    summary: 'Banded glute bridge and butterfly abduction complex: with a resistance band around your thighs by your knees and soles of your feet pressed together, lift from flat to the full frog pump vertical bridge position, move your knees out against band resistance at the top, then reverse and repeat.',
     steps: [
-      'Lie on your back, press the soles of your shoes together (like a frog or butterfly stretch), and pull your heels close to your glutes.',
-      'Tuck your chin slightly and drive through the outer edges of your feet to bridge your hips up.',
-      'Squeeze your glutes hard at the top and pump rhythmically while keeping your knees flared wide.'
+      'Loop a resistance band around your thighs by your knees, lie flat on your back, and press the soles of your feet together in a frog stance with heels pulled close to your glutes.',
+      'Drive through the outer edges of your feet to lift your hips from flat on the mat up to the full vertical frog pump bridge position.',
+      'Hold at the top of the frog pump and perform a butterfly abduction by pressing your knees outward against the band resistance, bring your knees back in, lower your hips to flat, and repeat.'
     ],
-    formTip: 'Tucking your chin and looking toward your knees helps lock your ribcage down for a stronger glute contraction.',
+    formTip: 'Keep your hips locked at the top of the bridge while moving your knees out and back in against the band before lowering back down.',
     pose: 'supine-bridge',
-    equip: 'bodyweight',
-    badge: 'SOLES TOGETHER PUMP',
+    equip: 'band-knees',
+    badge: 'FROG PUMP + BUTTERFLY',
     frames: [
-      { label: '1. Soles Together (Knees Wide)', phase: 'frog-pump-low' },
-      { label: '2. High Frog Hip Bridge', phase: 'frog-pump-high', arrow: 'up' }
+      { label: '1. Flat Frog Setup (Band at Knees)', phase: 'frog-pump-low', note: 'Soles Together' },
+      { label: '2. Full Frog Pump Bridge Lift', phase: 'frog-pump-high', arrow: 'up', note: 'Lift to Top' },
+      { label: '3. Top Band Butterfly Out', phase: 'frog-pump-butterfly', arrow: 'knees-out', note: 'Knees Out ↔ Reverse' }
     ]
   },
   'squats': {
@@ -1678,6 +1679,22 @@ const exerciseSpecs = {
     frames: [
       { label: '1. Wide Frontal-Plane Stance', phase: 'sumo-top' },
       { label: '2. Deep Lateral Hip Sit', phase: 'cossack-lunge-low', arrow: 'up' }
+    ]
+  },
+  'skater-hops': {
+    summary: 'Explosive lateral plyometric bound leaping side-to-side from one leg to the other like a speed skater to build single-leg power, outer glute drive, and lateral agility.',
+    steps: [
+      'Start in an athletic speed-skater crouch loaded on your right leg with your left foot swept behind your right ankle and arms counter-balanced across your torso.',
+      'Push explosively off the outside edge of your right foot to bound laterally through the air to your left.',
+      'Land softly on your left foot with a bent knee and hinged hip while sweeping your right leg behind you, then immediately bound back to the right.'
+    ],
+    formTip: 'Sink your hips back into each landing so your glute and quad absorb the force smoothly while keeping your chest proud.',
+    pose: 'lunge-split',
+    equip: 'bodyweight',
+    badge: 'LATERAL PLYO BOUND',
+    frames: [
+      { label: '1. Load & Bound Laterally (R)', phase: 'skater-hop-right', arrow: 'hop-arc', note: 'Push Side-to-Side' },
+      { label: '2. Soft Single-Leg Land (L)', phase: 'skater-hop-left', arrow: 'up', note: 'Sweep Trail Leg' }
     ]
   }
 };
@@ -2779,23 +2796,63 @@ function getPhasePose(phase) {
       head: [42, 152, -90],
       shoulder: [62, 156],
       hip: [108, 156],
-      knee: [136, 118],
+      knee: [140, 120],
       ankle: [156, 165],
-      knee2: [148, 136],
+      knee2: [148, 134],
       ankle2: [156, 165],
       elbow: [84, 160],
-      wrist: [106, 162]
+      wrist: [106, 162],
+      bandKnees: true
     },
     'frog-pump-high': {
       head: [42, 152, -90],
       shoulder: [62, 156],
       hip: [108, 126],
-      knee: [138, 104],
+      knee: [142, 110],
       ankle: [156, 165],
-      knee2: [150, 124],
+      knee2: [148, 122],
       ankle2: [156, 165],
       elbow: [84, 160],
-      wrist: [106, 162]
+      wrist: [106, 162],
+      bandKnees: true
+    },
+    'frog-pump-butterfly': {
+      head: [42, 152, -90],
+      shoulder: [62, 156],
+      hip: [108, 126],
+      knee: [134, 98],
+      ankle: [156, 165],
+      knee2: [156, 132],
+      ankle2: [156, 165],
+      elbow: [84, 160],
+      wrist: [106, 162],
+      bandKnees: true
+    },
+    'skater-hop-right': {
+      head: [134, 58, 12],
+      shoulder: [122, 76],
+      hip: [98, 114],
+      knee: [124, 138],
+      ankle: [128, 165],
+      knee2: [76, 136],
+      ankle2: [52, 148],
+      elbow: [104, 98],
+      wrist: [136, 94],
+      elbow2: [138, 92],
+      wrist2: [158, 82]
+    },
+    'skater-hop-left': {
+      head: [78, 58, -12],
+      shoulder: [90, 76],
+      hip: [114, 114],
+      knee: [88, 138],
+      ankle: [84, 165],
+      knee2: [136, 136],
+      ankle2: [160, 148],
+      elbow: [108, 98],
+      wrist: [76, 94],
+      elbow2: [74, 92],
+      wrist2: [54, 82]
     },
     'kickback-stand': {
       head: [116, 48, 0],

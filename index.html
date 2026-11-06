@@ -16,7 +16,7 @@
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/svg+xml" href="./diagrams/app-icon.svg" />
   <link rel="apple-touch-icon" href="./diagrams/app-icon.svg" />
-  <link rel="stylesheet" href="./src/styles.css?v=29" />
+  <link rel="stylesheet" href="./src/styles.css?v=30" />
 </head>
 <body>
   <div class="app-shell">
@@ -280,6 +280,19 @@
             </div>
             <div id="swapMuscleFilterBar" class="muscle-filter-bar" role="group" aria-label="Filter by muscle group"></div>
           </div>
+
+          <div class="manual-write-in-row">
+            <input
+              id="swapWriteInInput"
+              type="text"
+              placeholder="Write in custom exercise..."
+              class="search-input manual-write-in-input"
+              aria-label="Write in custom exercise for swap"
+            />
+            <button id="swapWriteInBtn" class="manual-write-in-btn" type="button">
+              Use Write-In
+            </button>
+          </div>
         </div>
 
         <div id="swapExerciseList" class="swap-exercise-list"></div>
@@ -358,7 +371,7 @@
 
         <div class="settings-block qa-link-block">
           <a href="./qa-gallery.html" class="secondary-pill-btn full-width-link">
-            View All 90 Exercise Diagrams →
+            View All 91 Exercise Diagrams →
           </a>
         </div>
 
@@ -395,6 +408,18 @@
             <button id="selectFilterAllBtn" class="seg-btn" type="button">All Exercises</button>
           </div>
           <div id="selectExercisesMuscleFilterBar" class="muscle-filter-bar" role="group" aria-label="Filter by muscle group"></div>
+          <div class="manual-write-in-row">
+            <input
+              id="selectWriteInInput"
+              type="text"
+              placeholder="Write in custom exercise..."
+              class="search-input manual-write-in-input"
+              aria-label="Write in custom exercise to select"
+            />
+            <button id="selectWriteInBtn" class="manual-write-in-btn" type="button">
+              + Write In
+            </button>
+          </div>
         </div>
 
         <div id="selectExercisesList" class="swap-exercise-list"></div>
@@ -524,6 +549,6 @@
     <div id="toast" class="toast" hidden>Updated</div>
   </div>
 
-  <script type="module" src="./src/app.js?v=29"></script>
+  <script type="module" src="./src/app.js?v=30"></script>
 </body>
 </html>

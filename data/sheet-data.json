@@ -1257,7 +1257,7 @@
     {
       "id": "frog-pumps",
       "row": 48,
-      "name": "Frog Pumps",
+      "name": "Frog Pump + Butterflys",
       "muscles": {
         "Chest": "",
         "Biceps": "",
@@ -1269,15 +1269,15 @@
         "Quads": "",
         "Hamstrings": ""
       },
-      "workoutCategory": "HIIT",
-      "equipment": "Nothing",
+      "workoutCategory": "Either",
+      "equipment": "Bands",
       "bodyCategories": {
         "Upper Body": "",
         "Core": "",
         "Legs": "Pri"
       },
-      "auditUpdated": false,
-      "auditNote": ""
+      "auditUpdated": true,
+      "auditNote": "Amended to Frog Pump + Butterflys with a resistance band around the thighs by the knees: lift from flat to full frog pump vertical bridge position, move knees out against band resistance at the top, then reverse and repeat."
     },
     {
       "id": "squats",
@@ -2353,6 +2353,31 @@
       },
       "auditUpdated": true,
       "auditNote": "Added frontal-plane landmine lateral lunge / Cossack squat."
+    },
+    {
+      "id": "skater-hops",
+      "row": 92,
+      "name": "Skater Hops",
+      "muscles": {
+        "Chest": "",
+        "Biceps": "",
+        "Triceps": "",
+        "Shoulders": "",
+        "Back": "",
+        "Abs": "Sec",
+        "Glutes": "Pri",
+        "Quads": "Sec",
+        "Hamstrings": "Sec"
+      },
+      "workoutCategory": "HIIT",
+      "equipment": "Nothing",
+      "bodyCategories": {
+        "Upper Body": "",
+        "Core": "Sec",
+        "Legs": "Pri"
+      },
+      "auditUpdated": true,
+      "auditNote": "Added Skater Hops: explosive lateral single-leg plyometric bound targeting glutes, quads, hamstrings, and core."
     }
   ]
 }

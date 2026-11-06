@@ -33,7 +33,8 @@ import {
   getConsolidatedWorkoutSubtitle,
   getTargetExerciseCount,
   autoSlotExercises,
-  generateWorkoutFromSelectedExercises
+  generateWorkoutFromSelectedExercises,
+  createCustomWriteInExercise
 } from '../src/engine/workoutEngine.js';
 import {
   analyzeMuscleLoad,
@@ -110,12 +111,12 @@ console.log('================================================================\n'
 // ----------------------------------------------------------------------------
 console.log('1. Data Integrity & Biomechanical Muscle Audit');
 
-test('Contains all 90 high-signal exercises (rows 2..91) and all 11 workout types', () => {
-  assert.equal(sheetData.exercises.length, 90, 'Expected exactly 90 exercises');
+test('Contains all 91 high-signal exercises (rows 2..92) and all 11 workout types', () => {
+  assert.equal(sheetData.exercises.length, 91, 'Expected exactly 91 exercises');
   assert.equal(sheetData.workouts.length, 11, 'Expected exactly 11 workout types');
 
   const rows = sheetData.exercises.map(e => e.row);
-  for (let r = 2; r <= 91; r++) {
+  for (let r = 2; r <= 92; r++) {
     assert.ok(rows.includes(r), `Missing sheet row #${r}`);
   }
 });
@@ -186,7 +187,7 @@ test('Specialty exercises have accurate, movement-specific fact-checked instruct
   assert.ok(inclineBbText.toLowerCase().includes('barbell') && inclineBbText.toLowerCase().includes('incline'));
 });
 
-test('All 90 SVG diagrams exist, contain valid SVG, highlight Pri/Sec muscles, and map back to descriptions', () => {
+test('All 91 SVG diagrams exist, contain valid SVG, highlight Pri/Sec muscles, and map back to descriptions', () => {
   for (const ex of sheetData.exercises) {
     const enrich = ex.enrichment;
     assert.ok(enrich, `Missing enrichment for ${ex.id}`);
@@ -237,13 +238,13 @@ test('Equipment = "Nothing" strictly returns only bodyweight-capable exercises (
   }
 });
 
-test('Equipment = "Any" makes all 90 exercises eligible', () => {
+test('Equipment = "Any" makes all 91 exercises eligible', () => {
   const pool = filterEligibleExercises(sheetData.exercises, {
     workoutCategory: 'Either',
     bodyCategory: 'All',
     equipment: 'Any'
   });
-  assert.equal(pool.length, 90);
+  assert.equal(pool.length, 91);
 });
 
 test('Selecting a manual Workout Type overrides Workout Category to match that workout (Apps Script parity)', () => {
@@ -1828,11 +1829,11 @@ test('Calf Stretch Timer builds 3 passes (6 min = 360s, no 10s countdown) of gas
   assert.ok(TIMER_COLORS['yellow-green'], 'Missing yellow-green in TIMER_COLORS');
   assert.ok(TIMER_COLORS['blue-green'], 'Missing blue-green in TIMER_COLORS');
 
-  // Verify button placement in index.html right below View All 90 Exercise Diagrams
+  // Verify button placement in index.html right below View All 91 Exercise Diagrams
   const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
-  const qaLinkPos = indexHtml.indexOf('View All 90 Exercise Diagrams');
+  const qaLinkPos = indexHtml.indexOf('View All 91 Exercise Diagrams');
   const calfBtnPos = indexHtml.indexOf('id="openCalfStretchTimerBtn"');
-  assert.ok(qaLinkPos > 0 && calfBtnPos > qaLinkPos, 'Calf Stretch Timer button must appear below View All 90 Exercise Diagrams in Settings');
+  assert.ok(qaLinkPos > 0 && calfBtnPos > qaLinkPos, 'Calf Stretch Timer button must appear below View All 91 Exercise Diagrams in Settings');
   assert.ok(indexHtml.includes('Calf Stretch Timer'));
 });
 
@@ -2058,7 +2059,7 @@ test('10s Transition sequence (Curls -> 10s Transition -> Bench Press) skips Cur
 // ----------------------------------------------------------------------------
 console.log('\n20. Background App-Switch Continuity, Silent-Switch Bypass & Speech Pack Mixer');
 
-test('Pre-rendered 24kHz neural speech-pack.json & speech-pack.m4a cover all 90 exercises, all 4 Calf Stretches, and countdown words', () => {
+test('Pre-rendered 24kHz neural speech-pack.json & speech-pack.m4a cover all 91 exercises, all 4 Calf Stretches, and countdown words', () => {
   const packJsonPath = path.join(rootDir, 'data', 'speech-pack.json');
   const packM4aPath = path.join(rootDir, 'data', 'speech-pack.m4a');
   assert.ok(fs.existsSync(packJsonPath), 'Missing data/speech-pack.json');
@@ -2378,6 +2379,84 @@ test('Audio engine enforces Silent-Mode IPC lead, MediaSession non-hijack, epoch
     appJs.includes('0.045'),
     'src/app.js must include 45ms IPC lead on ambient -> transient switch so iPhone Silent Mode never clips attack transients'
   );
+});
+
+// ----------------------------------------------------------------------------
+// 22. MANUAL EXERCISE WRITE-IN, SKATER HOPS & FROG PUMP + BUTTERFLYS
+// ----------------------------------------------------------------------------
+console.log('\n22. Manual Exercise Write-In, Skater Hops & Frog Pump + Butterflys');
+
+test('Skater Hops and amended Frog Pump + Butterflys have complete data, enrichments, and multi-frame diagrams', () => {
+  const byId = Object.fromEntries(sheetData.exercises.map(e => [e.id, e]));
+
+  const skater = byId['skater-hops'];
+  assert.ok(skater, 'Missing skater-hops in sheetData.exercises');
+  assert.equal(skater.name, 'Skater Hops');
+  assert.equal(skater.workoutCategory, 'HIIT');
+  assert.equal(skater.equipment, 'Nothing');
+  assert.equal(skater.bodyCategories.Legs, 'Pri');
+  assert.equal(skater.bodyCategories.Core, 'Sec');
+  assert.equal(skater.muscles.Glutes, 'Pri');
+  assert.equal(skater.muscles.Quads, 'Sec');
+  assert.equal(skater.muscles.Hamstrings, 'Sec');
+  assert.equal(skater.muscles.Abs, 'Sec');
+  assert.ok(fs.existsSync(path.join(rootDir, skater.enrichment.diagram)), 'Missing skater-hops.svg');
+
+  const frog = byId['frog-pumps'];
+  assert.ok(frog, 'Missing frog-pumps in sheetData.exercises');
+  assert.equal(frog.name, 'Frog Pump + Butterflys');
+  assert.equal(frog.equipment, 'Bands');
+  assert.equal(frog.muscles.Glutes, 'Pri');
+  assert.ok(
+    frog.enrichment.summary.toLowerCase().includes('band') &&
+      frog.enrichment.summary.toLowerCase().includes('butterfly'),
+    'Frog Pump + Butterflys summary must describe the band butterfly abduction at the top'
+  );
+  const frogSvg = fs.readFileSync(path.join(rootDir, frog.enrichment.diagram), 'utf8');
+  assert.ok(
+    frogSvg.includes('1. Flat Frog Setup (Band at Knees)') &&
+      frogSvg.includes('2. Full Frog Pump Bridge Lift') &&
+      frogSvg.includes('3. Top Band Butterfly Out'),
+    'Frog Pump + Butterflys SVG must render all 3 movement phases including top band butterfly abduction'
+  );
+});
+
+test('createCustomWriteInExercise supports manual write-in in both Swap Exercise and Select X Exercises', () => {
+  assert.equal(createCustomWriteInExercise('   '), null);
+
+  const customEx = createCustomWriteInExercise('  Turkish Get-Ups  ');
+  assert.ok(customEx);
+  assert.equal(customEx.id, 'custom-write-in-turkish-get-ups');
+  assert.equal(customEx.name, 'Turkish Get-Ups');
+  assert.equal(customEx.isCustomWriteIn, true);
+
+  // 1) Swap Exercise with custom write-in exercise
+  const wk = generateWorkout(sheetData, { workoutType: 'Timed Duos (40/20)', equipment: 'Any' });
+  const swapped = swapExerciseInSlot(wk, 0, 0, customEx, null, true);
+  assert.equal(getActiveSlotExercise(swapped.rounds[0].slots[0]).name, 'Turkish Get-Ups');
+  const analysis = analyzeMuscleLoad(swapped, sheetData, []);
+  assert.equal(analysis.warnings.length, 0, 'Custom write-in exercise must not trigger false muscle overload warnings');
+
+  // 2) Select X Exercises + Auto-Fill with custom write-in exercise
+  const customEx2 = createCustomWriteInExercise('Dragon Flags');
+  const autoFilled = pickAutoFillExercises(sheetData, { workoutType: 'Timed Duos (40/20)' }, [customEx, customEx2], 8);
+  assert.equal(autoFilled.length, 8);
+  assert.ok(autoFilled.some(e => e.name === 'Turkish Get-Ups'));
+  assert.ok(autoFilled.some(e => e.name === 'Dragon Flags'));
+
+  const customWk = generateWorkoutFromSelectedExercises(
+    sheetData,
+    { workoutType: 'Timed Duos (40/20)', equipment: 'Any' },
+    autoFilled
+  );
+  const allNames = customWk.rounds.flatMap(r => r.slots.map(s => getActiveSlotExercise(s).name));
+  assert.ok(allNames.includes('Turkish Get-Ups'));
+  assert.ok(allNames.includes('Dragon Flags'));
+
+  // 3) Verify write-in inputs exist right below the search/filter block in both modals in index.html
+  const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
+  assert.ok(indexHtml.includes('id="swapWriteInInput"') && indexHtml.includes('id="swapWriteInBtn"'));
+  assert.ok(indexHtml.includes('id="selectWriteInInput"') && indexHtml.includes('id="selectWriteInBtn"'));
 });
 
 console.log(`\n🎉 ALL ${passed} QA TEST SUITES PASSED SUCCESSFULLY!`);

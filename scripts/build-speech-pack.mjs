@@ -26,6 +26,7 @@ function toPronounceableTtsText(phrase) {
     .replace(/\bV\s+ups\b/gi, 'Vee-ups')
     .replace(/\bV-Sit\b/gi, 'vee-sit')
     .replace(/\bPallof\b/gi, 'Pal-off')
+    .replace(/\bButterflys\b/gi, 'butterflies')
     .replace(/\bFlys\b/gi, 'flies')
     .replace(/\b6-6-6\b/g, '6, 6, 6')
     .replace(/\bI-Y-Ts\b/gi, 'I, Y, Tees')

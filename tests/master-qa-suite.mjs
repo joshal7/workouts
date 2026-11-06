@@ -3102,7 +3102,107 @@ async function runBrowserCDPTests(wsUrl) {
           throw new Error('Calf Stretch Timer E2E check failed: ' + JSON.stringify(calfStretchCheck));
         }
         console.log(
-          '  ✅ PASS: Calf Stretch Timer easter egg verified (Settings button below 90 Diagrams -> 6-min 12x30s yellow-green/blue-green sequence with dings & grey drain)'
+          '  ✅ PASS: Calf Stretch Timer easter egg verified (Settings button below 91 Diagrams -> 6-min 12x30s yellow-green/blue-green sequence with dings & grey drain)'
+        );
+
+        console.log('\n--- 12b. Manual Exercise Write-In (Swap & Select X Exercises), Skater Hops & Frog Pump + Butterflys ---');
+        const writeInAndCatalogCheck = await evalInPage(() => {
+          // 1. Open Swap Modal on Round 1 Slot 1 and use Manual Write-In
+          document.querySelector('[data-action="open-swap-modal"][data-round-index="0"][data-slot-index="0"]')?.click();
+          const swapWriteInInput = document.getElementById('swapWriteInInput');
+          const swapWriteInBtn = document.getElementById('swapWriteInBtn');
+          const swapSearchRect = document.querySelector('#swapModal .search-and-toggle')?.getBoundingClientRect();
+          const swapWriteInRect = swapWriteInInput?.closest('.manual-write-in-row')?.getBoundingClientRect();
+          const swapWriteInBelowSearch = Boolean(
+            swapSearchRect && swapWriteInRect && swapWriteInRect.top >= swapSearchRect.bottom - 2
+          );
+          const swapNoHorizOverflow =
+            document.documentElement.scrollWidth <= document.documentElement.clientWidth;
+
+          // Also check that Skater Hops and Frog Pump + Butterflys appear in All Exercises in Swap Modal
+          document.getElementById('swapFilterAllBtn')?.click();
+          const allSwapTitles = Array.from(
+            document.querySelectorAll('#swapExerciseList .swap-option-title')
+          ).map(el => el.innerText.trim());
+          const hasSkaterHops = allSwapTitles.includes('Skater Hops');
+          const hasFrogPumpButterflys = allSwapTitles.includes('Frog Pump + Butterflys');
+
+          swapWriteInInput.value = 'Turkish Get-Ups';
+          swapWriteInBtn.click();
+
+          const swappedSlotTitle = document
+            .querySelector('.exercise-slot[data-round-index="0"][data-slot-index="0"] .exercise-title-text')
+            ?.innerText.trim();
+
+          // Open Exercise Guide modal for the written-in exercise
+          document
+            .querySelector('.exercise-slot[data-round-index="0"][data-slot-index="0"] [data-action="open-exercise-modal"]')
+            ?.click();
+          const guideTitle = document.getElementById('exerciseModalTitle')?.innerText.trim();
+          const guideCategory = document.getElementById('exerciseModalCategory')?.innerText.trim();
+          document.querySelector('[data-close-modal="exerciseModal"]')?.click();
+
+          // 2. Open Select X Exercises Modal and use Manual Write-In + Auto-Fill + Confirm
+          document.getElementById('selectExercisesBtn')?.click();
+          const selectWriteInInput = document.getElementById('selectWriteInInput');
+          const selectWriteInBtn = document.getElementById('selectWriteInBtn');
+          const selectFilterRect = document.getElementById('selectExercisesMuscleFilterBar')?.getBoundingClientRect();
+          const selectWriteInRect = selectWriteInInput?.closest('.manual-write-in-row')?.getBoundingClientRect();
+          const selectWriteInBelowFilters = Boolean(
+            selectFilterRect && selectWriteInRect && selectWriteInRect.top >= selectFilterRect.bottom - 2
+          );
+
+          selectWriteInInput.value = 'Copenhagen Plank';
+          selectWriteInBtn.click();
+
+          const topSelectItemTitle = document
+            .querySelector('#selectExercisesList .swap-option-item .swap-option-title')
+            ?.innerText.trim();
+          const topSelectBadge = document
+            .querySelector('#selectExercisesList .swap-option-item .swap-badge')
+            ?.innerText.trim();
+
+          document.getElementById('autoFillRemainingBtn')?.click();
+          document.getElementById('confirmSelectExercisesBtn')?.click();
+
+          const allWorkoutTitles = Array.from(
+            document.querySelectorAll('#roundsContainer .exercise-title-text')
+          ).map(el => el.innerText.trim());
+          const workoutIncludesWriteIn = allWorkoutTitles.includes('Copenhagen Plank');
+
+          return {
+            swapWriteInBelowSearch,
+            swapNoHorizOverflow,
+            hasSkaterHops,
+            hasFrogPumpButterflys,
+            swappedSlotTitle,
+            guideTitle,
+            guideCategory,
+            selectWriteInBelowFilters,
+            topSelectItemTitle,
+            topSelectBadge,
+            workoutIncludesWriteIn
+          };
+        });
+        if (
+          !writeInAndCatalogCheck.swapWriteInBelowSearch ||
+          !writeInAndCatalogCheck.swapNoHorizOverflow ||
+          !writeInAndCatalogCheck.hasSkaterHops ||
+          !writeInAndCatalogCheck.hasFrogPumpButterflys ||
+          writeInAndCatalogCheck.swappedSlotTitle !== 'Turkish Get-Ups' ||
+          writeInAndCatalogCheck.guideTitle !== 'Turkish Get-Ups' ||
+          writeInAndCatalogCheck.guideCategory !== 'CUSTOM WRITE-IN' ||
+          !writeInAndCatalogCheck.selectWriteInBelowFilters ||
+          writeInAndCatalogCheck.topSelectItemTitle !== 'Copenhagen Plank' ||
+          writeInAndCatalogCheck.topSelectBadge !== '✓ #1' ||
+          !writeInAndCatalogCheck.workoutIncludesWriteIn
+        ) {
+          throw new Error(
+            'Manual Exercise Write-In / Catalog E2E check failed: ' + JSON.stringify(writeInAndCatalogCheck)
+          );
+        }
+        console.log(
+          '  ✅ PASS: Manual Exercise Write-In (Swap & Select X Exercises), Skater Hops, and Frog Pump + Butterflys verified end-to-end'
         );
 
         console.log('\n--- 13. Mobile Viewport Screenshot Capture ---');
@@ -3125,7 +3225,7 @@ async function runBrowserCDPTests(wsUrl) {
         });
         console.log('  ✅ PASS: Mobile screenshots saved to /tmp/workout-mobile-screenshot.png and /tmp/workout-timer-screenshot.png');
 
-        console.log('\n--- 14. QA Gallery All 90 Diagrams Render, Zero Spreadsheet Mention, Muscle Filter & No Audit Box Check ---');
+        console.log('\n--- 14. QA Gallery All 91 Diagrams Render, Zero Spreadsheet Mention, Muscle Filter & No Audit Box Check ---');
         await send('Emulation.setDeviceMetricsOverride', {
           width: 1280,
           height: 900,
@@ -3156,7 +3256,7 @@ async function runBrowserCDPTests(wsUrl) {
           glutesBtn?.click();
           const glutesCards = Array.from(document.querySelectorAll('article.qa-card'));
           const allGlutesValid =
-            glutesCards.length > 0 && glutesCards.length < 90 && glutesCards.every(c => c.innerText.includes('Glutes'));
+            glutesCards.length > 0 && glutesCards.length < 91 && glutesCards.every(c => c.innerText.includes('Glutes'));
 
           // Reset to All
           document.querySelector('.qa-filter-bar [data-filter="all"]')?.click();
@@ -3172,7 +3272,7 @@ async function runBrowserCDPTests(wsUrl) {
           };
         });
         if (
-          galleryCheck.totalCards !== 90 ||
+          galleryCheck.totalCards !== 91 ||
           galleryCheck.brokenCount > 0 ||
           galleryCheck.auditBoxes > 0 ||
           !galleryCheck.noSpreadsheetMention ||
@@ -3181,7 +3281,7 @@ async function runBrowserCDPTests(wsUrl) {
           throw new Error('QA Gallery check failed: ' + JSON.stringify(galleryCheck));
         }
         console.log(
-          `  ✅ PASS: All 90/90 exercise SVG diagrams rendered cleanly (680x248), 0 spreadsheet row mentions, and QA Gallery muscle filter verified (${galleryCheck.glutesCardCount} Glutes exercises)`
+          `  ✅ PASS: All 91/91 exercise SVG diagrams rendered cleanly (680x248), 0 spreadsheet row mentions, and QA Gallery muscle filter verified (${galleryCheck.glutesCardCount} Glutes exercises)`
         );
 
         ws.close();

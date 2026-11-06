@@ -1,4 +1,4 @@
-import { DataService } from './services/dataService.js?v=29';
+import { DataService } from './services/dataService.js?v=30';
 import {
   FOCUS_SNAP_STEPS,
   DEFAULT_FOCUS_WEIGHTS,
@@ -26,13 +26,14 @@ import {
   getConsolidatedWorkoutSubtitle,
   getRandomEntry,
   getPrimaryMuscle,
-  getPrimaryBodyArea
-} from './engine/workoutEngine.js?v=29';
+  getPrimaryBodyArea,
+  createCustomWriteInExercise
+} from './engine/workoutEngine.js?v=30';
 import {
   analyzeMuscleLoad,
   applyBalancedRecommendation,
   SPECIFIC_MUSCLES
-} from './engine/muscleLoadAnalyzer.js?v=29';
+} from './engine/muscleLoadAnalyzer.js?v=30';
 import {
   TIMER_COLORS,
   CUSTOM_TIMER_PRESETS,
@@ -60,7 +61,7 @@ import {
   computeTimelineTargetScrollLeft,
   buildMasterTimelineWavBytes,
   encodeWavBytesToDataUri
-} from './engine/timerEngine.js?v=29';
+} from './engine/timerEngine.js?v=30';
 
 const dataService = new DataService();
 
@@ -94,6 +95,7 @@ let currentSelectMuscleFilter = 'All';
 let selectedCustomExerciseIds = [];
 let targetCustomExerciseCount = 9;
 let targetCustomWorkout = null;
+const customWriteInRegistry = new Map();
 
 let currentBalanceWarningId = null;
 let currentAnalysis = null;
@@ -249,7 +251,7 @@ const els = {
 
 async function bootstrap() {
   releaseAudioSessionToAuto();
-  await dataService.init('./data/sheet-data.json?v=29', './data/enrichments.json?v=29');
+  await dataService.init('./data/sheet-data.json?v=30', './data/enrichments.json?v=30');
   loadAndDecodeSpeechPack();
   populateWorkoutTypeSelect();
   populateCustomTimerPresetsSelect();
@@ -265,7 +267,7 @@ async function bootstrap() {
       refreshing = true;
       window.location.reload();
     });
-    navigator.serviceWorker.register('./sw.js?v=29', { updateViaCache: 'none' }).then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=30', { updateViaCache: 'none' }).then(reg => {
       reg.update().catch(() => {});
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
@@ -622,6 +624,9 @@ function renderActiveWorkout() {
         const equipLabel = formatCompactEquipment(activeEx.equipment);
         const inlineMetaParts = [...priMuscles];
         if (equipLabel) inlineMetaParts.push(equipLabel);
+        if (activeEx.isCustomWriteIn && inlineMetaParts.length === 0) {
+          inlineMetaParts.push('Write-In');
+        }
         const inlineMeta = inlineMetaParts.join(' · ');
 
         // Multi-option tabs if slot has 2 or 3 options and user hasn't chosen one yet
@@ -1736,11 +1741,11 @@ function loadAndDecodeSpeechPack() {
 
   speechPackLoadPromise = (async () => {
     try {
-      // Versioned query (?v=29) allows both Safari SW cache AND Chrome iOS (CriOS WKWebView) HTTP disk cache
+      // Versioned query (?v=30) allows both Safari SW cache AND Chrome iOS (CriOS WKWebView) HTTP disk cache
       // to reuse the neural 24kHz voice pack locally without re-downloading over cellular every visit
       const [metaRes, audioRes] = await Promise.all([
-        fetch('./data/speech-pack.json?v=29'),
-        fetch('./data/speech-pack.m4a?v=29')
+        fetch('./data/speech-pack.json?v=30'),
+        fetch('./data/speech-pack.m4a?v=30')
       ]);
       if (!metaRes.ok || !audioRes.ok) return false;
 
@@ -3263,19 +3268,51 @@ function closeAllModals() {
   if (els.selectExercisesModal) els.selectExercisesModal.hidden = true;
 }
 
+function findExerciseById(exerciseId, roundIndex = null, slotIndex = null) {
+  const fromCatalog = dataService.sheetData.exercises.find(e => e.id === exerciseId);
+  if (fromCatalog) return fromCatalog;
+  if (customWriteInRegistry.has(exerciseId)) {
+    return customWriteInRegistry.get(exerciseId);
+  }
+  const wkState = dataService.getActiveProfile()?.activeWorkout;
+  if (wkState && Array.isArray(wkState.rounds)) {
+    if (roundIndex !== null && slotIndex !== null) {
+      const slot = wkState.rounds[roundIndex]?.slots?.[slotIndex];
+      const activeEx = getActiveSlotExercise(slot);
+      if (activeEx && activeEx.id === exerciseId) {
+        if (activeEx.isCustomWriteIn) customWriteInRegistry.set(activeEx.id, activeEx);
+        return activeEx;
+      }
+    }
+    for (const r of wkState.rounds) {
+      for (const s of r.slots || []) {
+        for (const opt of s.options || []) {
+          if (opt && opt.id === exerciseId) {
+            if (opt.isCustomWriteIn) customWriteInRegistry.set(opt.id, opt);
+            return opt;
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
 function openExerciseModal(exerciseId, roundIndex = null, slotIndex = null) {
-  const ex = dataService.sheetData.exercises.find(e => e.id === exerciseId);
+  const ex = findExerciseById(exerciseId, roundIndex, slotIndex);
   if (!ex) return;
 
   currentSwapContext =
     roundIndex !== null && slotIndex !== null ? { roundIndex, slotIndex } : null;
 
   const enrich = ex.enrichment || {};
-  document.getElementById('exerciseModalCategory').textContent =
-    `${Object.entries(ex.bodyCategories)
-      .filter(([, v]) => v === 'Pri')
-      .map(([k]) => formatAreaUiName(k))
-      .join(' · ')} · ${ex.workoutCategory}`;
+  const areaLabels = Object.entries(ex.bodyCategories || {})
+    .filter(([, v]) => v === 'Pri')
+    .map(([k]) => formatAreaUiName(k))
+    .join(' · ');
+  document.getElementById('exerciseModalCategory').textContent = ex.isCustomWriteIn
+    ? 'CUSTOM WRITE-IN'
+    : `${areaLabels ? `${areaLabels} · ` : ''}${ex.workoutCategory}`;
   document.getElementById('exerciseModalTitle').textContent = ex.name;
 
   const diagramImg = document.getElementById('exerciseModalDiagram');
@@ -3285,11 +3322,16 @@ function openExerciseModal(exerciseId, roundIndex = null, slotIndex = null) {
   const priMuscles = SPECIFIC_MUSCLES.filter(m => ex.muscles?.[m] === 'Pri');
   const secMuscles = SPECIFIC_MUSCLES.filter(m => ex.muscles?.[m] === 'Sec');
 
-  document.getElementById('exerciseModalBadges').innerHTML = [
-    ...priMuscles.map(m => `<span class="mini-tag pri-muscle">Primary: ${m}</span>`),
-    ...secMuscles.map(m => `<span class="mini-tag sec-muscle">Secondary: ${m}</span>`),
-    `<span class="mini-tag">Equipment: ${ex.equipment}</span>`
-  ].join('');
+  document.getElementById('exerciseModalBadges').innerHTML = ex.isCustomWriteIn
+    ? [
+        `<span class="mini-tag pri-muscle">Custom Write-In</span>`,
+        `<span class="mini-tag">Equipment: ${ex.equipment}</span>`
+      ].join('')
+    : [
+        ...priMuscles.map(m => `<span class="mini-tag pri-muscle">Primary: ${m}</span>`),
+        ...secMuscles.map(m => `<span class="mini-tag sec-muscle">Secondary: ${m}</span>`),
+        `<span class="mini-tag">Equipment: ${ex.equipment}</span>`
+      ].join('');
 
   document.getElementById('exerciseModalSummary').textContent = enrich.summary || '';
 
@@ -3378,12 +3420,28 @@ function openSwapModal(roundIndex, slotIndex) {
   }
 
   document.getElementById('swapSearchInput').value = '';
+  const swapWriteInInput = document.getElementById('swapWriteInInput');
+  if (swapWriteInInput) swapWriteInInput.value = '';
   document.getElementById('swapFilterMatchingBtn').classList.add('active');
   document.getElementById('swapFilterAllBtn').classList.remove('active');
 
   renderSwapMuscleFilterBar();
   renderSwapExerciseList();
   openModal(els.swapModal);
+}
+
+function handleApplySwapWriteIn() {
+  if (!currentSwapContext) return;
+  const inputEl = document.getElementById('swapWriteInInput');
+  const customEx = createCustomWriteInExercise(inputEl?.value || '');
+  if (!customEx) {
+    showToast('Type an exercise name first');
+    return;
+  }
+  customWriteInRegistry.set(customEx.id, customEx);
+  if (inputEl) inputEl.value = '';
+  performSlotSwap(currentSwapContext.roundIndex, currentSwapContext.slotIndex, customEx, true);
+  closeAllModals();
 }
 
 function renderSwapMuscleFilterBar() {
@@ -3540,12 +3598,34 @@ function openSelectExercisesModal() {
   document.getElementById('selectExercisesEyebrow').textContent =
     `CUSTOM WORKOUT · ${target.workout.name.toUpperCase()}`;
   document.getElementById('selectExercisesSearchInput').value = '';
+  const selectWriteInInput = document.getElementById('selectWriteInInput');
+  if (selectWriteInInput) selectWriteInInput.value = '';
   document.getElementById('selectFilterMatchingBtn').classList.add('active');
   document.getElementById('selectFilterAllBtn').classList.remove('active');
 
   renderSelectExercisesMuscleFilterBar();
   renderSelectExercisesModalContent();
   openModal(els.selectExercisesModal);
+}
+
+function handleAddSelectWriteIn() {
+  const inputEl = document.getElementById('selectWriteInInput');
+  const customEx = createCustomWriteInExercise(inputEl?.value || '');
+  if (!customEx) {
+    showToast('Type an exercise name first');
+    return;
+  }
+  customWriteInRegistry.set(customEx.id, customEx);
+  if (!selectedCustomExerciseIds.includes(customEx.id)) {
+    if (selectedCustomExerciseIds.length >= targetCustomExerciseCount) {
+      showToast(`Already selected ${targetCustomExerciseCount} exercises`);
+      return;
+    }
+    selectedCustomExerciseIds.push(customEx.id);
+  }
+  if (inputEl) inputEl.value = '';
+  renderSelectExercisesModalContent();
+  showToast(`Added ${customEx.name}`);
 }
 
 function renderSelectExercisesMuscleFilterBar() {
@@ -3579,6 +3659,9 @@ function renderSelectExercisesModalContent() {
 
   // Summarize distribution of selected exercises so far
   const exMap = new Map(dataService.sheetData.exercises.map(e => [e.id, e]));
+  customWriteInRegistry.forEach((val, key) => {
+    exMap.set(key, val);
+  });
   const selectedObjs = selectedCustomExerciseIds.map(id => exMap.get(id)).filter(Boolean);
   const distEl = document.getElementById('selectExercisesDistributionText');
   if (selectedObjs.length === 0) {
@@ -3586,7 +3669,7 @@ function renderSelectExercisesModalContent() {
   } else {
     const muscleCounts = {};
     selectedObjs.forEach(e => {
-      const pm = getPrimaryMuscle(e) || getPrimaryBodyArea(e);
+      const pm = e.isCustomWriteIn ? 'Write-In' : getPrimaryMuscle(e) || getPrimaryBodyArea(e);
       muscleCounts[pm] = (muscleCounts[pm] || 0) + 1;
     });
     const summaryStr = Object.entries(muscleCounts)
@@ -3618,6 +3701,23 @@ function renderSelectExercisesModalContent() {
   });
 
   const selectedSet = new Set(selectedCustomExerciseIds);
+  const customWriteIns = Array.from(customWriteInRegistry.values())
+    .filter(
+      ex =>
+        selectedSet.has(ex.id) ||
+        (query.length > 0 && ex.name.toLowerCase().includes(query.toLowerCase()))
+    )
+    .sort((a, b) => {
+      const aSel = selectedSet.has(a.id) ? 0 : 1;
+      const bSel = selectedSet.has(b.id) ? 0 : 1;
+      if (aSel !== bSel) return aSel - bSel;
+      return selectedCustomExerciseIds.indexOf(a.id) - selectedCustomExerciseIds.indexOf(b.id);
+    });
+  if (customWriteIns.length > 0) {
+    const existingPoolIds = new Set(pool.map(e => e.id));
+    pool = [...customWriteIns.filter(e => !existingPoolIds.has(e.id)), ...pool];
+  }
+
   const listEl = document.getElementById('selectExercisesList');
   if (pool.length === 0) {
     listEl.innerHTML = `<p class="settings-help">No matching exercises found. Tap "All Exercises" to browse all ${dataService.sheetData.exercises.length} movements.</p>`;
@@ -3630,6 +3730,9 @@ function renderSelectExercisesModalContent() {
       const orderNum = isSelected ? selectedCustomExerciseIds.indexOf(ex.id) + 1 : null;
       const pri = SPECIFIC_MUSCLES.filter(m => ex.muscles?.[m] === 'Pri').join(', ');
       const area = getPrimaryBodyArea(ex);
+      const metaText = ex.isCustomWriteIn
+        ? `Custom Write-In · ${ex.equipment}`
+        : `${area} (${pri}) · ${ex.equipment}`;
       return `
         <button
           type="button"
@@ -3639,7 +3742,7 @@ function renderSelectExercisesModalContent() {
         >
           <div>
             <div class="swap-option-title">${ex.name}</div>
-            <div class="swap-option-meta">${area} (${pri}) · ${ex.equipment}</div>
+            <div class="swap-option-meta">${metaText}</div>
           </div>
           <span class="swap-badge ${isSelected ? 'selected-badge' : ''}">
             ${isSelected ? `✓ #${orderNum}` : 'Select'}
@@ -3980,15 +4083,35 @@ function bindEvents() {
 
   document.getElementById('autoFillRemainingBtn').addEventListener('click', () => {
     const inputs = getSelectedInputs();
+    const resolvedSelected = selectedCustomExerciseIds.map(
+      id => customWriteInRegistry.get(id) || id
+    );
     const filled = pickAutoFillExercises(
       dataService.sheetData,
       inputs,
-      selectedCustomExerciseIds,
+      resolvedSelected,
       targetCustomExerciseCount
     );
+    filled.forEach(ex => {
+      if (ex?.isCustomWriteIn) customWriteInRegistry.set(ex.id, ex);
+    });
     selectedCustomExerciseIds = filled.map(ex => ex.id);
     renderSelectExercisesModalContent();
   });
+
+  const selectWriteInBtn = document.getElementById('selectWriteInBtn');
+  if (selectWriteInBtn) {
+    selectWriteInBtn.addEventListener('click', handleAddSelectWriteIn);
+  }
+  const selectWriteInInput = document.getElementById('selectWriteInInput');
+  if (selectWriteInInput) {
+    selectWriteInInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleAddSelectWriteIn();
+      }
+    });
+  }
 
   document.getElementById('selectExercisesList').addEventListener('click', e => {
     const btn = e.target.closest('[data-action="toggle-custom-select-exercise"]');
@@ -4013,10 +4136,13 @@ function bindEvents() {
       inputs.workoutType === 'Random' && targetCustomWorkout
         ? targetCustomWorkout.name
         : inputs.workoutType;
+    const resolvedSelected = selectedCustomExerciseIds.map(
+      id => customWriteInRegistry.get(id) || id
+    );
     const workoutState = generateWorkoutFromSelectedExercises(
       dataService.sheetData,
       { ...inputs, workoutType: effectiveWorkoutType },
-      selectedCustomExerciseIds
+      resolvedSelected
     );
     dataService.updateActiveProfile({
       inputs: {
@@ -4362,6 +4488,19 @@ function bindEvents() {
 
   // Swap Modal Controls
   document.getElementById('swapSearchInput').addEventListener('input', renderSwapExerciseList);
+  const swapWriteInBtn = document.getElementById('swapWriteInBtn');
+  if (swapWriteInBtn) {
+    swapWriteInBtn.addEventListener('click', handleApplySwapWriteIn);
+  }
+  const swapWriteInInput = document.getElementById('swapWriteInInput');
+  if (swapWriteInInput) {
+    swapWriteInInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleApplySwapWriteIn();
+      }
+    });
+  }
   document.getElementById('swapFilterMatchingBtn').addEventListener('click', () => {
     currentSwapShowAll = false;
     document.getElementById('swapFilterMatchingBtn').classList.add('active');
