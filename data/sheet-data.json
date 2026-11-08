@@ -1,6 +1,6 @@
 {
-  "version": "1.0.1",
-  "lastUpdated": "2026-10-16",
+  "version": "1.1.0",
+  "lastUpdated": "2026-11-07",
   "source": "Google Sheets Workout Generator (Audited - Single Primary + Synergist Secondaries)",
   "workouts": [
     {
@@ -121,6 +121,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "Sec",
@@ -146,6 +149,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "Sec",
@@ -171,6 +177,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "Sec",
@@ -195,7 +204,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Dumbbells",
+      "equipmentTypes": [
+        "Dumbbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -220,7 +232,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Dumbbells",
+      "equipmentTypes": [
+        "Dumbbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -245,7 +260,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "TRX",
+      "equipmentTypes": [
+        "TRX"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "Sec",
@@ -271,6 +289,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "Sec",
@@ -295,7 +316,12 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Band or Weights",
+      "equipment": "DB / Long Bands / TRX",
+      "equipmentTypes": [
+        "Dumbbells",
+        "Long Bands",
+        "TRX"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -320,7 +346,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Dumbbells",
+      "equipmentTypes": [
+        "Dumbbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -345,7 +374,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Dumbbells",
+      "equipmentTypes": [
+        "Dumbbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -370,7 +402,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "TRX",
+      "equipmentTypes": [
+        "TRX"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "Sec",
@@ -396,6 +431,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -420,7 +458,11 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Band or Weights",
+      "equipment": "Dumbbells / Long Bands",
+      "equipmentTypes": [
+        "Dumbbells",
+        "Long Bands"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -445,7 +487,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Strength",
-      "equipment": "Weights",
+      "equipment": "Dumbbells",
+      "equipmentTypes": [
+        "Dumbbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -470,7 +515,11 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Band or Weights",
+      "equipment": "Dumbbells / Long Bands",
+      "equipmentTypes": [
+        "Dumbbells",
+        "Long Bands"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -495,7 +544,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Dumbbells",
+      "equipmentTypes": [
+        "Dumbbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -520,7 +572,10 @@
         "Hamstrings": "Sec"
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Dumbbells",
+      "equipmentTypes": [
+        "Dumbbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "Sec",
@@ -545,7 +600,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "TRX",
+      "equipmentTypes": [
+        "TRX"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "Sec",
@@ -570,7 +628,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "TRX",
+      "equipmentTypes": [
+        "TRX"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "Sec",
@@ -595,7 +656,12 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Band or Weights",
+      "equipment": "DB / Long Bands / TRX",
+      "equipmentTypes": [
+        "Dumbbells",
+        "Long Bands",
+        "TRX"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -620,7 +686,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Barbells",
+      "equipmentTypes": [
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "Sec",
@@ -645,7 +714,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Barbells",
+      "equipmentTypes": [
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "Sec",
@@ -670,7 +742,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Bands",
+      "equipment": "Long Bands",
+      "equipmentTypes": [
+        "Long Bands"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -695,7 +770,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Dumbbells",
+      "equipmentTypes": [
+        "Dumbbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -721,6 +799,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "Sec",
@@ -745,7 +826,10 @@
         "Hamstrings": "Sec"
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Slam Ball",
+      "equipmentTypes": [
+        "Slam Ball"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "Sec",
@@ -770,7 +854,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Ab Wheel",
+      "equipmentTypes": [
+        "Ab Wheel"
+      ],
       "bodyCategories": {
         "Upper Body": "Sec",
         "Core": "Pri",
@@ -795,7 +882,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "TRX",
+      "equipmentTypes": [
+        "TRX"
+      ],
       "bodyCategories": {
         "Upper Body": "Sec",
         "Core": "Pri",
@@ -821,6 +911,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Pri",
@@ -846,6 +939,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Pri",
@@ -870,7 +966,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Slam Ball",
+      "equipmentTypes": [
+        "Slam Ball"
+      ],
       "bodyCategories": {
         "Upper Body": "Sec",
         "Core": "Pri",
@@ -896,6 +995,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Pri",
@@ -921,6 +1023,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Pri",
@@ -946,6 +1051,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "Sec",
         "Core": "Pri",
@@ -971,6 +1079,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "Sec",
         "Core": "Pri",
@@ -996,6 +1107,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "Sec",
         "Core": "Pri",
@@ -1021,6 +1135,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "Sec",
         "Core": "Pri",
@@ -1046,6 +1163,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "Sec",
         "Core": "Pri",
@@ -1071,6 +1191,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "Sec",
         "Core": "Pri",
@@ -1096,6 +1219,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "Sec",
         "Core": "Pri",
@@ -1120,7 +1246,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Slam Ball",
+      "equipmentTypes": [
+        "Slam Ball"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Pri",
@@ -1145,7 +1274,10 @@
         "Hamstrings": "Sec"
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Dumbbells",
+      "equipmentTypes": [
+        "Dumbbells"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Sec",
@@ -1170,7 +1302,10 @@
         "Hamstrings": "Sec"
       },
       "workoutCategory": "Either",
-      "equipment": "Bands",
+      "equipment": "Hip Bands",
+      "equipmentTypes": [
+        "Hip Bands"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Sec",
@@ -1195,7 +1330,10 @@
         "Hamstrings": "Sec"
       },
       "workoutCategory": "Either",
-      "equipment": "Bands",
+      "equipment": "Hip Bands",
+      "equipmentTypes": [
+        "Hip Bands"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "",
@@ -1220,7 +1358,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Bands",
+      "equipment": "Hip Bands",
+      "equipmentTypes": [
+        "Hip Bands"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "",
@@ -1245,7 +1386,10 @@
         "Hamstrings": "Sec"
       },
       "workoutCategory": "Either",
-      "equipment": "Bands",
+      "equipment": "Hip Bands",
+      "equipmentTypes": [
+        "Hip Bands"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "",
@@ -1270,7 +1414,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Bands",
+      "equipment": "Hip Bands",
+      "equipmentTypes": [
+        "Hip Bands"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "",
@@ -1296,6 +1443,11 @@
       },
       "workoutCategory": "Strength",
       "equipment": "Any",
+      "equipmentTypes": [
+        "Nothing",
+        "Dumbbells",
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "",
@@ -1321,6 +1473,11 @@
       },
       "workoutCategory": "Strength",
       "equipment": "Any",
+      "equipmentTypes": [
+        "Nothing",
+        "Dumbbells",
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "",
@@ -1346,6 +1503,11 @@
       },
       "workoutCategory": "Strength",
       "equipment": "Any",
+      "equipmentTypes": [
+        "Nothing",
+        "Dumbbells",
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "",
@@ -1371,6 +1533,10 @@
       },
       "workoutCategory": "HIIT",
       "equipment": "Any",
+      "equipmentTypes": [
+        "Nothing",
+        "Dumbbells"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "",
@@ -1396,6 +1562,9 @@
       },
       "workoutCategory": "HIIT",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "",
@@ -1421,6 +1590,11 @@
       },
       "workoutCategory": "Either",
       "equipment": "Any",
+      "equipmentTypes": [
+        "Nothing",
+        "Dumbbells",
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "",
@@ -1445,7 +1619,12 @@
         "Hamstrings": "Sec"
       },
       "workoutCategory": "Either",
-      "equipment": "Band or Weights",
+      "equipment": "DB / BB / Long Bands",
+      "equipmentTypes": [
+        "Dumbbells",
+        "Barbells",
+        "Long Bands"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "",
@@ -1471,6 +1650,9 @@
       },
       "workoutCategory": "HIIT",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "",
@@ -1495,7 +1677,10 @@
         "Hamstrings": "Sec"
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Dumbbells",
+      "equipmentTypes": [
+        "Dumbbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Sec",
         "Core": "Sec",
@@ -1520,7 +1705,12 @@
         "Hamstrings": "Sec"
       },
       "workoutCategory": "Either",
-      "equipment": "Band or Weights",
+      "equipment": "DB / BB / Long Bands",
+      "equipmentTypes": [
+        "Dumbbells",
+        "Barbells",
+        "Long Bands"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "",
@@ -1545,7 +1735,10 @@
         "Hamstrings": "Sec"
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Slam Ball",
+      "equipmentTypes": [
+        "Slam Ball"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Sec",
@@ -1571,6 +1764,9 @@
       },
       "workoutCategory": "HIIT",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "Sec",
         "Core": "Sec",
@@ -1596,6 +1792,9 @@
       },
       "workoutCategory": "HIIT",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "Sec",
         "Core": "Sec",
@@ -1620,7 +1819,10 @@
         "Hamstrings": "Pri"
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Dumbbells",
+      "equipmentTypes": [
+        "Dumbbells"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Sec",
@@ -1645,7 +1847,10 @@
         "Hamstrings": "Pri"
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "TRX",
+      "equipmentTypes": [
+        "TRX"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Sec",
@@ -1670,7 +1875,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Strength",
-      "equipment": "Weights",
+      "equipment": "Barbells",
+      "equipmentTypes": [
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -1695,7 +1903,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Strength",
-      "equipment": "Weights",
+      "equipment": "Barbells",
+      "equipmentTypes": [
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -1720,7 +1931,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Barbells",
+      "equipmentTypes": [
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "Sec",
@@ -1745,7 +1959,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Barbells",
+      "equipmentTypes": [
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "Sec",
@@ -1770,7 +1987,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Strength",
-      "equipment": "Weights",
+      "equipment": "Barbells",
+      "equipmentTypes": [
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "Sec",
@@ -1795,7 +2015,10 @@
         "Hamstrings": "Sec"
       },
       "workoutCategory": "Strength",
-      "equipment": "Weights",
+      "equipment": "Barbells",
+      "equipmentTypes": [
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "Sec",
@@ -1820,7 +2043,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Dumbbells",
+      "equipmentTypes": [
+        "Dumbbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -1845,7 +2071,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Bands",
+      "equipment": "Long Bands",
+      "equipmentTypes": [
+        "Long Bands"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "Sec",
@@ -1870,7 +2099,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Dumbbells",
+      "equipmentTypes": [
+        "Dumbbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -1895,7 +2127,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Dumbbells",
+      "equipmentTypes": [
+        "Dumbbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -1920,7 +2155,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Dumbbells",
+      "equipmentTypes": [
+        "Dumbbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -1945,7 +2183,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Bands",
+      "equipment": "Long Bands",
+      "equipmentTypes": [
+        "Long Bands"
+      ],
       "bodyCategories": {
         "Upper Body": "Pri",
         "Core": "",
@@ -1970,7 +2211,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Barbells",
+      "equipmentTypes": [
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Sec",
         "Core": "Pri",
@@ -1995,7 +2239,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Nothing",
+      "equipment": "Barbells",
+      "equipmentTypes": [
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Sec",
         "Core": "Pri",
@@ -2020,7 +2267,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Bands",
+      "equipment": "Long Bands",
+      "equipmentTypes": [
+        "Long Bands"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Pri",
@@ -2046,6 +2296,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "Sec",
         "Core": "Pri",
@@ -2071,6 +2324,9 @@
       },
       "workoutCategory": "HIIT",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Pri",
@@ -2096,6 +2352,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Pri",
@@ -2121,6 +2380,9 @@
       },
       "workoutCategory": "Either",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Pri",
@@ -2145,7 +2407,11 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Band or Weights",
+      "equipment": "Dumbbells / Long Bands",
+      "equipmentTypes": [
+        "Dumbbells",
+        "Long Bands"
+      ],
       "bodyCategories": {
         "Upper Body": "Sec",
         "Core": "Pri",
@@ -2170,7 +2436,10 @@
         "Hamstrings": "Sec"
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "TRX",
+      "equipmentTypes": [
+        "TRX"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Sec",
@@ -2195,7 +2464,10 @@
         "Hamstrings": "Pri"
       },
       "workoutCategory": "Strength",
-      "equipment": "Weights",
+      "equipment": "Barbells",
+      "equipmentTypes": [
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Sec",
@@ -2220,7 +2492,10 @@
         "Hamstrings": "Pri"
       },
       "workoutCategory": "Strength",
-      "equipment": "Weights",
+      "equipment": "Barbells",
+      "equipmentTypes": [
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "Sec",
         "Core": "Sec",
@@ -2245,7 +2520,11 @@
         "Hamstrings": "Pri"
       },
       "workoutCategory": "Either",
-      "equipment": "Band or Weights",
+      "equipment": "Barbells / Long Bands",
+      "equipmentTypes": [
+        "Barbells",
+        "Long Bands"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Sec",
@@ -2271,6 +2550,11 @@
       },
       "workoutCategory": "Either",
       "equipment": "Any",
+      "equipmentTypes": [
+        "Nothing",
+        "Dumbbells",
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Sec",
@@ -2295,7 +2579,10 @@
         "Hamstrings": "Sec"
       },
       "workoutCategory": "Strength",
-      "equipment": "Weights",
+      "equipment": "Barbells",
+      "equipmentTypes": [
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Sec",
@@ -2320,7 +2607,10 @@
         "Hamstrings": ""
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Barbells",
+      "equipmentTypes": [
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Sec",
@@ -2345,7 +2635,11 @@
         "Hamstrings": "Sec"
       },
       "workoutCategory": "Either",
-      "equipment": "Weights",
+      "equipment": "Dumbbells / Barbells",
+      "equipmentTypes": [
+        "Dumbbells",
+        "Barbells"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Sec",
@@ -2371,6 +2665,9 @@
       },
       "workoutCategory": "HIIT",
       "equipment": "Nothing",
+      "equipmentTypes": [
+        "Nothing"
+      ],
       "bodyCategories": {
         "Upper Body": "",
         "Core": "Sec",

@@ -3332,7 +3332,142 @@ async function runBrowserCDPTests(wsUrl) {
         });
         console.log('  ✅ PASS: Mobile screenshots saved to /tmp/workout-mobile-screenshot.png and /tmp/workout-timer-screenshot.png');
 
-        console.log('\n--- 14. QA Gallery All 91 Diagrams Render, Zero Spreadsheet Mention, Muscle Filter & No Audit Box Check ---');
+        console.log('\n--- 13b. Any / Nothing / Custom Equipment UI, Check/Uncheck Gear, Modal Gear Pills & 375px Layout ---');
+        await send('Emulation.setDeviceMetricsOverride', {
+          width: 375,
+          height: 667,
+          deviceScaleFactor: 2,
+          mobile: true
+        });
+        await new Promise(r => setTimeout(r, 150));
+
+        const customEquipE2E = await evalInPage(async () => {
+          const collapsible = document.getElementById('generatorSettingsCollapsible');
+          if (collapsible?.hidden) {
+            document.getElementById('toggleInputsCollapseBtn')?.click();
+          }
+
+          const equipSelect = document.getElementById('equipmentSelect');
+          const optionValues = Array.from(equipSelect?.options || []).map(o => o.value);
+          const customSection = document.getElementById('customEquipmentSection');
+
+          // Ensure Any hides #customEquipmentSection
+          equipSelect.value = 'Any';
+          equipSelect.dispatchEvent(new Event('change'));
+          const hiddenWhenAny = customSection?.hidden === true;
+
+          // Record active workout titles before staging Custom equipment changes
+          const getTitles = () =>
+            Array.from(document.querySelectorAll('.exercise-title-text')).map(el => el.innerText.trim());
+          const titlesBefore = getTitles();
+
+          // Switch to Custom -> #customEquipmentSection appears with 8 checkable pills
+          equipSelect.value = 'Custom';
+          equipSelect.dispatchEvent(new Event('change'));
+          const visibleWhenCustom = customSection?.hidden === false;
+
+          const chips = Array.from(document.querySelectorAll('#customEquipmentGrid [data-custom-equip]'));
+          const chipIds = chips.map(c => c.getAttribute('data-custom-equip'));
+          const noOverflowAt375 =
+            document.documentElement.scrollWidth <= window.innerWidth + 1 &&
+            customSection.getBoundingClientRect().right <= window.innerWidth + 1;
+
+          // Tap Clear -> leaves only Bodyweight ('Nothing') checked
+          document.getElementById('customEquipClearBtn')?.click();
+          const checkedAfterClear = Array.from(
+            document.querySelectorAll('#customEquipmentGrid .custom-equip-chip.is-checked')
+          ).map(c => c.getAttribute('data-custom-equip'));
+
+          // Check Hip Bands and uncheck Bodyweight -> strictly Hip Bands ONLY!
+          document.querySelector('#customEquipmentGrid [data-custom-equip="Hip Bands"]')?.click();
+          document.querySelector('#customEquipmentGrid [data-custom-equip="Nothing"]')?.click();
+          const checkedHipOnly = Array.from(
+            document.querySelectorAll('#customEquipmentGrid .custom-equip-chip.is-checked')
+          ).map(c => c.getAttribute('data-custom-equip'));
+
+          // Verify workout STILL has not mutated before clicking Generate Workout
+          const titlesStillUnchanged = JSON.stringify(getTitles()) === JSON.stringify(titlesBefore);
+
+          // Click Generate Workout -> every generated exercise must be one of the 5 Hip Bands exercises!
+          document.getElementById('generateWorkoutBtn')?.click();
+          const hipBandTitles = new Set([
+            'Single leg band glute bridge',
+            'Alternating glute bridge and butterflies with band',
+            'Band Walks (Lateral & Monster)',
+            'Band leg kick backs and diagonals',
+            'Frog Pump + Butterflys'
+          ]);
+          const generatedHipTitles = getTitles();
+          const allGeneratedAreHipBands =
+            generatedHipTitles.length > 0 && generatedHipTitles.every(t => hipBandTitles.has(t));
+
+          // Re-expand, click All, uncheck Barbells + Hip Bands + TRX + Slam Ball + Ab Wheel + Nothing -> Dumbbells + Long Bands
+          if (document.getElementById('generatorSettingsCollapsible')?.hidden) {
+            document.getElementById('toggleInputsCollapseBtn')?.click();
+          }
+          document.getElementById('customEquipAllBtn')?.click();
+          const allCountAfterAllBtn = document.querySelectorAll(
+            '#customEquipmentGrid .custom-equip-chip.is-checked'
+          ).length;
+
+          // Open Swap Modal on Round 1 Slot 1 and test clicking the "Barbells" equipment filter pill
+          document.querySelector('[data-action="open-swap-modal"]')?.click();
+          const barbellsPill = document.querySelector(
+            '#swapEquipmentFilterBar [data-equipment-filter="Barbells"]'
+          );
+          barbellsPill?.click();
+          const swapMetaTexts = Array.from(
+            document.querySelectorAll('#swapExerciseList .swap-option-meta')
+          ).map(el => el.innerText.trim());
+          const swapHasBarbellItems =
+            swapMetaTexts.length > 0 &&
+            swapMetaTexts.every(
+              t => t.includes('Barbells') || t.includes('BB') || t.includes('Any')
+            );
+          document.querySelector('[data-close-modal="swapModal"]')?.click();
+
+          // Restore Equipment to Any cleanly
+          equipSelect.value = 'Any';
+          equipSelect.dispatchEvent(new Event('change'));
+          document.getElementById('generateWorkoutBtn')?.click();
+
+          return {
+            optionValues,
+            hiddenWhenAny,
+            visibleWhenCustom,
+            chipIds,
+            noOverflowAt375,
+            checkedAfterClear,
+            checkedHipOnly,
+            titlesStillUnchanged,
+            allGeneratedAreHipBands,
+            generatedHipTitles,
+            allCountAfterAllBtn,
+            swapHasBarbellItems,
+            swapBarbellCount: swapMetaTexts.length
+          };
+        });
+
+        if (
+          JSON.stringify(customEquipE2E.optionValues) !== JSON.stringify(['Any', 'Nothing', 'Custom']) ||
+          !customEquipE2E.hiddenWhenAny ||
+          !customEquipE2E.visibleWhenCustom ||
+          customEquipE2E.chipIds.length !== 8 ||
+          !customEquipE2E.noOverflowAt375 ||
+          JSON.stringify(customEquipE2E.checkedAfterClear) !== JSON.stringify(['Nothing']) ||
+          JSON.stringify(customEquipE2E.checkedHipOnly) !== JSON.stringify(['Hip Bands']) ||
+          !customEquipE2E.titlesStillUnchanged ||
+          !customEquipE2E.allGeneratedAreHipBands ||
+          customEquipE2E.allCountAfterAllBtn !== 8 ||
+          !customEquipE2E.swapHasBarbellItems
+        ) {
+          throw new Error('Custom Equipment E2E check failed: ' + JSON.stringify(customEquipE2E));
+        }
+        console.log(
+          `  ✅ PASS: Equipment Any/Nothing/Custom UI, 8-chip grid (zero overflow @ 375px), staged toggle, strict Hip Bands generation, and Swap Barbells filter (${customEquipE2E.swapBarbellCount} exercises) verified`
+        );
+
+        console.log('\n--- 14. QA Gallery All 91 Diagrams Render, Zero Spreadsheet Mention, Muscle & Equipment Filters Check ---');
         await send('Emulation.setDeviceMetricsOverride', {
           width: 1280,
           height: 900,
@@ -3376,6 +3511,17 @@ async function runBrowserCDPTests(wsUrl) {
           // Reset to All
           document.querySelector('.qa-filter-bar [data-filter="all"]')?.click();
 
+          // Test QA Gallery new Equipment Filter Pills (Hip Bands = 5, Long Bands = 12, Dumbbells = 29, Barbells = 23)
+          document.querySelector('#qaEquipFilterBar [data-equip-filter="Hip Bands"]')?.click();
+          const hipBandGalleryCount = document.querySelectorAll('article.qa-card').length;
+          document.querySelector('#qaEquipFilterBar [data-equip-filter="Long Bands"]')?.click();
+          const longBandGalleryCount = document.querySelectorAll('article.qa-card').length;
+          document.querySelector('#qaEquipFilterBar [data-equip-filter="Dumbbells"]')?.click();
+          const dumbbellsGalleryCount = document.querySelectorAll('article.qa-card').length;
+          document.querySelector('#qaEquipFilterBar [data-equip-filter="Barbells"]')?.click();
+          const barbellsGalleryCount = document.querySelectorAll('article.qa-card').length;
+          document.querySelector('#qaEquipFilterBar [data-equip-filter="all"]')?.click();
+
           return {
             totalCards: cards.length,
             brokenCount: broken.length,
@@ -3383,7 +3529,11 @@ async function runBrowserCDPTests(wsUrl) {
             auditBoxes,
             noSpreadsheetMention,
             glutesCardCount: glutesCards.length,
-            allGlutesValid
+            allGlutesValid,
+            hipBandGalleryCount,
+            longBandGalleryCount,
+            dumbbellsGalleryCount,
+            barbellsGalleryCount
           };
         });
         if (
@@ -3391,7 +3541,11 @@ async function runBrowserCDPTests(wsUrl) {
           galleryCheck.brokenCount > 0 ||
           galleryCheck.auditBoxes > 0 ||
           !galleryCheck.noSpreadsheetMention ||
-          !galleryCheck.allGlutesValid
+          !galleryCheck.allGlutesValid ||
+          galleryCheck.hipBandGalleryCount !== 5 ||
+          galleryCheck.longBandGalleryCount !== 12 ||
+          galleryCheck.dumbbellsGalleryCount !== 29 ||
+          galleryCheck.barbellsGalleryCount !== 23
         ) {
           throw new Error('QA Gallery check failed: ' + JSON.stringify(galleryCheck));
         }

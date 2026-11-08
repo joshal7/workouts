@@ -1,8 +1,13 @@
-import { DataService } from './services/dataService.js?v=31';
+import { DataService } from './services/dataService.js?v=32';
 import {
   FOCUS_SNAP_STEPS,
   DEFAULT_FOCUS_WEIGHTS,
   DEFAULT_FOCUS_ENABLED,
+  ALL_EQUIPMENT_TYPES,
+  CUSTOM_EQUIPMENT_ITEMS,
+  DEFAULT_CUSTOM_EQUIPMENT,
+  normalizeCustomEquipment,
+  normalizeEquipmentSelection,
   normalizeFocusWeights,
   deriveBodyCategoryFromFocus,
   resetFocusState,
@@ -29,12 +34,12 @@ import {
   getPrimaryMuscle,
   getPrimaryBodyArea,
   createCustomWriteInExercise
-} from './engine/workoutEngine.js?v=31';
+} from './engine/workoutEngine.js?v=32';
 import {
   analyzeMuscleLoad,
   applyBalancedRecommendation,
   SPECIFIC_MUSCLES
-} from './engine/muscleLoadAnalyzer.js?v=31';
+} from './engine/muscleLoadAnalyzer.js?v=32';
 import {
   TIMER_COLORS,
   CUSTOM_TIMER_PRESETS,
@@ -63,7 +68,7 @@ import {
   computeTimelineTargetScrollLeft,
   buildMasterTimelineWavBytes,
   encodeWavBytesToDataUri
-} from './engine/timerEngine.js?v=31';
+} from './engine/timerEngine.js?v=32';
 
 const dataService = new DataService();
 
@@ -85,15 +90,30 @@ const MUSCLE_FILTER_PILLS = [
   { value: 'Hamstrings', label: 'Hamstrings' }
 ];
 
+const EQUIPMENT_FILTER_PILLS = [
+  { value: 'All', label: 'All Gear' },
+  { value: 'Dumbbells', label: 'Dumbbells' },
+  { value: 'Barbells', label: 'Barbells' },
+  { value: 'Long Bands', label: 'Long Bands' },
+  { value: 'Hip Bands', label: 'Hip Bands' },
+  { value: 'TRX', label: 'TRX' },
+  { value: 'Slam Ball', label: 'Slam Ball' },
+  { value: 'Ab Wheel', label: 'Ab Wheel' },
+  { value: 'Nothing', label: 'Bodyweight' }
+];
+
 // UI State for active modals
 let currentSwapContext = null; // { roundIndex, slotIndex }
 let currentSwapShowAll = false;
 let currentSwapMuscleFilter = 'All';
+let currentSwapEquipmentFilter = 'All';
 
 let currentExclusionMuscleFilter = 'All';
+let currentExclusionEquipmentFilter = 'All';
 
 let currentSelectShowAll = false;
 let currentSelectMuscleFilter = 'All';
+let currentSelectEquipmentFilter = 'All';
 let selectedCustomExerciseIds = [];
 let targetCustomExerciseCount = 9;
 let targetCustomWorkout = null;
@@ -195,6 +215,8 @@ let focusState = {
   enabled: { ...DEFAULT_FOCUS_ENABLED }
 };
 
+let customEquipmentState = [...DEFAULT_CUSTOM_EQUIPMENT];
+
 let isGeneratorSettingsCollapsed = false;
 
 if (typeof window !== 'undefined') {
@@ -213,6 +235,11 @@ const els = {
   workoutCategorySelect: document.getElementById('workoutCategorySelect'),
   equipmentSelect: document.getElementById('equipmentSelect'),
   workoutTypeSelect: document.getElementById('workoutTypeSelect'),
+
+  customEquipmentSection: document.getElementById('customEquipmentSection'),
+  customEquipmentGrid: document.getElementById('customEquipmentGrid'),
+  customEquipAllBtn: document.getElementById('customEquipAllBtn'),
+  customEquipClearBtn: document.getElementById('customEquipClearBtn'),
 
   focusSliderSection: document.getElementById('focusSliderSection'),
   resetFocusBtn: document.getElementById('resetFocusBtn'),
@@ -253,7 +280,7 @@ const els = {
 
 async function bootstrap() {
   releaseAudioSessionToAuto();
-  await dataService.init('./data/sheet-data.json?v=31', './data/enrichments.json?v=31');
+  await dataService.init('./data/sheet-data.json?v=32', './data/enrichments.json?v=32');
   loadAndDecodeSpeechPack();
   populateWorkoutTypeSelect();
   populateCustomTimerPresetsSelect();
@@ -269,7 +296,7 @@ async function bootstrap() {
       refreshing = true;
       window.location.reload();
     });
-    navigator.serviceWorker.register('./sw.js?v=31', { updateViaCache: 'none' }).then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=32', { updateViaCache: 'none' }).then(reg => {
       reg.update().catch(() => {});
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
@@ -383,6 +410,25 @@ function renderFocusSliderUI(activeDragHandleIndex = null) {
   }
 }
 
+function renderCustomEquipmentUI() {
+  if (!els.customEquipmentSection || !els.customEquipmentGrid) return;
+  const isCustomMode = els.equipmentSelect?.value === 'Custom';
+  els.customEquipmentSection.hidden = !isCustomMode;
+
+  const checkedSet = new Set(customEquipmentState);
+  els.customEquipmentGrid.innerHTML = CUSTOM_EQUIPMENT_ITEMS.map(item => {
+    const isChecked = checkedSet.has(item.id);
+    const titleAttr = item.hint ? ` title="${item.hint}"` : '';
+    return `<button
+      type="button"
+      class="custom-equip-chip ${isChecked ? 'is-checked' : ''}"
+      data-custom-equip="${item.id}"
+      role="checkbox"
+      aria-checked="${isChecked}"${titleAttr}
+    ><span class="custom-equip-check" aria-hidden="true">✓</span><span class="custom-equip-label">${item.label}</span></button>`;
+  }).join('');
+}
+
 function updateExcludedCountBadge() {
   const profile = dataService.getActiveProfile();
   const excludedCount = (profile.excludedExerciseIds || []).length;
@@ -400,9 +446,12 @@ function syncUIFromActiveProfile() {
 
   // Inputs
   const inputs = profile.inputs || {};
+  const normEquip = normalizeEquipmentSelection(inputs);
   els.workoutCategorySelect.value = inputs.workoutCategory || 'HIIT';
-  els.equipmentSelect.value = inputs.equipment === 'All' ? 'Any' : (inputs.equipment || 'Any');
+  els.equipmentSelect.value = normEquip.equipment;
+  customEquipmentState = [...normEquip.customEquipment];
   els.workoutTypeSelect.value = inputs.workoutType || 'Timed Trios (40/20)';
+  renderCustomEquipmentUI();
 
   const normFocus = normalizeFocusWeights(inputs);
   focusState = {
@@ -438,6 +487,11 @@ function rehydrateActiveWorkout(workoutState) {
     workoutState.inputs.focusWeights = { ...norm.weights };
     workoutState.inputs.focusEnabled = { ...norm.enabled };
   }
+  if (workoutState.inputs) {
+    const normEq = normalizeEquipmentSelection(workoutState.inputs);
+    workoutState.inputs.equipment = normEq.equipment;
+    workoutState.inputs.customEquipment = [...normEq.customEquipment];
+  }
   if (!Array.isArray(workoutState.dismissedWarnings)) {
     workoutState.dismissedWarnings = [];
   }
@@ -462,12 +516,17 @@ function rehydrateActiveWorkout(workoutState) {
 function getSelectedInputs() {
   const profile = dataService.getActiveProfile();
   const bodyCategory = deriveBodyCategoryFromFocus(focusState.weights, focusState.enabled);
+  const normEquip = normalizeEquipmentSelection({
+    equipment: els.equipmentSelect.value,
+    customEquipment: customEquipmentState
+  });
   return {
     workoutCategory: els.workoutCategorySelect.value,
     bodyCategory,
     focusWeights: { ...focusState.weights },
     focusEnabled: { ...focusState.enabled },
-    equipment: els.equipmentSelect.value,
+    equipment: normEquip.equipment,
+    customEquipment: [...normEquip.customEquipment],
     workoutType: els.workoutTypeSelect.value,
     excludedExerciseIds: profile.excludedExerciseIds || [],
     optionsPerSlot: profile.optionsPerSlot || 1
@@ -526,6 +585,7 @@ function handleGenerateWorkout(showFeedback = true) {
       focusWeights: { ...inputs.focusWeights },
       focusEnabled: { ...inputs.focusEnabled },
       equipment: inputs.equipment,
+      customEquipment: [...inputs.customEquipment],
       workoutType: inputs.workoutType
     },
     activeWorkout: workoutState
@@ -808,6 +868,25 @@ function renderMuscleFilterPills(containerEl, activeValue, onSelect) {
     const btn = e.target.closest('[data-muscle-filter]');
     if (!btn) return;
     const val = btn.getAttribute('data-muscle-filter');
+    onSelect(val);
+  };
+}
+
+function renderEquipmentFilterPills(containerEl, activeValue, onSelect) {
+  if (!containerEl) return;
+  containerEl.innerHTML = EQUIPMENT_FILTER_PILLS.map(
+    pill => `
+      <button
+        type="button"
+        class="muscle-filter-pill equipment-filter-pill ${pill.value === activeValue ? 'active' : ''}"
+        data-equipment-filter="${pill.value}"
+      >${pill.label}</button>`
+  ).join('');
+
+  containerEl.onclick = e => {
+    const btn = e.target.closest('[data-equipment-filter]');
+    if (!btn) return;
+    const val = btn.getAttribute('data-equipment-filter');
     onSelect(val);
   };
 }
@@ -3405,6 +3484,7 @@ function openSwapModal(roundIndex, slotIndex) {
   currentSwapContext = { roundIndex, slotIndex };
   currentSwapShowAll = false;
   currentSwapMuscleFilter = 'All';
+  currentSwapEquipmentFilter = 'All';
 
   const wkState = dataService.getActiveProfile().activeWorkout;
   const slot = wkState?.rounds?.[roundIndex]?.slots?.[slotIndex];
@@ -3479,6 +3559,15 @@ function renderSwapMuscleFilterBar() {
       renderSwapExerciseList();
     }
   );
+  renderEquipmentFilterPills(
+    document.getElementById('swapEquipmentFilterBar'),
+    currentSwapEquipmentFilter,
+    val => {
+      currentSwapEquipmentFilter = val;
+      renderSwapMuscleFilterBar();
+      renderSwapExerciseList();
+    }
+  );
 }
 
 function renderSwapExerciseList() {
@@ -3496,15 +3585,18 @@ function renderSwapExerciseList() {
     analyzeMuscleLoadFn: analyzeMuscleLoad
   });
   const balancedIds = new Set(validBalancedCandidates.map(e => e.id));
+  const balancedRankMap = new Map(validBalancedCandidates.map((e, idx) => [e.id, idx]));
 
   let pool = [];
   if (currentSwapShowAll) {
     pool = [...dataService.sheetData.exercises];
   } else {
-    // If user explicitly clicked a muscle group filter pill in the Swap modal,
-    // use that muscle filter rather than locking to the active workout's Focus weights
+    // If user explicitly clicked a muscle or equipment filter pill in the Swap modal,
+    // honor that explicit filter rather than locking to the active workout's Focus/Equipment
     const hasExplicitChip = currentSwapMuscleFilter !== 'All';
+    const hasExplicitEquipChip = currentSwapEquipmentFilter !== 'All';
     const activeFocus = normalizeFocusWeights(wkState.inputs || {});
+    const normWkEquip = normalizeEquipmentSelection(wkState.inputs || {});
     pool = filterEligibleExercises(dataService.sheetData.exercises, {
       workoutCategory: wkState.inputs.effectiveWorkoutCategory,
       bodyCategory: hasExplicitChip
@@ -3513,20 +3605,31 @@ function renderSwapExerciseList() {
       muscleGroup: hasExplicitChip ? currentSwapMuscleFilter : null,
       focusWeights: hasExplicitChip ? null : activeFocus.weights,
       focusEnabled: hasExplicitChip ? null : activeFocus.enabled,
-      equipment: wkState.inputs.equipment || els.equipmentSelect.value,
+      equipment: hasExplicitEquipChip ? 'Any' : normWkEquip.equipment,
+      customEquipment: hasExplicitEquipChip ? null : normWkEquip.customEquipment,
       excludedExerciseIds: profile.excludedExerciseIds || []
     });
   }
 
   pool = filterExercisesByMuscleAndQuery(pool, {
     muscleFilter: currentSwapMuscleFilter,
+    equipmentFilter: currentSwapEquipmentFilter,
     query
   });
 
   pool.sort((a, b) => {
     const aBal = balancedIds.has(a.id) ? 1 : 0;
     const bBal = balancedIds.has(b.id) ? 1 : 0;
-    return bBal - aBal;
+    if (aBal !== bBal) return bBal - aBal;
+    if (SPECIFIC_MUSCLES.includes(currentSwapMuscleFilter)) {
+      const aPri = a.muscles?.[currentSwapMuscleFilter] === 'Pri' ? 1 : 0;
+      const bPri = b.muscles?.[currentSwapMuscleFilter] === 'Pri' ? 1 : 0;
+      if (aPri !== bPri) return bPri - aPri;
+    }
+    if (aBal && bBal) {
+      return (balancedRankMap.get(a.id) ?? 999) - (balancedRankMap.get(b.id) ?? 999);
+    }
+    return 0;
   });
 
   const listEl = document.getElementById('swapExerciseList');
@@ -3619,6 +3722,7 @@ function openSelectExercisesModal() {
   selectedCustomExerciseIds = [];
   currentSelectShowAll = false;
   currentSelectMuscleFilter = 'All';
+  currentSelectEquipmentFilter = 'All';
 
   document.getElementById('selectExercisesEyebrow').textContent =
     `CUSTOM WORKOUT · ${target.workout.name.toUpperCase()}`;
@@ -3659,6 +3763,15 @@ function renderSelectExercisesMuscleFilterBar() {
     currentSelectMuscleFilter,
     val => {
       currentSelectMuscleFilter = val;
+      renderSelectExercisesMuscleFilterBar();
+      renderSelectExercisesModalContent();
+    }
+  );
+  renderEquipmentFilterPills(
+    document.getElementById('selectExercisesEquipmentFilterBar'),
+    currentSelectEquipmentFilter,
+    val => {
+      currentSelectEquipmentFilter = val;
       renderSelectExercisesMuscleFilterBar();
       renderSelectExercisesModalContent();
     }
@@ -3709,19 +3822,22 @@ function renderSelectExercisesModalContent() {
     pool = [...dataService.sheetData.exercises];
   } else {
     const hasExplicitChip = currentSelectMuscleFilter !== 'All';
+    const hasExplicitEquipChip = currentSelectEquipmentFilter !== 'All';
     pool = filterEligibleExercises(dataService.sheetData.exercises, {
       workoutCategory: inputs.workoutCategory,
       bodyCategory: hasExplicitChip ? currentSelectMuscleFilter : inputs.bodyCategory,
       muscleGroup: hasExplicitChip ? currentSelectMuscleFilter : null,
       focusWeights: hasExplicitChip ? null : inputs.focusWeights,
       focusEnabled: hasExplicitChip ? null : inputs.focusEnabled,
-      equipment: inputs.equipment,
+      equipment: hasExplicitEquipChip ? 'Any' : inputs.equipment,
+      customEquipment: hasExplicitEquipChip ? null : inputs.customEquipment,
       excludedExerciseIds: profile.excludedExerciseIds || []
     });
   }
 
   pool = filterExercisesByMuscleAndQuery(pool, {
     muscleFilter: currentSelectMuscleFilter,
+    equipmentFilter: currentSelectEquipmentFilter,
     query
   });
 
@@ -3780,6 +3896,7 @@ function renderSelectExercisesModalContent() {
 
 function openSettingsModal() {
   currentExclusionMuscleFilter = 'All';
+  currentExclusionEquipmentFilter = 'All';
   renderSettingsModalContent();
   openModal(els.settingsModal);
 }
@@ -3806,6 +3923,14 @@ function renderSettingsModalContent() {
       renderSettingsModalContent();
     }
   );
+  renderEquipmentFilterPills(
+    document.getElementById('exclusionEquipmentFilterBar'),
+    currentExclusionEquipmentFilter,
+    val => {
+      currentExclusionEquipmentFilter = val;
+      renderSettingsModalContent();
+    }
+  );
 
   renderExclusionChecklist();
 }
@@ -3817,6 +3942,7 @@ function renderExclusionChecklist() {
 
   const exercises = filterExercisesByMuscleAndQuery(dataService.sheetData.exercises, {
     muscleFilter: currentExclusionMuscleFilter,
+    equipmentFilter: currentExclusionEquipmentFilter,
     query
   });
 
@@ -4063,8 +4189,46 @@ function bindEvents() {
   });
 
   els.equipmentSelect.addEventListener('change', () => {
+    renderCustomEquipmentUI();
     updateSelectExercisesButtonLabel();
   });
+
+  if (els.customEquipmentGrid) {
+    els.customEquipmentGrid.addEventListener('click', e => {
+      const chip = e.target.closest('[data-custom-equip]');
+      if (!chip) return;
+      const equipId = chip.getAttribute('data-custom-equip');
+      const checkedSet = new Set(customEquipmentState);
+      if (checkedSet.has(equipId)) {
+        if (checkedSet.size <= 1) {
+          showToast('Keep at least one item checked (or select Nothing)');
+          return;
+        }
+        checkedSet.delete(equipId);
+      } else {
+        checkedSet.add(equipId);
+      }
+      customEquipmentState = ALL_EQUIPMENT_TYPES.filter(t => checkedSet.has(t));
+      renderCustomEquipmentUI();
+      updateSelectExercisesButtonLabel();
+    });
+  }
+
+  if (els.customEquipAllBtn) {
+    els.customEquipAllBtn.addEventListener('click', () => {
+      customEquipmentState = [...ALL_EQUIPMENT_TYPES];
+      renderCustomEquipmentUI();
+      updateSelectExercisesButtonLabel();
+    });
+  }
+
+  if (els.customEquipClearBtn) {
+    els.customEquipClearBtn.addEventListener('click', () => {
+      customEquipmentState = ['Nothing'];
+      renderCustomEquipmentUI();
+      updateSelectExercisesButtonLabel();
+    });
+  }
 
   els.workoutTypeSelect.addEventListener('change', () => {
     const val = els.workoutTypeSelect.value;
@@ -4176,6 +4340,7 @@ function bindEvents() {
         focusWeights: { ...inputs.focusWeights },
         focusEnabled: { ...inputs.focusEnabled },
         equipment: inputs.equipment,
+        customEquipment: [...inputs.customEquipment],
         workoutType: workoutState.workout.name
       },
       activeWorkout: workoutState

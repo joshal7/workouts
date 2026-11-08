@@ -16,7 +16,7 @@
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/svg+xml" href="./diagrams/app-icon.svg" />
   <link rel="apple-touch-icon" href="./diagrams/app-icon.svg" />
-  <link rel="stylesheet" href="./src/styles.css?v=31" />
+  <link rel="stylesheet" href="./src/styles.css?v=32" />
 </head>
 <body>
   <div class="app-shell">
@@ -74,12 +74,25 @@
               <div class="select-wrapper">
                 <select id="equipmentSelect">
                   <option value="Any">Any</option>
-                  <option value="Weights">Weights</option>
-                  <option value="Bands">Bands</option>
                   <option value="Nothing">Nothing</option>
+                  <option value="Custom">Custom</option>
                 </select>
               </div>
             </div>
+          </div>
+
+          <div id="customEquipmentSection" class="custom-equipment-section" aria-label="Custom Equipment Checklist" hidden>
+            <div class="custom-equip-header">
+              <div class="custom-equip-title-group">
+                <span class="custom-equip-title">Custom Equipment</span>
+                <span class="custom-equip-hint">Barbells = rack &amp; landmine</span>
+              </div>
+              <div class="custom-equip-actions">
+                <button id="customEquipAllBtn" class="custom-equip-action-btn" type="button">All</button>
+                <button id="customEquipClearBtn" class="custom-equip-action-btn" type="button">Clear</button>
+              </div>
+            </div>
+            <div id="customEquipmentGrid" class="custom-equip-grid" role="group" aria-label="Toggle available equipment"></div>
           </div>
 
           <div id="focusSliderSection" class="focus-slider-section" aria-label="Body Focus Distribution">
@@ -279,6 +292,7 @@
               <button id="swapFilterAllBtn" class="seg-btn" type="button">All Exercises</button>
             </div>
             <div id="swapMuscleFilterBar" class="muscle-filter-bar" role="group" aria-label="Filter by muscle group"></div>
+            <div id="swapEquipmentFilterBar" class="muscle-filter-bar equipment-filter-bar" role="group" aria-label="Filter by equipment"></div>
           </div>
 
           <div class="manual-write-in-row">
@@ -364,8 +378,9 @@
             <button id="clearExclusionsBtn" class="text-link-btn" type="button">Include All</button>
           </div>
           <p class="settings-help">Uncheck exercises to exclude them from your workouts.</p>
-          <input id="exclusionSearchInput" type="search" placeholder="Filter exercises or muscles..." class="search-input" />
+          <input id="exclusionSearchInput" type="search" placeholder="Filter exercises, muscles, or gear..." class="search-input" />
           <div id="exclusionMuscleFilterBar" class="muscle-filter-bar" role="group" aria-label="Filter exclusions by muscle group"></div>
+          <div id="exclusionEquipmentFilterBar" class="muscle-filter-bar equipment-filter-bar" role="group" aria-label="Filter exclusions by equipment"></div>
           <div id="exclusionChecklist" class="exclusion-checklist"></div>
         </div>
 
@@ -408,6 +423,7 @@
             <button id="selectFilterAllBtn" class="seg-btn" type="button">All Exercises</button>
           </div>
           <div id="selectExercisesMuscleFilterBar" class="muscle-filter-bar" role="group" aria-label="Filter by muscle group"></div>
+          <div id="selectExercisesEquipmentFilterBar" class="muscle-filter-bar equipment-filter-bar" role="group" aria-label="Filter by equipment"></div>
           <div class="manual-write-in-row">
             <input
               id="selectWriteInInput"
@@ -552,6 +568,6 @@
     <div id="toast" class="toast" hidden>Updated</div>
   </div>
 
-  <script type="module" src="./src/app.js?v=31"></script>
+  <script type="module" src="./src/app.js?v=32"></script>
 </body>
 </html>

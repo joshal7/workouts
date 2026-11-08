@@ -64,6 +64,269 @@ export const SPECIFIC_MUSCLE_LIST = [
   'Hamstrings'
 ];
 
+export const EQUIPMENT_MODES = ['Any', 'Nothing', 'Custom'];
+
+export const ALL_EQUIPMENT_TYPES = [
+  'Dumbbells',
+  'Barbells',
+  'Long Bands',
+  'Hip Bands',
+  'TRX',
+  'Slam Ball',
+  'Ab Wheel',
+  'Nothing'
+];
+
+export const CUSTOM_EQUIPMENT_ITEMS = [
+  { id: 'Dumbbells', label: 'Dumbbells', shortLabel: 'Dumbbells', group: 'weights' },
+  {
+    id: 'Barbells',
+    label: 'Barbells',
+    shortLabel: 'Barbells',
+    group: 'weights',
+    hint: 'Squat rack, pull-up bar & landmine'
+  },
+  {
+    id: 'Long Bands',
+    label: 'Long Bands',
+    shortLabel: 'Long Bands',
+    group: 'bands',
+    hint: 'Long thin loop / pull-up bands'
+  },
+  {
+    id: 'Hip Bands',
+    label: 'Hip Bands',
+    shortLabel: 'Hip Bands',
+    group: 'bands',
+    hint: 'Thick thigh / glute loop bands'
+  },
+  { id: 'TRX', label: 'TRX', shortLabel: 'TRX', group: 'other' },
+  { id: 'Slam Ball', label: 'Slam Ball', shortLabel: 'Slam Ball', group: 'other' },
+  { id: 'Ab Wheel', label: 'Ab Wheel', shortLabel: 'Ab Wheel', group: 'other' },
+  { id: 'Nothing', label: 'Bodyweight', shortLabel: 'Bodyweight', group: 'bodyweight' }
+];
+
+export const DEFAULT_CUSTOM_EQUIPMENT = [...ALL_EQUIPMENT_TYPES];
+
+const EQUIPMENT_ALIAS_MAP = {
+  dumbbells: 'Dumbbells',
+  dumbbell: 'Dumbbells',
+  dumbells: 'Dumbbells',
+  dumbell: 'Dumbbells',
+  db: 'Dumbbells',
+  barbells: 'Barbells',
+  barbell: 'Barbells',
+  bb: 'Barbells',
+  'squat rack': 'Barbells',
+  landmine: 'Barbells',
+  'land mine': 'Barbells',
+  'pull-up bar': 'Barbells',
+  'pullup bar': 'Barbells',
+  'long bands': 'Long Bands',
+  'long band': 'Long Bands',
+  'arm bands': 'Long Bands',
+  'arm band': 'Long Bands',
+  'pull-up bands': 'Long Bands',
+  'power bands': 'Long Bands',
+  'hip bands': 'Hip Bands',
+  'hip band': 'Hip Bands',
+  'thigh bands': 'Hip Bands',
+  'thigh band': 'Hip Bands',
+  'glute bands': 'Hip Bands',
+  'glute band': 'Hip Bands',
+  'mini bands': 'Hip Bands',
+  'mini band': 'Hip Bands',
+  'booty bands': 'Hip Bands',
+  trx: 'TRX',
+  'slam ball': 'Slam Ball',
+  'ab wheel': 'Ab Wheel',
+  nothing: 'Nothing',
+  bodyweight: 'Nothing',
+  'body weight': 'Nothing'
+};
+
+const EQUIPMENT_SEARCH_SYNONYMS = {
+  Dumbbells: ['dumbbells', 'dumbbell', 'dumbells', 'dumbell', 'free weights'],
+  Barbells: [
+    'barbells',
+    'barbell',
+    'squat rack',
+    'landmine',
+    'land mine',
+    'pull-up bar',
+    'pullup bar',
+    'olympic bar'
+  ],
+  'Long Bands': [
+    'long bands',
+    'long band',
+    'arm bands',
+    'arm band',
+    'pull-up band',
+    'pullup band',
+    'power band',
+    'loop band',
+    'thin band'
+  ],
+  'Hip Bands': [
+    'hip bands',
+    'hip band',
+    'thigh bands',
+    'thigh band',
+    'glute band',
+    'glute bands',
+    'mini band',
+    'mini bands',
+    'booty band',
+    'thick band'
+  ],
+  TRX: ['trx', 'suspension', 'straps'],
+  'Slam Ball': ['slam ball', 'medicine ball', 'med ball'],
+  'Ab Wheel': ['ab wheel', 'ab roller'],
+  Nothing: ['nothing', 'bodyweight', 'body weight', 'no equipment']
+};
+
+/**
+ * Canonicalize an equipment token (supporting aliases and common misspellings).
+ */
+export function canonicalizeEquipmentType(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (ALL_EQUIPMENT_TYPES.includes(trimmed)) return trimmed;
+  const mapped = EQUIPMENT_ALIAS_MAP[trimmed.toLowerCase()];
+  return mapped || null;
+}
+
+/**
+ * Normalize a `customEquipment` array into ordered, deduplicated canonical types.
+ * Falls back to `DEFAULT_CUSTOM_EQUIPMENT` when undefined/null, or `['Nothing']` if empty.
+ */
+export function normalizeCustomEquipment(customEquipment) {
+  if (!Array.isArray(customEquipment)) {
+    return [...DEFAULT_CUSTOM_EQUIPMENT];
+  }
+  const selected = new Set();
+  for (const item of customEquipment) {
+    const canon = canonicalizeEquipmentType(item);
+    if (canon) selected.add(canon);
+  }
+  const ordered = ALL_EQUIPMENT_TYPES.filter(t => selected.has(t));
+  return ordered.length > 0 ? ordered : ['Nothing'];
+}
+
+/**
+ * Normalize legacy or shorthand `{ equipment, customEquipment }` inputs into the
+ * canonical `{ equipment: 'Any' | 'Nothing' | 'Custom', customEquipment: string[] }` shape.
+ */
+export function normalizeEquipmentSelection(inputs = {}) {
+  const rawMode = typeof inputs?.equipment === 'string' ? inputs.equipment.trim() : 'Any';
+  const hasExplicitCustom = Array.isArray(inputs?.customEquipment);
+  const baseCustom = normalizeCustomEquipment(inputs?.customEquipment);
+
+  if (!rawMode || rawMode === 'Any' || rawMode === 'All') {
+    return { equipment: 'Any', customEquipment: baseCustom };
+  }
+  if (rawMode === 'Nothing' || rawMode.toLowerCase() === 'bodyweight') {
+    return { equipment: 'Nothing', customEquipment: baseCustom };
+  }
+  if (rawMode === 'Custom') {
+    return { equipment: 'Custom', customEquipment: baseCustom };
+  }
+  // Legacy profile migration ('Weights' / 'Bands')
+  if (rawMode === 'Weights') {
+    return {
+      equipment: 'Custom',
+      customEquipment: hasExplicitCustom
+        ? baseCustom
+        : ['Dumbbells', 'Barbells', 'TRX', 'Slam Ball', 'Ab Wheel', 'Nothing']
+    };
+  }
+  if (rawMode === 'Bands') {
+    return {
+      equipment: 'Custom',
+      customEquipment: hasExplicitCustom ? baseCustom : ['Long Bands', 'Hip Bands', 'Nothing']
+    };
+  }
+  // Direct single-equipment shorthand (e.g. 'Dumbbells', 'Barbells', 'Long Bands', 'Hip Bands', 'TRX', 'Slam Ball', 'Ab Wheel')
+  const singleCanon = canonicalizeEquipmentType(rawMode);
+  if (singleCanon) {
+    return {
+      equipment: 'Custom',
+      customEquipment: hasExplicitCustom ? baseCustom : [singleCanon]
+    };
+  }
+
+  return { equipment: 'Any', customEquipment: baseCustom };
+}
+
+/**
+ * Return the canonical `equipmentTypes` array for an exercise.
+ */
+export function getExerciseEquipmentTypes(exercise) {
+  if (!exercise) return ['Nothing'];
+  if (exercise.isCustomWriteIn || exercise.equipment === 'All') {
+    return [...ALL_EQUIPMENT_TYPES];
+  }
+  if (Array.isArray(exercise.equipmentTypes) && exercise.equipmentTypes.length > 0) {
+    return exercise.equipmentTypes;
+  }
+  const raw = (exercise.equipment || '').trim();
+  if (!raw || raw === 'Nothing' || raw.toLowerCase() === 'bodyweight') {
+    return ['Nothing'];
+  }
+  if (raw === 'Any') {
+    return ['Nothing', 'Dumbbells', 'Barbells'];
+  }
+  if (raw === 'Weights') {
+    return ['Dumbbells', 'Barbells'];
+  }
+  if (raw === 'Bands') {
+    return ['Long Bands', 'Hip Bands'];
+  }
+  const parts = raw
+    .split('/')
+    .map(s => canonicalizeEquipmentType(s))
+    .filter(Boolean);
+  return parts.length > 0 ? parts : [...ALL_EQUIPMENT_TYPES];
+}
+
+/**
+ * Resolve the Set of available equipment types for `{ equipment, customEquipment }`,
+ * or `null` when all equipment is allowed (`Any`).
+ */
+export function resolveAvailableEquipmentSet({ equipment = 'Any', customEquipment } = {}) {
+  const norm = normalizeEquipmentSelection({ equipment, customEquipment });
+  if (norm.equipment === 'Any') return null;
+  if (norm.equipment === 'Nothing') return new Set(['Nothing']);
+  const customSet = new Set(norm.customEquipment);
+  if (customSet.size >= ALL_EQUIPMENT_TYPES.length) return null;
+  return customSet;
+}
+
+/**
+ * Determine whether `exercise` can be performed with the selected `{ equipment, customEquipment }`.
+ */
+export function doesExerciseMatchEquipment(exercise, { equipment = 'Any', customEquipment } = {}) {
+  if (!exercise) return false;
+  if (exercise.isCustomWriteIn) return true;
+  const availableSet = resolveAvailableEquipmentSet({ equipment, customEquipment });
+  if (!availableSet) return true;
+  const exTypes = getExerciseEquipmentTypes(exercise);
+  return exTypes.some(t => availableSet.has(t));
+}
+
+/**
+ * Human-readable summary of an equipment configuration (for headers, export text, and badges).
+ */
+export function formatEquipmentSelectionSummary({ equipment = 'Any', customEquipment } = {}) {
+  const norm = normalizeEquipmentSelection({ equipment, customEquipment });
+  if (norm.equipment === 'Any') return 'Any Equipment';
+  if (norm.equipment === 'Nothing') return 'Nothing (Bodyweight)';
+  if (norm.customEquipment.length === ALL_EQUIPMENT_TYPES.length) return 'Custom (All)';
+  const labels = norm.customEquipment.map(t => (t === 'Nothing' ? 'Bodyweight' : t));
+  return `Custom (${labels.join(', ')})`;
+}
+
 /**
  * Normalize a body area name ('Lower Body' -> 'Legs').
  */
@@ -736,15 +999,16 @@ export function filterEligibleExercises(allExercises, {
   workoutCategory,
   bodyCategory = 'All',
   equipment = 'Any',
+  customEquipment = null,
   excludedExerciseIds = [],
   muscleGroup = null,
   focusWeights = null,
   focusEnabled = null
-}) {
+} = {}) {
   const excludedSet = new Set(excludedExerciseIds);
 
   // 1. Exclude user's excluded exercises
-  let pool = allExercises.filter(ex => !excludedSet.has(ex.id) && !excludedSet.has(ex.name));
+  let pool = (allExercises || []).filter(ex => !excludedSet.has(ex.id) && !excludedSet.has(ex.name));
 
   // 2. Filter by workoutCategory ('Strength' or 'HIIT' matches exact or 'Either')
   if (workoutCategory && workoutCategory !== 'Either') {
@@ -753,16 +1017,8 @@ export function filterEligibleExercises(allExercises, {
     );
   }
 
-  // 3. Filter by equipment
-  if (equipment === 'Weights') {
-    pool = pool.filter(ex => ex.equipment !== 'Bands');
-  } else if (equipment === 'Bands') {
-    pool = pool.filter(ex => ex.equipment !== 'Weights');
-  } else if (equipment === 'Nothing') {
-    pool = pool.filter(
-      ex => ex.equipment === 'Nothing' || ex.equipment === 'Any' || ex.equipment === 'All'
-    );
-  }
+  // 3. Filter by equipment ('Any', 'Nothing', 'Custom' + customEquipment, or shorthand/legacy values)
+  pool = pool.filter(ex => doesExerciseMatchEquipment(ex, { equipment, customEquipment }));
 
   // 4. Filter by explicit muscleGroup, specific muscle bodyCategory, focusWeights, or legacy bodyCategory
   const hasExplicitMuscleGroup = Boolean(muscleGroup && muscleGroup !== 'All');
@@ -811,13 +1067,15 @@ export function filterEligibleExercises(allExercises, {
 
 /**
  * Shared filter helper for Swap Modal, Select X Exercises Modal, Exclusion List, and QA Gallery.
- * Accurately matches muscle groups (Primary muscle or Body Area) and text search queries.
+ * Accurately matches muscle groups (Primary muscle or Body Area), equipment pills, and text search queries.
  */
 export function filterExercisesByMuscleAndQuery(exercises, {
   muscleFilter = 'All',
+  equipmentFilter = 'All',
   query = ''
 } = {}) {
-  let result = [...exercises];
+  let result = [...(exercises || [])];
+  const isSpecificMuscleChip = SPECIFIC_MUSCLE_LIST.includes(muscleFilter);
 
   if (muscleFilter && muscleFilter !== 'All' && muscleFilter !== 'all') {
     if (muscleFilter === 'Lower Body' || muscleFilter === 'Legs') {
@@ -844,19 +1102,52 @@ export function filterExercisesByMuscleAndQuery(exercises, {
       result = result.filter(
         ex => ex.bodyCategories?.['Upper Body'] === 'Pri' || ex.bodyCategories?.['Legs'] === 'Pri'
       );
-    } else if (SPECIFIC_MUSCLE_LIST.includes(muscleFilter)) {
+    } else if (isSpecificMuscleChip) {
       const priMatches = result.filter(ex => ex.muscles?.[muscleFilter] === 'Pri');
       const secMatches = result.filter(ex => ex.muscles?.[muscleFilter] === 'Sec');
       result = [...priMatches, ...secMatches];
     }
   }
 
+  let activeCanonEquipFilter = null;
+  if (
+    equipmentFilter &&
+    equipmentFilter !== 'All' &&
+    equipmentFilter !== 'all' &&
+    equipmentFilter !== 'Any'
+  ) {
+    if (equipmentFilter === 'Weights') {
+      result = result.filter(ex => {
+        const types = getExerciseEquipmentTypes(ex);
+        return types.includes('Dumbbells') || types.includes('Barbells');
+      });
+    } else if (equipmentFilter === 'Bands') {
+      result = result.filter(ex => {
+        const types = getExerciseEquipmentTypes(ex);
+        return types.includes('Long Bands') || types.includes('Hip Bands');
+      });
+    } else {
+      activeCanonEquipFilter = canonicalizeEquipmentType(equipmentFilter);
+      if (activeCanonEquipFilter) {
+        result = result.filter(ex => getExerciseEquipmentTypes(ex).includes(activeCanonEquipFilter));
+      }
+    }
+  }
+
   const q = (query || '').trim().toLowerCase();
+  let matchedEquipByQuery = null;
+
   if (q) {
-    // Check if the query specifically names a muscle group or body area
+    // Check if the query specifically names a muscle group or equipment type/synonym
     const matchedMuscle = SPECIFIC_MUSCLE_LIST.find(
-      m => m.toLowerCase() === q || m.toLowerCase().startsWith(q) && q.length >= 3
+      m => m.toLowerCase() === q || (m.toLowerCase().startsWith(q) && q.length >= 3)
     );
+    matchedEquipByQuery =
+      canonicalizeEquipmentType(q) ||
+      ALL_EQUIPMENT_TYPES.find(t =>
+        (EQUIPMENT_SEARCH_SYNONYMS[t] || []).some(syn => syn === q || (q.length >= 4 && syn.includes(q)))
+      ) ||
+      null;
 
     result = result.filter(ex => {
       const priMuscles = Object.entries(ex.muscles || {})
@@ -868,9 +1159,25 @@ export function filterExercisesByMuscleAndQuery(exercises, {
       const priAreas = Object.entries(ex.bodyCategories || {})
         .filter(([, v]) => v === 'Pri')
         .map(([k]) => k.toLowerCase());
+      const exTypes = getExerciseEquipmentTypes(ex);
 
       if (ex.name.toLowerCase().includes(q)) return true;
       if ((ex.equipment || '').toLowerCase().includes(q)) return true;
+      if (exTypes.some(t => t.toLowerCase().includes(q))) return true;
+      if (matchedEquipByQuery && exTypes.includes(matchedEquipByQuery)) return true;
+      if (
+        exTypes.some(t =>
+          (EQUIPMENT_SEARCH_SYNONYMS[t] || []).some(syn => syn.includes(q) && q.length >= 3)
+        )
+      ) {
+        return true;
+      }
+      if ((q === 'weights' || q === 'weight') && (exTypes.includes('Dumbbells') || exTypes.includes('Barbells'))) {
+        return true;
+      }
+      if ((q === 'bands' || q === 'band') && (exTypes.includes('Long Bands') || exTypes.includes('Hip Bands'))) {
+        return true;
+      }
       if (priMuscles.some(m => m.includes(q))) return true;
       if (priAreas.some(a => a.includes(q))) return true;
       if (('lower body'.includes(q) && q.length >= 4) && ex.bodyCategories?.['Legs'] === 'Pri') return true;
@@ -886,6 +1193,24 @@ export function filterExercisesByMuscleAndQuery(exercises, {
         return bPri - aPri;
       });
     }
+  }
+
+  // Sort dedicated single-equipment matches ahead of multi-equipment alternatives when filtering by equipment
+  const equipSortTarget = activeCanonEquipFilter || matchedEquipByQuery;
+  if (equipSortTarget) {
+    result.sort((a, b) => {
+      if (isSpecificMuscleChip) {
+        const aPri = a.muscles?.[muscleFilter] === 'Pri' ? 1 : 0;
+        const bPri = b.muscles?.[muscleFilter] === 'Pri' ? 1 : 0;
+        if (aPri !== bPri) return bPri - aPri;
+      }
+      const aDedicated = a.equipment === equipSortTarget ? 1 : 0;
+      const bDedicated = b.equipment === equipSortTarget ? 1 : 0;
+      if (aDedicated !== bDedicated) return bDedicated - aDedicated;
+      const aLen = getExerciseEquipmentTypes(a).length;
+      const bLen = getExerciseEquipmentTypes(b).length;
+      return aLen - bLen;
+    });
   }
 
   return result;
@@ -1078,11 +1403,11 @@ export function generateWorkout(sheetData, inputs = {}, rng = Math.random) {
   const {
     workoutCategory: rawWorkoutCategory = 'HIIT',
     bodyCategory = 'All',
-    equipment = 'Any',
     workoutType = 'Random',
     excludedExerciseIds = [],
     optionsPerSlot = 1
   } = inputs;
+  const { equipment, customEquipment } = normalizeEquipmentSelection(inputs);
 
   const numOptions = Math.min(3, Math.max(1, Number(optionsPerSlot) || 1));
   const isSpecificMuscleMode = SPECIFIC_MUSCLE_LIST.includes(bodyCategory);
@@ -1114,22 +1439,65 @@ export function generateWorkout(sheetData, inputs = {}, rng = Math.random) {
 
   const checkMode = getWorkoutCheckMode(selectedWorkout);
 
-  // Step 3: Filter eligible exercises
+  // Step 3: Filter eligible exercises (preserving selected equipment across fallbacks)
   const allFiltered = filterEligibleExercises(sheetData.exercises, {
     workoutCategory: resolvedWorkoutCategory,
     bodyCategory: effectiveBodyCategory,
     equipment,
+    customEquipment,
     excludedExerciseIds,
     focusWeights: isSpecificMuscleMode ? null : focusWeights,
     focusEnabled: isSpecificMuscleMode ? null : focusEnabled
   });
 
-  // Fallback if user excluded almost everything
-  const basePool = allFiltered.length > 0
-    ? [...allFiltered]
-    : sheetData.exercises.filter(
-        ex => !excludedExerciseIds.includes(ex.id) && !excludedExerciseIds.includes(ex.name)
-      );
+  let basePool = [...allFiltered];
+  if (basePool.length === 0) {
+    // Fallback A: Widen workoutCategory to 'Either' while keeping Focus + Equipment
+    basePool = filterEligibleExercises(sheetData.exercises, {
+      workoutCategory: 'Either',
+      bodyCategory: effectiveBodyCategory,
+      equipment,
+      customEquipment,
+      excludedExerciseIds,
+      focusWeights: isSpecificMuscleMode ? null : focusWeights,
+      focusEnabled: isSpecificMuscleMode ? null : focusEnabled
+    });
+  }
+  if (basePool.length === 0) {
+    // Fallback B: Relax Focus while strictly preserving workoutCategory + Equipment
+    basePool = filterEligibleExercises(sheetData.exercises, {
+      workoutCategory: resolvedWorkoutCategory,
+      bodyCategory: 'All',
+      equipment,
+      customEquipment,
+      excludedExerciseIds
+    });
+  }
+  if (basePool.length === 0) {
+    // Fallback C: Relax workoutCategory + Focus while strictly preserving Equipment
+    basePool = filterEligibleExercises(sheetData.exercises, {
+      workoutCategory: 'Either',
+      bodyCategory: 'All',
+      equipment,
+      customEquipment,
+      excludedExerciseIds
+    });
+  }
+  if (basePool.length === 0) {
+    // Fallback D: Bodyweight ('Nothing') if user excluded every exercise for their chosen gear
+    basePool = filterEligibleExercises(sheetData.exercises, {
+      workoutCategory: 'Either',
+      bodyCategory: 'All',
+      equipment: 'Nothing',
+      excludedExerciseIds
+    });
+  }
+  if (basePool.length === 0) {
+    // Fallback E: Ultimate safety net if user excluded almost all 91 exercises
+    basePool = sheetData.exercises.filter(
+      ex => !excludedExerciseIds.includes(ex.id) && !excludedExerciseIds.includes(ex.name)
+    );
+  }
 
   const nRounds = parseInt(selectedWorkout.rounds, 10) || 1;
   const nExercisesPerRound = parseInt(selectedWorkout.exercisesPerRound, 10) || 1;
@@ -1498,26 +1866,30 @@ export function generateWorkout(sheetData, inputs = {}, rng = Math.random) {
             );
           }
 
-          // Tier 4b: If narrow filter pool exhausted a muscle group (e.g. only 1 Glutes in Strength+Legs+Weights),
-          // expand to non-excluded exercises in the same body area / active focus areas that are safe for the round
+          // Tier 4b: If narrow filter pool exhausted a muscle group (e.g. only 1 Glutes in Strength+Legs+Dumbbells),
+          // first widen workoutCategory ('Either') & bodyCategory ('All') while strictly preserving selected equipment and Focus!
           if (altCandidates.length === 0) {
-            const nonExcludedAll = sheetData.exercises.filter(
+            const equipWiderSafe = filterEligibleExercises(sheetData.exercises, {
+              workoutCategory: 'Either',
+              bodyCategory: 'All',
+              equipment,
+              customEquipment,
+              excludedExerciseIds
+            }).filter(
               ex =>
-                !excludedExerciseIds.includes(ex.id) &&
-                !excludedExerciseIds.includes(ex.name) &&
                 !roundExerciseIds.has(ex.id) &&
                 !slot.options.some(o => o.id === ex.id) &&
                 isSafeForRound(ex)
             );
-            altCandidates = nonExcludedAll.filter(
+            altCandidates = equipWiderSafe.filter(
               ex => targetArea === 'All' || ex.bodyCategories[targetArea] === 'Pri'
             );
             if (altCandidates.length === 0) {
-              altCandidates = nonExcludedAll.filter(isWithinFocusBand);
+              altCandidates = equipWiderSafe.filter(isWithinFocusBand);
             }
           }
 
-          // Tier 5: Pick from candidates not in current round with minimum primary muscle count in other slots
+          // Tier 5: Pick from basePool candidates (preserving selected equipment & Focus) with minimum primary muscle count in other slots
           if (altCandidates.length === 0) {
             let fallbackPool = basePool.filter(
               ex => !roundExerciseIds.has(ex.id) && !slot.options.some(o => o.id === ex.id)
@@ -1532,6 +1904,28 @@ export function generateWorkout(sheetData, inputs = {}, rng = Math.random) {
               altCandidates = fallbackPool.filter(
                 ex => (otherSlotsPriCounts[getPrimaryMuscle(ex)] || 0) === minOtherCount
               );
+            }
+          }
+
+          // Tier 6: Only if selected equipment literally has fewer total unique exercises than optionsPerSlot
+          // (e.g., Ab Wheel only with 2–3 options), allow Focus-compliant Bodyweight ('Nothing')
+          if (altCandidates.length === 0) {
+            const bodyweightSafe = filterEligibleExercises(sheetData.exercises, {
+              workoutCategory: 'Either',
+              bodyCategory: 'All',
+              equipment: 'Nothing',
+              excludedExerciseIds
+            }).filter(
+              ex =>
+                !roundExerciseIds.has(ex.id) &&
+                !slot.options.some(o => o.id === ex.id) &&
+                isSafeForRound(ex)
+            );
+            altCandidates = bodyweightSafe.filter(
+              ex => targetArea === 'All' || ex.bodyCategories[targetArea] === 'Pri'
+            );
+            if (altCandidates.length === 0) {
+              altCandidates = bodyweightSafe.filter(isWithinFocusBand);
             }
           }
 
@@ -1556,6 +1950,7 @@ export function generateWorkout(sheetData, inputs = {}, rng = Math.random) {
       focusWeights: { ...focusWeights },
       focusEnabled: { ...focusEnabled },
       equipment,
+      customEquipment: [...customEquipment],
       workoutType,
       optionsPerSlot: numOptions
     },
@@ -1853,9 +2248,9 @@ export function pickAutoFillExercises(
   const {
     workoutCategory: rawWorkoutCategory = 'HIIT',
     bodyCategory = 'All',
-    equipment = 'Any',
     excludedExerciseIds = []
   } = inputs;
+  const { equipment, customEquipment } = normalizeEquipmentSelection(inputs);
 
   const isSpecificMuscleMode = SPECIFIC_MUSCLE_LIST.includes(bodyCategory);
   const { weights: focusWeights, enabled: focusEnabled } = normalizeFocusWeights(inputs);
@@ -1879,24 +2274,69 @@ export function pickAutoFillExercises(
     return chosenList.slice(0, totalNeeded);
   }
 
+  const neededCount = totalNeeded - chosenList.length;
   const eligible = filterEligibleExercises(sheetData?.exercises || [], {
     workoutCategory: rawWorkoutCategory,
     bodyCategory: effectiveBodyCategory,
     equipment,
+    customEquipment,
     excludedExerciseIds,
     focusWeights: isSpecificMuscleMode ? null : focusWeights,
     focusEnabled: isSpecificMuscleMode ? null : focusEnabled
   }).filter(e => !chosenIds.has(e.id));
 
-  const fallbackPool =
-    eligible.length >= totalNeeded - chosenList.length
-      ? eligible
-      : (sheetData?.exercises || []).filter(
-          e =>
-            !chosenIds.has(e.id) &&
-            !excludedExerciseIds.includes(e.id) &&
-            !excludedExerciseIds.includes(e.name)
-        );
+  const fallbackPool = [...eligible];
+  const fallbackPoolIds = new Set(fallbackPool.map(e => e.id));
+  const appendUnique = list => {
+    for (const ex of list) {
+      if (!chosenIds.has(ex.id) && !fallbackPoolIds.has(ex.id)) {
+        fallbackPool.push(ex);
+        fallbackPoolIds.add(ex.id);
+      }
+    }
+  };
+
+  if (fallbackPool.length < neededCount) {
+    appendUnique(
+      filterEligibleExercises(sheetData?.exercises || [], {
+        workoutCategory: 'Either',
+        bodyCategory: effectiveBodyCategory,
+        equipment,
+        customEquipment,
+        excludedExerciseIds,
+        focusWeights: isSpecificMuscleMode ? null : focusWeights,
+        focusEnabled: isSpecificMuscleMode ? null : focusEnabled
+      })
+    );
+  }
+  if (fallbackPool.length < neededCount) {
+    appendUnique(
+      filterEligibleExercises(sheetData?.exercises || [], {
+        workoutCategory: 'Either',
+        bodyCategory: 'All',
+        equipment,
+        customEquipment,
+        excludedExerciseIds
+      })
+    );
+  }
+  if (fallbackPool.length < neededCount) {
+    appendUnique(
+      filterEligibleExercises(sheetData?.exercises || [], {
+        workoutCategory: 'Either',
+        bodyCategory: 'All',
+        equipment: 'Nothing',
+        excludedExerciseIds
+      })
+    );
+  }
+  if (fallbackPool.length < neededCount) {
+    appendUnique(
+      (sheetData?.exercises || []).filter(
+        e => !excludedExerciseIds.includes(e.id) && !excludedExerciseIds.includes(e.name)
+      )
+    );
+  }
 
   const areaPoolSizes = {
     'Upper Body':
@@ -1912,6 +2352,8 @@ export function pickAutoFillExercises(
   const targetQuotas = isSpecificMuscleMode
     ? null
     : computeWorkoutAreaQuotas(totalNeeded, focusWeights, areaPoolSizes);
+
+  const eligibleIds = new Set(eligible.map(e => e.id));
 
   while (chosenList.length < totalNeeded && fallbackPool.length > 0) {
     const muscleCounts = {};
@@ -1930,6 +2372,14 @@ export function pickAutoFillExercises(
     if (available.length === 0) break;
 
     available.sort((a, b) => {
+      const equipA = doesExerciseMatchEquipment(a, { equipment, customEquipment }) ? 1 : 0;
+      const equipB = doesExerciseMatchEquipment(b, { equipment, customEquipment }) ? 1 : 0;
+      if (equipA !== equipB) return equipB - equipA;
+
+      const prioA = eligibleIds.has(a.id) ? 1 : 0;
+      const prioB = eligibleIds.has(b.id) ? 1 : 0;
+      if (prioA !== prioB) return prioB - prioA;
+
       const areaA = getPrimaryBodyArea(a);
       const areaB = getPrimaryBodyArea(b);
       if (!isSpecificMuscleMode && targetQuotas) {
@@ -1977,10 +2427,10 @@ export function generateWorkoutFromSelectedExercises(
   const {
     workoutCategory: rawWorkoutCategory = 'HIIT',
     bodyCategory = 'All',
-    equipment = 'Any',
     workoutType = 'Random',
     excludedExerciseIds = []
   } = inputs;
+  const { equipment, customEquipment } = normalizeEquipmentSelection(inputs);
 
   const isSpecificMuscleMode = SPECIFIC_MUSCLE_LIST.includes(bodyCategory);
   const { weights: focusWeights, enabled: focusEnabled } = normalizeFocusWeights(inputs);
@@ -2034,6 +2484,7 @@ export function generateWorkoutFromSelectedExercises(
         workoutCategory: resolvedWorkoutCategory,
         bodyCategory: effectiveBodyCategory,
         equipment,
+        customEquipment,
         excludedExerciseIds,
         focusWeights,
         focusEnabled
@@ -2076,6 +2527,7 @@ export function generateWorkoutFromSelectedExercises(
       focusWeights: { ...focusWeights },
       focusEnabled: { ...focusEnabled },
       equipment,
+      customEquipment: [...customEquipment],
       workoutType: selectedWorkout.name,
       optionsPerSlot: 1
     },
@@ -2227,10 +2679,14 @@ export function getValidReplacementCandidates({
       .filter(Boolean)
   );
 
+  const { equipment: activeEquipment, customEquipment: activeCustomEquipment } =
+    normalizeEquipmentSelection(workoutState.inputs || {});
+
   const eligible = filterEligibleExercises(sheetData.exercises, {
     workoutCategory: workoutState.inputs.effectiveWorkoutCategory,
     bodyCategory,
-    equipment: workoutState.inputs.equipment,
+    equipment: activeEquipment,
+    customEquipment: activeCustomEquipment,
     excludedExerciseIds,
     focusWeights: isSpecificMuscleMode ? null : focusWeights,
     focusEnabled: isSpecificMuscleMode ? null : focusEnabled
@@ -2330,12 +2786,26 @@ export function getValidReplacementCandidates({
     const widerPool = filterEligibleExercises(sheetData.exercises, {
       workoutCategory: workoutState.inputs.effectiveWorkoutCategory,
       bodyCategory: 'All',
-      equipment: workoutState.inputs.equipment,
+      equipment: activeEquipment,
+      customEquipment: activeCustomEquipment,
       excludedExerciseIds
     }).filter(ex => !usedIds.has(ex.id) && ex.id !== currentEx?.id);
     const widerWarningFree = widerPool.filter(isCandidateWarningFree);
     const widerInFocus = widerWarningFree.filter(passesAutoFocus);
     warningFree = widerInFocus.length > 0 ? widerInFocus : widerWarningFree;
+  }
+
+  if (warningFree.length === 0) {
+    const anyCatEquipPool = filterEligibleExercises(sheetData.exercises, {
+      workoutCategory: 'Either',
+      bodyCategory: 'All',
+      equipment: activeEquipment,
+      customEquipment: activeCustomEquipment,
+      excludedExerciseIds
+    }).filter(ex => !usedIds.has(ex.id) && ex.id !== currentEx?.id);
+    const anyCatWarningFree = anyCatEquipPool.filter(isCandidateWarningFree);
+    const anyCatInFocus = anyCatWarningFree.filter(passesAutoFocus);
+    warningFree = anyCatInFocus.length > 0 ? anyCatInFocus : anyCatWarningFree;
   }
 
   if (warningFree.length === 0) {
@@ -2534,6 +3004,7 @@ export function createCustomWriteInExercise(rawName) {
     isCustomWriteIn: true,
     workoutCategory: 'Either',
     equipment: 'Any',
+    equipmentTypes: [...ALL_EQUIPMENT_TYPES],
     muscles: {
       Chest: '',
       Biceps: '',

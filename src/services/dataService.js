@@ -4,6 +4,11 @@
  * while providing a drop-in sync adapter for Google Sheets / Apps Script (Options B/C).
  */
 
+import {
+  DEFAULT_CUSTOM_EQUIPMENT,
+  normalizeEquipmentSelection
+} from '../engine/workoutEngine.js';
+
 const STORAGE_KEY_PROFILES = 'joshal_workout_profiles_v1';
 const STORAGE_KEY_ACTIVE_PROFILE_ID = 'joshal_workout_active_profile_v1';
 const STORAGE_KEY_REMOTE_CACHE = 'joshal_workout_remote_sheet_cache_v1';
@@ -34,6 +39,7 @@ export const DEFAULT_INPUTS = {
     'Legs': true
   },
   equipment: 'Any',
+  customEquipment: [...DEFAULT_CUSTOM_EQUIPMENT],
   workoutType: 'Timed Trios (40/20)'
 };
 
@@ -65,7 +71,7 @@ export class DataService {
   /**
    * Load static JSON files (Option A) and merge enrichments with sheet rows.
    */
-  async init(sheetUrl = './data/sheet-data.json?v=31', enrichmentsUrl = './data/enrichments.json?v=31') {
+  async init(sheetUrl = './data/sheet-data.json?v=32', enrichmentsUrl = './data/enrichments.json?v=32') {
     const [sheetRes, enrichRes] = await Promise.all([
       fetch(sheetUrl, { cache: 'no-cache' }),
       fetch(enrichmentsUrl, { cache: 'no-cache' })
@@ -144,10 +150,36 @@ export class DataService {
       if (savedProfiles) {
         const parsed = JSON.parse(savedProfiles);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          this.profiles = parsed.map(p => ({
-            ...p,
-            spokenExerciseNames: typeof p.spokenExerciseNames === 'boolean' ? p.spokenExerciseNames : true
-          }));
+          this.profiles = parsed.map(p => {
+            const normInputs = p.inputs ? normalizeEquipmentSelection(p.inputs) : null;
+            const migratedInputs = p.inputs
+              ? {
+                  ...structuredClone(DEFAULT_INPUTS),
+                  ...p.inputs,
+                  equipment: normInputs.equipment,
+                  customEquipment: normInputs.customEquipment
+                }
+              : structuredClone(DEFAULT_INPUTS);
+            let migratedActiveWorkout = p.activeWorkout || null;
+            if (migratedActiveWorkout?.inputs) {
+              const normWkEquip = normalizeEquipmentSelection(migratedActiveWorkout.inputs);
+              migratedActiveWorkout = {
+                ...migratedActiveWorkout,
+                inputs: {
+                  ...migratedActiveWorkout.inputs,
+                  equipment: normWkEquip.equipment,
+                  customEquipment: normWkEquip.customEquipment
+                }
+              };
+            }
+            return {
+              ...p,
+              spokenExerciseNames:
+                typeof p.spokenExerciseNames === 'boolean' ? p.spokenExerciseNames : true,
+              inputs: migratedInputs,
+              activeWorkout: migratedActiveWorkout
+            };
+          });
         }
       }
       if (savedActiveId && this.profiles.some(p => p.id === savedActiveId)) {

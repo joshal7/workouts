@@ -39,7 +39,16 @@ import {
   getTargetExerciseCount,
   autoSlotExercises,
   generateWorkoutFromSelectedExercises,
-  createCustomWriteInExercise
+  createCustomWriteInExercise,
+  EQUIPMENT_MODES,
+  ALL_EQUIPMENT_TYPES,
+  CUSTOM_EQUIPMENT_ITEMS,
+  DEFAULT_CUSTOM_EQUIPMENT,
+  normalizeCustomEquipment,
+  normalizeEquipmentSelection,
+  getExerciseEquipmentTypes,
+  doesExerciseMatchEquipment,
+  formatEquipmentSelectionSummary
 } from '../src/engine/workoutEngine.js';
 import {
   analyzeMuscleLoad,
@@ -2411,7 +2420,8 @@ test('Skater Hops and amended Frog Pump + Butterflys have complete data, enrichm
   const frog = byId['frog-pumps'];
   assert.ok(frog, 'Missing frog-pumps in sheetData.exercises');
   assert.equal(frog.name, 'Frog Pump + Butterflys');
-  assert.equal(frog.equipment, 'Bands');
+  assert.equal(frog.equipment, 'Hip Bands');
+  assert.deepEqual(frog.equipmentTypes, ['Hip Bands']);
   assert.equal(frog.muscles.Glutes, 'Pri');
   assert.ok(
     frog.enrichment.summary.toLowerCase().includes('band') &&
@@ -2581,6 +2591,303 @@ test('computeTimerRemainingAndTotal calculates XX of YY for single round vs all 
   const allDone = computeTimerRemainingAndTotal(allRoundsSteps, allRoundsSteps.length - 1, 0);
   assert.equal(allDone.remainingTotalSeconds, 0);
   assert.equal(allDone.label, '00:00 of 24:10');
+});
+
+// ----------------------------------------------------------------------------
+// 25. SPLIT WEIGHTS (DUMBBELLS / BARBELLS), SPLIT BANDS (LONG / HIP) & ANY/NOTHING/CUSTOM EQUIPMENT SYSTEM
+// ----------------------------------------------------------------------------
+console.log('\n25. Split Weights (Dumbbells / Barbells), Split Bands (Long / Hip) & Any / Nothing / Custom Equipment System');
+
+test('All 91 exercises classify cleanly into Dumbbells, Barbells (squat rack, pull-up bar & landmine), Long Bands, Hip Bands, TRX, Slam Ball, Ab Wheel, and Nothing', () => {
+  assert.deepEqual(EQUIPMENT_MODES, ['Any', 'Nothing', 'Custom']);
+  assert.equal(CUSTOM_EQUIPMENT_ITEMS.length, 8);
+  assert.deepEqual(DEFAULT_INPUTS.customEquipment, DEFAULT_CUSTOM_EQUIPMENT);
+
+  const byId = Object.fromEntries(sheetData.exercises.map(e => [e.id, e]));
+
+  for (const ex of sheetData.exercises) {
+    assert.ok(
+      Array.isArray(ex.equipmentTypes) && ex.equipmentTypes.length >= 1,
+      `Exercise ${ex.id} must have a non-empty equipmentTypes array`
+    );
+    for (const t of ex.equipmentTypes) {
+      assert.ok(
+        ALL_EQUIPMENT_TYPES.includes(t),
+        `Exercise ${ex.id} has unknown equipmentType "${t}"`
+      );
+    }
+    assert.ok(
+      ex.equipment !== 'Weights' && ex.equipment !== 'Bands' && ex.equipment !== 'Band or Weights',
+      `Exercise ${ex.id} still has unsplit legacy equipment label "${ex.equipment}"`
+    );
+  }
+
+  // Squat rack, pull-up bar, Olympic barbell, and landmine exercises belong to Barbells
+  const expectedBarbellOnly = [
+    'pull-ups',
+    'chin-ups',
+    'hanging-leg-knee-raises',
+    'incline-barbell-bench-press',
+    'barbell-bench-press',
+    'landmine-single-arm-press',
+    'barbell-push-press',
+    'landmine-meadows-row',
+    'barbell-pendlay-row',
+    'landmine-180-rotations',
+    'barbell-romanian-deadlift',
+    'barbell-deadlift',
+    'barbell-hip-thrust',
+    'landmine-hack-goblet-squat'
+  ];
+  for (const id of expectedBarbellOnly) {
+    assert.equal(byId[id].equipment, 'Barbells', `${id} must have equipment = Barbells`);
+    assert.deepEqual(byId[id].equipmentTypes, ['Barbells'], `${id} must be Barbells only`);
+  }
+
+  // Landmine Lateral / Cossack Lunge allows Dumbbells or Barbells
+  assert.deepEqual(byId['landmine-lateral-cossack-lunge'].equipmentTypes, ['Dumbbells', 'Barbells']);
+
+  // Dedicated Dumbbells exercises
+  for (const id of ['arnold-press', 'chest-flys', 'skull-crushers', 'incline-dumbbell-curls', 'hammer-zottman-curls']) {
+    assert.equal(byId[id].equipment, 'Dumbbells');
+    assert.deepEqual(byId[id].equipmentTypes, ['Dumbbells']);
+  }
+
+  // Dedicated Long Bands (long thin loop / pull-up bands) vs Hip Bands (thick thigh / glute bands)
+  for (const id of ['face-pulls', 'high-band-lat-pulldown', 'high-band-tricep-pushdown', 'banded-pallof-press']) {
+    assert.equal(byId[id].equipment, 'Long Bands', `${id} must be Long Bands`);
+    assert.deepEqual(byId[id].equipmentTypes, ['Long Bands']);
+  }
+  for (const id of [
+    'single-leg-band-glute-bridge',
+    'alternating-glute-bridge-and-butterflies-with-band',
+    'lateral-band-walks',
+    'band-leg-kick-backs-and-diagonals',
+    'frog-pumps'
+  ]) {
+    assert.equal(byId[id].equipment, 'Hip Bands', `${id} must be Hip Bands`);
+    assert.deepEqual(byId[id].equipmentTypes, ['Hip Bands']);
+  }
+});
+
+test('Any / Nothing / Custom equipment filtering, multi-option slots, auto-fill, swap candidates, and fallback pools never leak unchecked equipment', () => {
+  // 1) Equipment = Nothing -> strictly bodyweight-capable ('Nothing' in equipmentTypes), excludes hanging-leg-knee-raises
+  const nothingPool = filterEligibleExercises(sheetData.exercises, { equipment: 'Nothing' });
+  assert.equal(nothingPool.length, 32);
+  assert.ok(!nothingPool.some(e => e.id === 'hanging-leg-knee-raises'), 'Pull-up bar leg raises must not appear in Nothing');
+  assert.ok(nothingPool.every(e => e.equipmentTypes.includes('Nothing')));
+
+  // 2) Custom = Dumbbells ONLY (Bodyweight unchecked) -> zero Barbells, zero Hip Bands, zero pure Bodyweight
+  const dbOnlyPool = filterEligibleExercises(sheetData.exercises, {
+    equipment: 'Custom',
+    customEquipment: ['Dumbbells']
+  });
+  assert.ok(dbOnlyPool.length >= 25);
+  assert.ok(dbOnlyPool.every(e => e.equipmentTypes.includes('Dumbbells')));
+  assert.ok(!dbOnlyPool.some(e => e.id === 'push-ups' || e.id === 'barbell-deadlift' || e.id === 'frog-pumps'));
+
+  // 3) Custom = Barbells ONLY -> includes squat rack, pull-up bar, barbell, and landmine movements
+  const bbOnlyPool = filterEligibleExercises(sheetData.exercises, {
+    equipment: 'Custom',
+    customEquipment: ['Barbells']
+  });
+  assert.ok(bbOnlyPool.length >= 20);
+  assert.ok(bbOnlyPool.every(e => e.equipmentTypes.includes('Barbells')));
+  assert.ok(bbOnlyPool.some(e => e.id === 'pull-ups'));
+  assert.ok(bbOnlyPool.some(e => e.id === 'landmine-single-arm-press'));
+  assert.ok(!bbOnlyPool.some(e => e.id === 'arnold-press' || e.id === 'wide-then-narrow-squats'));
+
+  // 4) Custom = Long Bands vs Hip Bands
+  const longBandPool = filterEligibleExercises(sheetData.exercises, {
+    equipment: 'Custom',
+    customEquipment: ['Long Bands']
+  });
+  assert.ok(longBandPool.every(e => e.equipmentTypes.includes('Long Bands')));
+  assert.ok(longBandPool.some(e => e.id === 'face-pulls' && e.equipment === 'Long Bands'));
+  assert.ok(longBandPool.some(e => e.id === 'curls')); // Multi-equip (DB / Long Bands / TRX)
+  assert.ok(!longBandPool.some(e => e.id === 'lateral-band-walks'));
+
+  const hipBandPool = filterEligibleExercises(sheetData.exercises, {
+    equipment: 'Custom',
+    customEquipment: ['Hip Bands']
+  });
+  assert.equal(hipBandPool.length, 5);
+  assert.ok(hipBandPool.every(e => e.equipmentTypes.includes('Hip Bands')));
+
+  // 5) Fallback non-leakage when Focus conflicts with narrow Custom equipment (e.g. 100% Upper Body + Hip Bands only)
+  const narrowConflictWk = generateWorkout(sheetData, {
+    workoutType: 'Timed Duos (40/20)',
+    equipment: 'Custom',
+    customEquipment: ['Hip Bands'],
+    focusWeights: { 'Upper Body': 1, 'Core': 0, 'Legs': 0 },
+    focusEnabled: { 'Upper Body': true, 'Core': false, 'Legs': false },
+    optionsPerSlot: 2
+  });
+  for (const r of narrowConflictWk.rounds) {
+    for (const s of r.slots) {
+      assert.ok(
+        doesExerciseMatchEquipment(s.options[0], { equipment: 'Custom', customEquipment: ['Hip Bands'] }),
+        `Primary option "${s.options[0].name}" leaked outside Custom=[Hip Bands]`
+      );
+    }
+  }
+  const narrowAnalysis = analyzeMuscleLoad(narrowConflictWk, sheetData, []);
+  assert.equal(narrowAnalysis.warnings.length, 0, 'Narrow custom equipment fallback must not emit false overload warnings');
+
+  // 6) Verify zero equipment leakage across diverse Custom equipment sets for generateWorkout (optionsPerSlot=3), pickAutoFillExercises, and getValidReplacementCandidates
+  const customSets = [
+    ['Dumbbells', 'Nothing'],
+    ['Barbells', 'Nothing'],
+    ['Long Bands', 'Nothing'],
+    ['Hip Bands', 'Nothing'],
+    ['Dumbbells', 'Hip Bands', 'Nothing'],
+    ['Barbells', 'Long Bands', 'TRX'],
+    ['Dumbbells'],
+    ['Barbells'],
+    ['Long Bands', 'Hip Bands', 'TRX', 'Slam Ball']
+  ];
+
+  for (const customEquipment of customSets) {
+    for (const wkDef of sheetData.workouts) {
+      const wk = generateWorkout(sheetData, {
+        workoutType: wkDef.name,
+        equipment: 'Custom',
+        customEquipment,
+        optionsPerSlot: 3
+      });
+      for (const r of wk.rounds) {
+        for (const s of r.slots) {
+          for (const opt of s.options) {
+            assert.ok(
+              doesExerciseMatchEquipment(opt, { equipment: 'Custom', customEquipment }),
+              `[${wkDef.name} | Custom=${customEquipment.join(',')}] Option "${opt.name}" (${opt.equipmentTypes.join('/')}) violated custom equipment`
+            );
+          }
+        }
+      }
+      const analysis = analyzeMuscleLoad(wk, sheetData, []);
+      assert.equal(
+        analysis.warnings.length,
+        0,
+        `[${wkDef.name} | Custom=${customEquipment.join(',')}] Unexpected overload warning: ${JSON.stringify(analysis.warnings)}`
+      );
+    }
+
+    const autoFilled = pickAutoFillExercises(
+      sheetData,
+      { workoutType: 'Timed Trios (40/20)', equipment: 'Custom', customEquipment },
+      [],
+      9
+    );
+    assert.equal(autoFilled.length, 9);
+    for (const ex of autoFilled) {
+      assert.ok(
+        doesExerciseMatchEquipment(ex, { equipment: 'Custom', customEquipment }),
+        `pickAutoFillExercises leaked "${ex.name}" outside Custom=${customEquipment.join(',')}`
+      );
+    }
+
+    const baseWk = generateWorkout(sheetData, {
+      workoutType: 'Timed Duos (40/20)',
+      equipment: 'Custom',
+      customEquipment
+    });
+    const swapCands = getValidReplacementCandidates({
+      workoutState: baseWk,
+      roundIndex: 0,
+      slotIndex: 0,
+      sheetData,
+      excludedExerciseIds: [],
+      analyzeMuscleLoadFn: analyzeMuscleLoad
+    });
+    assert.ok(swapCands.length > 0);
+    for (const cand of swapCands) {
+      assert.ok(
+        doesExerciseMatchEquipment(cand, { equipment: 'Custom', customEquipment }),
+        `getValidReplacementCandidates leaked "${cand.name}" outside Custom=${customEquipment.join(',')}`
+      );
+    }
+  }
+});
+
+test('filterExercisesByMuscleAndQuery equipment pills, synonym queries, sorting priority, and legacy profile migration are sound', () => {
+  // 1) Equipment filter pills in modals & QA Gallery
+  const dbFiltered = filterExercisesByMuscleAndQuery(sheetData.exercises, {
+    equipmentFilter: 'Dumbbells'
+  });
+  assert.ok(dbFiltered.length >= 25);
+  assert.ok(dbFiltered.every(e => getExerciseEquipmentTypes(e).includes('Dumbbells')));
+  // Dedicated single-equipment Dumbbells sort ahead of multi-equipment (e.g. Squat Any or DB / Long Bands)
+  const firstMultiIdx = dbFiltered.findIndex(e => e.equipment !== 'Dumbbells');
+  const lastDedicatedIdx = dbFiltered.map(e => e.equipment === 'Dumbbells').lastIndexOf(true);
+  assert.ok(lastDedicatedIdx < firstMultiIdx, 'Dedicated Dumbbells exercises must sort before multi-equipment exercises');
+
+  // 2) Combined Muscle + Equipment pill preserves Primary-before-Secondary ordering first, then dedicated equipment
+  const shouldersLongBands = filterExercisesByMuscleAndQuery(sheetData.exercises, {
+    muscleFilter: 'Shoulders',
+    equipmentFilter: 'Long Bands'
+  });
+  assert.ok(shouldersLongBands.length >= 3);
+  const secStart = shouldersLongBands.findIndex(e => e.muscles.Shoulders !== 'Pri');
+  if (secStart !== -1) {
+    assert.ok(
+      shouldersLongBands.slice(secStart).every(e => e.muscles.Shoulders === 'Sec'),
+      'Primary Shoulders matches must precede Secondary matches when combined with Long Bands filter'
+    );
+  }
+
+  // 3) Synonym queries ("dumbells" misspelling, "squat rack", "landmine", "arm bands", "thigh bands", "glute band", "bodyweight")
+  const dumbellsMisspelled = filterExercisesByMuscleAndQuery(sheetData.exercises, { query: 'dumbells' });
+  assert.ok(dumbellsMisspelled.some(e => e.id === 'arnold-press'));
+
+  const squatRackQuery = filterExercisesByMuscleAndQuery(sheetData.exercises, { query: 'squat rack' });
+  assert.ok(squatRackQuery.some(e => e.id === 'barbell-bench-press') && squatRackQuery.some(e => e.id === 'pull-ups'));
+
+  const landmineQuery = filterExercisesByMuscleAndQuery(sheetData.exercises, { query: 'landmine' });
+  assert.ok(landmineQuery.some(e => e.id === 'landmine-single-arm-press'));
+
+  const armBandsQuery = filterExercisesByMuscleAndQuery(sheetData.exercises, { query: 'arm bands' });
+  assert.ok(armBandsQuery.some(e => e.id === 'face-pulls') && !armBandsQuery.some(e => e.id === 'frog-pumps'));
+
+  const thighBandsQuery = filterExercisesByMuscleAndQuery(sheetData.exercises, { query: 'thigh bands' });
+  assert.ok(thighBandsQuery.some(e => e.id === 'lateral-band-walks') && !thighBandsQuery.some(e => e.id === 'face-pulls'));
+
+  const bodyweightQuery = filterExercisesByMuscleAndQuery(sheetData.exercises, { query: 'bodyweight' });
+  assert.equal(bodyweightQuery.length, 32);
+
+  // 4) Legacy localStorage profile migration ('Weights' / 'Bands' -> 'Custom' + customEquipment)
+  const storeMap = new Map();
+  globalThis.__testLocalStorage = {
+    getItem: k => (storeMap.has(k) ? storeMap.get(k) : null),
+    setItem: (k, v) => storeMap.set(k, String(v))
+  };
+  try {
+    storeMap.set(
+      'joshal_workout_profiles_v1',
+      JSON.stringify([
+        {
+          id: 'legacy-u1',
+          name: 'Legacy',
+          excludedExerciseIds: [],
+          optionsPerSlot: 1,
+          inputs: { workoutCategory: 'Strength', equipment: 'Bands', workoutType: 'Strength Duos' },
+          activeWorkout: null
+        }
+      ])
+    );
+    storeMap.set('joshal_workout_active_profile_v1', 'legacy-u1');
+    const migratedDs = new DataService().initFromObjects(rawSheet, rawEnrich);
+    migratedDs.loadProfilesFromStorage();
+    const prof = migratedDs.getActiveProfile();
+    assert.equal(prof.inputs.equipment, 'Custom');
+    assert.deepEqual(prof.inputs.customEquipment, ['Long Bands', 'Hip Bands', 'Nothing']);
+    assert.equal(
+      formatEquipmentSelectionSummary(prof.inputs),
+      'Custom (Long Bands, Hip Bands, Bodyweight)'
+    );
+  } finally {
+    delete globalThis.__testLocalStorage;
+  }
 });
 
 console.log(`\n🎉 ALL ${passed} QA TEST SUITES PASSED SUCCESSFULLY!`);

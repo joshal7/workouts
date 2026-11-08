@@ -66,10 +66,10 @@ for (const ex of sheetData.exercises) {
   }
 
   // 5. Check Band-specific exercises depict bands in gold (#facc15)
-  if (ex.equipment === 'Bands') {
+  if (ex.equipment === 'Long Bands' || ex.equipment === 'Hip Bands') {
     assert.ok(
       svg.includes('#facc15'),
-      `Band exercise "${ex.name}" must visually render the resistance band in #facc15`
+      `Band exercise "${ex.name}" (${ex.equipment}) must visually render the resistance band in #facc15`
     );
   }
 

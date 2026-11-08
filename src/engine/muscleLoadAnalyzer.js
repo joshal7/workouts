@@ -11,9 +11,11 @@ import {
   BODY_AREAS,
   MANUAL_FOCUS_ERROR_BAR,
   computeWorkoutAreaQuotas,
+  doesExerciseMatchEquipment,
   filterEligibleExercises,
   getActiveSlotExercise,
   getPrimaryBodyArea,
+  normalizeEquipmentSelection,
   normalizeFocusWeights,
   swapExerciseInSlot
 } from './workoutEngine.js';
@@ -77,7 +79,7 @@ export function analyzeMuscleLoad(
   }
 
   const bodyCategory = workoutState.inputs?.bodyCategory || 'All';
-  const equipment = workoutState.inputs?.equipment || 'Any';
+  const { equipment, customEquipment } = normalizeEquipmentSelection(workoutState.inputs || {});
   const effectiveWorkoutCategory =
     workoutState.inputs?.effectiveWorkoutCategory ||
     workoutState.workout?.workoutCategory ||
@@ -127,23 +129,38 @@ export function analyzeMuscleLoad(
     });
   });
 
-  // Eligible replacement pool respecting user filters, Focus weights, & exclusions
-  const eligiblePool = filterEligibleExercises(sheetData.exercises, {
+  // Eligible replacement pool respecting user filters, Focus weights, Equipment, & exclusions
+  const strictEligiblePool = filterEligibleExercises(sheetData.exercises, {
     workoutCategory: effectiveWorkoutCategory,
     bodyCategory,
     equipment,
+    customEquipment,
     excludedExerciseIds,
     focusWeights: isSpecificMuscleFilter ? null : focusWeights,
     focusEnabled: isSpecificMuscleFilter ? null : focusEnabled
   });
 
-  // Fallback pools if current filter combination is super narrow (e.g. Strength + Legs + Nothing)
+  // Fallback pools if current filter combination is super narrow (e.g. Hip Bands only + Upper Focus)
   const categoryEquipmentPool = filterEligibleExercises(sheetData.exercises, {
     workoutCategory: effectiveWorkoutCategory,
     bodyCategory: 'All',
     equipment,
+    customEquipment,
     excludedExerciseIds
   });
+  const anyCategoryEquipmentPool = filterEligibleExercises(sheetData.exercises, {
+    workoutCategory: 'Either',
+    bodyCategory: 'All',
+    equipment,
+    customEquipment,
+    excludedExerciseIds
+  });
+  const eligiblePool =
+    strictEligiblePool.length > 0
+      ? strictEligiblePool
+      : categoryEquipmentPool.length > 0
+      ? categoryEquipmentPool
+      : anyCategoryEquipmentPool;
   const allNonExcludedPool = sheetData.exercises.filter(
     ex => !excludedExerciseIds.includes(ex.id) && !excludedExerciseIds.includes(ex.name)
   );
@@ -158,7 +175,16 @@ export function analyzeMuscleLoad(
 
   const nRounds = workoutState.rounds.length || 1;
   const totalWorkoutSlots = workoutState.rounds.reduce((acc, r) => acc + r.slots.length, 0);
-  const expectedAreaQuotas = computeWorkoutAreaQuotas(totalWorkoutSlots, focusWeights);
+  const eligibleAreaSizes = {
+    'Upper Body': eligiblePool.filter(e => e.bodyCategories?.['Upper Body'] === 'Pri').length,
+    'Core': eligiblePool.filter(e => e.bodyCategories?.['Core'] === 'Pri').length,
+    'Legs': eligiblePool.filter(e => e.bodyCategories?.['Legs'] === 'Pri').length
+  };
+  const expectedAreaQuotas = computeWorkoutAreaQuotas(
+    totalWorkoutSlots,
+    focusWeights,
+    eligibleAreaSizes
+  );
 
   const warnings = [];
   const roundSummaries = [];
@@ -371,7 +397,10 @@ export function analyzeMuscleLoad(
 
       const targetExArea = getPrimaryBodyArea(targetSlotInfo.exercise);
       const maxManualTargetArea =
-        Math.ceil((focusWeights[targetExArea] || 0) * totalWorkoutSlots - 1e-9) + 1;
+        Math.max(
+          Math.ceil((focusWeights[targetExArea] || 0) * totalWorkoutSlots - 1e-9),
+          expectedAreaQuotas[targetExArea] || 0
+        ) + 1;
       const isTargetAreaOverloaded =
         !isSpecificMuscleFilter && (workoutAreaCounts[targetExArea] || 0) > maxManualTargetArea;
 
@@ -382,7 +411,10 @@ export function analyzeMuscleLoad(
         targetExercise: targetSlotInfo.exercise,
         eligiblePool,
         categoryEquipmentPool,
+        anyCategoryEquipmentPool,
         allNonExcludedPool,
+        equipment,
+        customEquipment,
         activeWorkoutExerciseIds,
         workoutMuscleTotals,
         roundStats,
@@ -460,7 +492,10 @@ export function analyzeMuscleLoad(
             targetExercise: targetSlotInfo.exercise,
             eligiblePool,
             categoryEquipmentPool,
+            anyCategoryEquipmentPool,
             allNonExcludedPool,
+            equipment,
+            customEquipment,
             activeWorkoutExerciseIds,
             workoutMuscleTotals,
             roundStats,
@@ -505,7 +540,8 @@ export function analyzeMuscleLoad(
     for (const area of BODY_AREAS) {
       const w = focusWeights[area] || 0;
       const actual = workoutAreaCounts[area] || 0;
-      const maxAllowedManual = Math.ceil(w * totalWorkoutSlots - 1e-9) + 1;
+      const maxAllowedManual =
+        Math.max(Math.ceil(w * totalWorkoutSlots - 1e-9), expectedAreaQuotas[area] || 0) + 1;
       const excessRatio = actual / Math.max(1, totalWorkoutSlots) - w;
 
       if (actual > maxAllowedManual && excessRatio >= MANUAL_FOCUS_ERROR_BAR - 1e-9) {
@@ -583,7 +619,10 @@ export function analyzeMuscleLoad(
             targetExercise: targetSlotInfo.exercise,
             eligiblePool,
             categoryEquipmentPool,
+            anyCategoryEquipmentPool,
             allNonExcludedPool,
+            equipment,
+            customEquipment,
             activeWorkoutExerciseIds,
             workoutMuscleTotals,
             roundStats: roundSummary?.stats || {},
@@ -647,7 +686,10 @@ function getBalancedAlternatives({
   targetExercise,
   eligiblePool,
   categoryEquipmentPool = [],
+  anyCategoryEquipmentPool = [],
   allNonExcludedPool = [],
+  equipment = 'Any',
+  customEquipment = null,
   activeWorkoutExerciseIds,
   workoutMuscleTotals,
   roundStats,
@@ -806,6 +848,24 @@ function getBalancedAlternatives({
     }
   }
 
+  // Tier 4b: Unused in current round, from anyCategoryEquipmentPool (preserving selected equipment across categories)
+  if (candidates.length === 0 && anyCategoryEquipmentPool.length > 0) {
+    candidates = anyCategoryEquipmentPool.filter(
+      ex =>
+        !roundExerciseIds.has(ex.id) &&
+        ex.id !== targetExercise.id &&
+        causesNoNewOverload(ex, true)
+    );
+    if (candidates.length === 0) {
+      candidates = anyCategoryEquipmentPool.filter(
+        ex =>
+          !roundExerciseIds.has(ex.id) &&
+          ex.id !== targetExercise.id &&
+          causesNoNewOverload(ex, false)
+      );
+    }
+  }
+
   // Tier 5: Unused in current round, from allNonExcludedPool, zero new overload
   if (candidates.length === 0 && allNonExcludedPool.length > 0) {
     candidates = allNonExcludedPool.filter(
@@ -824,12 +884,13 @@ function getBalancedAlternatives({
     }
   }
 
-  // Score candidates by how well they balance under-used muscles and Focus body areas
+  // Score candidates by how well they balance under-used muscles, selected equipment, and Focus body areas
   const scored = candidates.map(ex => {
     let balanceScore = 0;
     const candArea = getPrimaryBodyArea(ex);
 
-    // Bonus if candidate is from the user's primary eligiblePool and unused in the workout
+    // Bonus if candidate matches user's selected equipment, primary eligiblePool, and is unused in the workout
+    if (doesExerciseMatchEquipment(ex, { equipment, customEquipment })) balanceScore += 30;
     if (eligiblePool.some(e => e.id === ex.id)) balanceScore += 25;
     if (!activeWorkoutExerciseIds.has(ex.id)) balanceScore += 15;
     if (musclesList.length > 0 && musclesList.every(m => !ex.muscles?.[m])) balanceScore += 10;
