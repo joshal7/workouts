@@ -1826,7 +1826,7 @@ html, body {
 .timer-stage-top {
   width: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
 }
@@ -1841,10 +1841,27 @@ html, body {
   background: rgba(255, 255, 255, 0.78);
 }
 
+.timer-stage-top-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+}
+
 .timer-step-counter {
   font-size: 11.5px;
   font-weight: 700;
   opacity: 0.85;
+  line-height: 1.15;
+}
+
+.timer-total-remaining {
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.82;
+  line-height: 1.15;
 }
 
 .timer-big-clock {

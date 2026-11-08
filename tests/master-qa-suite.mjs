@@ -3205,6 +3205,113 @@ async function runBrowserCDPTests(wsUrl) {
           '  ✅ PASS: Manual Exercise Write-In (Swap & Select X Exercises), Skater Hops, and Frog Pump + Butterflys verified end-to-end'
         );
 
+        console.log('\n--- 12G. Top-Level Workout Total Time (with Strength "est.") & Timer "XX of YY" Remaining E2E Check ---');
+        const totalTimeAndTimerRemainingCheck = await evalInPage(async () => {
+          const selectType = name => {
+            const sel = document.getElementById('workoutTypeSelect');
+            sel.value = name;
+            sel.dispatchEvent(new Event('change'));
+            document.getElementById('generateWorkoutBtn').click();
+            return document.getElementById('workoutMetaSummary')?.innerText.trim() || '';
+          };
+
+          const strengthDuosMeta = selectType('Strength Duos');
+          const strengthTriosMeta = selectType('Strength Trios');
+          const strengthQuadsMeta = selectType('Strength Quads');
+          const eightByEightMeta = selectType('8x8 Duos');
+          const timedDuosMeta = selectType('Timed Duos (40/20)');
+
+          // Open full workout timer (All Rounds) for Timed Duos (40/20) -> 10s prep + 24 * (40s + 20s) = 24:10
+          document.getElementById('openWorkoutTimerBtn').click();
+
+          const stepEl = document.getElementById('timerStepCounter');
+          const remEl = document.getElementById('timerTotalRemaining');
+          const stepRect = stepEl.getBoundingClientRect();
+          const remRect = remEl.getBoundingClientRect();
+          const stepFontPx = parseFloat(window.getComputedStyle(stepEl).fontSize);
+          const remFontPx = parseFloat(window.getComputedStyle(remEl).fontSize);
+          const positionedUnderStepCounter =
+            remRect.top >= stepRect.bottom - 3 &&
+            Math.abs(remRect.right - stepRect.right) <= 4 &&
+            Math.abs(stepFontPx - remFontPx) <= 2;
+
+          const allRoundsInitial = remEl.innerText.trim();
+
+          // Start timer and wait ~1.15s so XX counts down by 1s
+          document.getElementById('timerStartPauseBtn').click();
+          await new Promise(r => setTimeout(r, 1150));
+          const afterTickText = remEl.innerText.trim();
+
+          // Pause timer and verify XX stays paused across 500ms
+          document.getElementById('timerStartPauseBtn').click();
+          const pausedSnapshot1 = remEl.innerText.trim();
+          await new Promise(r => setTimeout(r, 500));
+          const pausedSnapshot2 = remEl.innerText.trim();
+
+          // Jump ahead to Step 2 (index 1, first 40s work) via Next button -> 24:00 of 24:10
+          document.getElementById('timerNextStepBtn').click();
+          const afterNextJump = remEl.innerText.trim();
+
+          // Jump ahead to Step 4 (index 3, second 40s work) via timeline chip click -> 23:00 of 24:10
+          document.querySelector('#timerSequenceTimeline [data-step-index="3"]')?.click();
+          const afterChipJump = remEl.innerText.trim();
+
+          // Reset timer -> back to 24:10 of 24:10
+          document.getElementById('timerResetBtn').click();
+          const afterReset = remEl.innerText.trim();
+
+          // Select just Round 1 (instead of All Rounds) -> YY updates to individual round time (06:10 of 06:10)
+          document.querySelector('#timerScopePills [data-timer-round="0"]')?.click();
+          const singleRoundInitial = remEl.innerText.trim();
+
+          // Jump ahead 1 step inside single round -> 06:00 of 06:10
+          document.getElementById('timerNextStepBtn').click();
+          const singleRoundAfterNext = remEl.innerText.trim();
+
+          document.getElementById('closeTimerModalBtn').click();
+
+          return {
+            strengthDuosMeta,
+            strengthTriosMeta,
+            strengthQuadsMeta,
+            eightByEightMeta,
+            timedDuosMeta,
+            positionedUnderStepCounter,
+            allRoundsInitial,
+            afterTickText,
+            pausedStayedSame: pausedSnapshot1 === pausedSnapshot2,
+            afterNextJump,
+            afterChipJump,
+            afterReset,
+            singleRoundInitial,
+            singleRoundAfterNext
+          };
+        });
+        if (
+          !totalTimeAndTimerRemainingCheck.strengthDuosMeta.includes('40 min (est.)') ||
+          !totalTimeAndTimerRemainingCheck.strengthTriosMeta.includes('45 min (est.)') ||
+          !totalTimeAndTimerRemainingCheck.strengthQuadsMeta.includes('44 min (est.)') ||
+          !totalTimeAndTimerRemainingCheck.eightByEightMeta.includes('35 min') ||
+          !totalTimeAndTimerRemainingCheck.timedDuosMeta.includes('24 min') ||
+          !totalTimeAndTimerRemainingCheck.positionedUnderStepCounter ||
+          totalTimeAndTimerRemainingCheck.allRoundsInitial !== '24:10 of 24:10' ||
+          totalTimeAndTimerRemainingCheck.afterTickText === '24:10 of 24:10' ||
+          !totalTimeAndTimerRemainingCheck.pausedStayedSame ||
+          totalTimeAndTimerRemainingCheck.afterNextJump !== '24:00 of 24:10' ||
+          totalTimeAndTimerRemainingCheck.afterChipJump !== '23:00 of 24:10' ||
+          totalTimeAndTimerRemainingCheck.afterReset !== '24:10 of 24:10' ||
+          totalTimeAndTimerRemainingCheck.singleRoundInitial !== '06:10 of 06:10' ||
+          totalTimeAndTimerRemainingCheck.singleRoundAfterNext !== '06:00 of 06:10'
+        ) {
+          throw new Error(
+            'Top-Level Workout Total Time / Timer XX of YY E2E check failed: ' +
+              JSON.stringify(totalTimeAndTimerRemainingCheck)
+          );
+        }
+        console.log(
+          '  ✅ PASS: Top-level workout total time (with Strength "est." & extended rests) and Timer "XX of YY" remaining (countdown, pause, step jumps, and single-round vs all-rounds YY) verified'
+        );
+
         console.log('\n--- 13. Mobile Viewport Screenshot Capture ---');
         await evalInPage(() => {
           document.getElementById('generateWorkoutBtn')?.click();
@@ -3235,7 +3342,15 @@ async function runBrowserCDPTests(wsUrl) {
         await send('Page.navigate', { url: 'http://127.0.0.1:8080/qa-gallery.html' });
         await new Promise(r => setTimeout(r, 1200));
 
-        const galleryCheck = await evalInPage(() => {
+        const galleryCheck = await evalInPage(async () => {
+          const waitStart = Date.now();
+          while (Date.now() - waitStart < 4500) {
+            const imgs = Array.from(document.querySelectorAll('article.qa-card img'));
+            if (imgs.length === 91 && imgs.every(img => img.complete && img.naturalWidth > 0)) {
+              break;
+            }
+            await new Promise(r => setTimeout(r, 100));
+          }
           const cards = Array.from(document.querySelectorAll('article.qa-card'));
           const broken = cards
             .map(c => {

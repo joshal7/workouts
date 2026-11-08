@@ -564,9 +564,112 @@ export function getWorkoutCheckMode(workout) {
 }
 
 /**
- * Consolidate workout structure and comments into a single non-duplicative summary line.
+ * Standard weight-lifting set duration (45s for 8-12 controlled reps + weight setup)
+ * and extended rest between sets (55s vs 20s in HIIT = 100s per Strength set vs 60s in HIIT).
  */
-export function getConsolidatedWorkoutSubtitle(workoutState) {
+export const STRENGTH_WORK_SEC_PER_SET = 45;
+export const STRENGTH_REST_SEC_PER_SET = 55;
+export const HIIT_WORK_SEC_PER_SET = 40;
+export const HIIT_REST_SEC_PER_SET = 20;
+
+/**
+ * Compute total workout duration (or estimated duration for Strength / untimed rep workouts).
+ * For Strength workouts, estimates time based on standard weight-lifting set duration (45s)
+ * plus extended rests between sets (55s, compared to 20s in HIIT) and marks with "est.".
+ */
+export function getWorkoutTotalTimeInfo(workoutState, options = {}) {
+  const wk = workoutState?.workout || workoutState;
+  if (!wk) {
+    return { totalSeconds: 0, minutes: 0, isEstimated: false, label: '' };
+  }
+
+  const isStrength =
+    wk.workoutCategory === 'Strength' ||
+    String(wk.id || '').startsWith('strength-');
+
+  if (isStrength) {
+    const strengthSetSec = STRENGTH_WORK_SEC_PER_SET + STRENGTH_REST_SEC_PER_SET; // 100s per set (vs 60s in HIIT)
+    let totalSeconds = 0;
+
+    if (wk.id === 'strength-duos') {
+      // 4 rounds * 2 exercises * 3 sets = 24 sets * 100s = 2400s (40 min vs 24 min in Timed Duos HIIT)
+      totalSeconds = 4 * 2 * 3 * strengthSetSec;
+    } else if (wk.id === 'strength-trios') {
+      // 3 rounds * 3 exercises * 3 sets = 27 sets * 100s = 2700s (45 min vs 27 min in Timed Trios HIIT)
+      totalSeconds = 3 * 3 * 3 * strengthSetSec;
+    } else if (wk.id === 'strength-quads') {
+      // 2 rounds * (4 exercises * 3 superset sets * 100s + 2 burnout sets * 60s) = 2640s (44 min)
+      totalSeconds = 2 * (4 * 3 * strengthSetSec + 2 * 60);
+    } else {
+      const rounds = Math.max(1, Number(wk.rounds) || 1);
+      const exPerRound = Math.max(1, Number(wk.exercisesPerRound) || 1);
+      const setsPerRound = Math.max(1, Number(wk.setsPerRound) || 3);
+      totalSeconds = rounds * exPerRound * setsPerRound * strengthSetSec;
+    }
+
+    const minutes = Math.max(1, Math.round(totalSeconds / 60));
+    return {
+      totalSeconds,
+      minutes,
+      isEstimated: true,
+      label: `${minutes} min (est.)`
+    };
+  }
+
+  if (typeof options.customTotalSeconds === 'number' && options.customTotalSeconds > 0) {
+    const totalSeconds = Math.round(options.customTotalSeconds);
+    const minutes = Math.max(1, Math.round(totalSeconds / 60));
+    return {
+      totalSeconds,
+      minutes,
+      isEstimated: false,
+      label: `${minutes} min`
+    };
+  }
+
+  if (wk.id === '10-to-1-to-10') {
+    // Untimed rep ladder: 5 exercises * 110 reps = 550 reps + brief transitions (~28 min)
+    const totalSeconds = 28 * 60;
+    return {
+      totalSeconds,
+      minutes: 28,
+      isEstimated: true,
+      label: '28 min (est.)'
+    };
+  }
+
+  const hiitSetSec = HIIT_WORK_SEC_PER_SET + HIIT_REST_SEC_PER_SET; // 60s per 40/20 set
+  const hiitSecondsById = {
+    'timed-duos-40-20': 4 * 2 * 3 * hiitSetSec, // 1440s = 24 min
+    'timed-trios-40-20': 3 * 3 * 3 * hiitSetSec, // 1620s = 27 min
+    '8-excercises-40-20': 1 * 8 * 3 * hiitSetSec, // 1440s = 24 min
+    '30-20-10-10-20-30': 8 * 270, // 8 exercises * 270s (30/20/10/10/20/30 work+rest) = 2160s = 36 min
+    '6-excercise-pyramid': 36 * 30 + 25 * 10 + 11 * 60, // 1990s = 33 min
+    '8x8-duos': 4 * 480 + 3 * 60, // 4 * 8-min AMRAP + 3 * 60s rest between rounds = 2100s = 35 min
+    '5-constant-5-change-40-20': 3 * 10 * hiitSetSec // 3 rounds * 10 sets * 60s = 1800s = 30 min
+  };
+
+  let totalSeconds = hiitSecondsById[wk.id];
+  if (!totalSeconds) {
+    const rounds = Math.max(1, Number(wk.rounds) || 1);
+    const exPerRound = Math.max(1, Number(wk.exercisesPerRound) || 1);
+    const setsPerRound = Math.max(1, Number(wk.setsPerRound) || 3);
+    totalSeconds = rounds * exPerRound * setsPerRound * hiitSetSec;
+  }
+
+  const minutes = Math.max(1, Math.round(totalSeconds / 60));
+  return {
+    totalSeconds,
+    minutes,
+    isEstimated: false,
+    label: `${minutes} min`
+  };
+}
+
+/**
+ * Consolidate workout structure, comments, and total workout time into a single non-duplicative summary line.
+ */
+export function getConsolidatedWorkoutSubtitle(workoutState, options = {}) {
   const wk = workoutState?.workout;
   if (!wk) return '';
 
@@ -584,15 +687,16 @@ export function getConsolidatedWorkoutSubtitle(workoutState) {
     '5-constant-5-change-40-20': '3 rounds · 6 exercises · 10 sets (first 3 are round constants)'
   };
 
-  if (consolidatedMap[wk.id]) {
-    return consolidatedMap[wk.id];
-  }
-
   const setsStr =
     wk.setsPerRound !== null && wk.setsPerRound !== ''
       ? `${wk.setsPerRound} sets/round`
       : 'AMRAP';
-  return `${wk.rounds} round${wk.rounds > 1 ? 's' : ''} · ${wk.exercisesPerRound} exercises · ${setsStr}`;
+  const baseSubtitle =
+    consolidatedMap[wk.id] ||
+    `${wk.rounds} round${wk.rounds > 1 ? 's' : ''} · ${wk.exercisesPerRound} exercises · ${setsStr}`;
+
+  const timeInfo = getWorkoutTotalTimeInfo(workoutState, options);
+  return timeInfo.label ? `${baseSubtitle} · ${timeInfo.label}` : baseSubtitle;
 }
 
 /**

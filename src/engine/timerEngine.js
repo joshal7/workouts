@@ -181,6 +181,57 @@ export function formatTimerClock(totalSeconds) {
 }
 
 /**
+ * Compute total remaining time (XX) and total scope time (YY) for the active timer sequence
+ * ("XX of YY", e.g., "28:30 of 32:00"), where XX counts down each second, pauses when paused,
+ * jumps when skipping/selecting steps, and YY reflects either the selected single round or all rounds.
+ */
+export function computeTimerRemainingAndTotal(
+  steps,
+  currentStepIndex = 0,
+  remainingSeconds = null
+) {
+  if (!Array.isArray(steps) || steps.length === 0) {
+    return {
+      remainingTotalSeconds: 0,
+      totalSeconds: 0,
+      formattedRemaining: '00:00',
+      formattedTotal: '00:00',
+      label: '00:00 of 00:00'
+    };
+  }
+
+  const safeIdx = Math.min(steps.length - 1, Math.max(0, Number(currentStepIndex) || 0));
+  let totalSeconds = 0;
+  let futureStepsSec = 0;
+
+  for (let i = 0; i < steps.length; i++) {
+    const dur = Math.max(0, Math.ceil(Number(steps[i]?.duration) || 0));
+    totalSeconds += dur;
+    if (i > safeIdx) {
+      futureStepsSec += dur;
+    }
+  }
+
+  const currentStepDur = Math.max(0, Math.ceil(Number(steps[safeIdx]?.duration) || 0));
+  const currentStepRem =
+    remainingSeconds === null || remainingSeconds === undefined
+      ? currentStepDur
+      : Math.max(0, Math.min(currentStepDur, Math.ceil(Number(remainingSeconds) || 0)));
+
+  const remainingTotalSeconds = currentStepRem + futureStepsSec;
+  const formattedRemaining = formatTimerClock(remainingTotalSeconds);
+  const formattedTotal = formatTimerClock(totalSeconds);
+
+  return {
+    remainingTotalSeconds,
+    totalSeconds,
+    formattedRemaining,
+    formattedTotal,
+    label: `${formattedRemaining} of ${formattedTotal}`
+  };
+}
+
+/**
  * Return the bottom display label for a timer step:
  * - "Count Down" for the yellow countdown timer
  * - "[name of exercise]" for the green exercise timer

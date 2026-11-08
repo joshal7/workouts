@@ -16,7 +16,7 @@
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/svg+xml" href="./diagrams/app-icon.svg" />
   <link rel="apple-touch-icon" href="./diagrams/app-icon.svg" />
-  <link rel="stylesheet" href="./src/styles.css?v=30" />
+  <link rel="stylesheet" href="./src/styles.css?v=31" />
 </head>
 <body>
   <div class="app-shell">
@@ -459,7 +459,10 @@
             <div class="timer-stage-content">
               <div class="timer-stage-top">
                 <span id="timerPhaseBadge" class="timer-phase-badge">10s PREP COUNTDOWN</span>
-                <span id="timerStepCounter" class="timer-step-counter">Step 1 of 13</span>
+                <div class="timer-stage-top-right">
+                  <span id="timerStepCounter" class="timer-step-counter">Step 1 of 13</span>
+                  <span id="timerTotalRemaining" class="timer-total-remaining">06:10 of 06:10</span>
+                </div>
               </div>
 
               <div id="timerClockDisplay" class="timer-big-clock" aria-live="assertive">
@@ -549,6 +552,6 @@
     <div id="toast" class="toast" hidden>Updated</div>
   </div>
 
-  <script type="module" src="./src/app.js?v=30"></script>
+  <script type="module" src="./src/app.js?v=31"></script>
 </body>
 </html>

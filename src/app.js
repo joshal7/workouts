@@ -1,4 +1,4 @@
-import { DataService } from './services/dataService.js?v=30';
+import { DataService } from './services/dataService.js?v=31';
 import {
   FOCUS_SNAP_STEPS,
   DEFAULT_FOCUS_WEIGHTS,
@@ -23,23 +23,25 @@ import {
   swapExercisesAcrossRounds,
   getValidReplacementCandidates,
   getWorkoutCheckMode,
+  getWorkoutTotalTimeInfo,
   getConsolidatedWorkoutSubtitle,
   getRandomEntry,
   getPrimaryMuscle,
   getPrimaryBodyArea,
   createCustomWriteInExercise
-} from './engine/workoutEngine.js?v=30';
+} from './engine/workoutEngine.js?v=31';
 import {
   analyzeMuscleLoad,
   applyBalancedRecommendation,
   SPECIFIC_MUSCLES
-} from './engine/muscleLoadAnalyzer.js?v=30';
+} from './engine/muscleLoadAnalyzer.js?v=31';
 import {
   TIMER_COLORS,
   CUSTOM_TIMER_PRESETS,
   TIMER_SOUND_PROFILES,
   isTimedHiitWorkout,
   formatTimerClock,
+  computeTimerRemainingAndTotal,
   getTimerBottomLabel,
   getDefaultExerciseTimerConfig,
   buildStockTimerSequence,
@@ -61,7 +63,7 @@ import {
   computeTimelineTargetScrollLeft,
   buildMasterTimelineWavBytes,
   encodeWavBytesToDataUri
-} from './engine/timerEngine.js?v=30';
+} from './engine/timerEngine.js?v=31';
 
 const dataService = new DataService();
 
@@ -251,7 +253,7 @@ const els = {
 
 async function bootstrap() {
   releaseAudioSessionToAuto();
-  await dataService.init('./data/sheet-data.json?v=30', './data/enrichments.json?v=30');
+  await dataService.init('./data/sheet-data.json?v=31', './data/enrichments.json?v=31');
   loadAndDecodeSpeechPack();
   populateWorkoutTypeSelect();
   populateCustomTimerPresetsSelect();
@@ -267,7 +269,7 @@ async function bootstrap() {
       refreshing = true;
       window.location.reload();
     });
-    navigator.serviceWorker.register('./sw.js?v=30', { updateViaCache: 'none' }).then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=31', { updateViaCache: 'none' }).then(reg => {
       reg.update().catch(() => {});
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
@@ -956,6 +958,24 @@ function updateWorkoutTimerBarUI(wkState) {
   const firstRest = fullWorkoutSteps.find(s => s.type === 'rest');
   const cdSec = fullWorkoutSteps[0]?.duration || 10;
 
+  // Keep top-level workout total time in sync if user customized HIIT intervals or presets
+  if (!isStandaloneEasterEgg && els.workoutMetaSummary) {
+    const hasCustomTimerConfig =
+      Boolean(timerState.customStepsOverride) ||
+      timerState.mode === 'custom-preset' ||
+      Object.keys(timerState.exerciseConfigs || {}).length > 0;
+    if (hasCustomTimerConfig) {
+      const customTotalSeconds = fullWorkoutSteps
+        .filter(s => s.type !== 'countdown')
+        .reduce((sum, s) => sum + (Number(s.duration) || 0), 0);
+      els.workoutMetaSummary.textContent = getConsolidatedWorkoutSubtitle(wkState, {
+        customTotalSeconds
+      });
+    } else {
+      els.workoutMetaSummary.textContent = getConsolidatedWorkoutSubtitle(wkState);
+    }
+  }
+
   els.openWorkoutTimerBtn.hidden = false;
   if (firstWork && firstTransition && firstRest) {
     els.workoutTimerBtnLabel.textContent = `Timer (${cdSec}s Yellow · ${workSteps.length}× ${firstWork.duration}s / ${firstTransition.duration}s trans / ${firstRest.duration}s rest)`;
@@ -1167,6 +1187,11 @@ function renderTimerExecutionView({ forceTimelineScroll = false } = {}) {
 
   document.getElementById('timerPhaseBadge').textContent = step.phaseLabel || step.type.toUpperCase();
   document.getElementById('timerStepCounter').textContent = `Step ${idx + 1} of ${steps.length}`;
+  const timeProgress = computeTimerRemainingAndTotal(steps, idx, timerState.remainingSeconds);
+  const totalRemEl = document.getElementById('timerTotalRemaining');
+  if (totalRemEl) {
+    totalRemEl.textContent = timeProgress.label;
+  }
   document.getElementById('timerActiveExerciseName').textContent = getTimerBottomLabel(step);
   document.getElementById('timerClockDisplay').textContent = formatTimerClock(timerState.remainingSeconds);
 

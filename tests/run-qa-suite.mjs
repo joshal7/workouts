@@ -30,6 +30,11 @@ import {
   swapExercisesAcrossRounds,
   getValidReplacementCandidates,
   getWorkoutCheckMode,
+  STRENGTH_WORK_SEC_PER_SET,
+  STRENGTH_REST_SEC_PER_SET,
+  HIIT_WORK_SEC_PER_SET,
+  HIIT_REST_SEC_PER_SET,
+  getWorkoutTotalTimeInfo,
   getConsolidatedWorkoutSubtitle,
   getTargetExerciseCount,
   autoSlotExercises,
@@ -48,6 +53,7 @@ import {
   TIMER_SOUND_PROFILES,
   isTimedHiitWorkout,
   formatTimerClock,
+  computeTimerRemainingAndTotal,
   getTimerBottomLabel,
   getDefaultExerciseTimerConfig,
   buildStockTimerSequence,
@@ -2457,6 +2463,124 @@ test('createCustomWriteInExercise supports manual write-in in both Swap Exercise
   const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
   assert.ok(indexHtml.includes('id="swapWriteInInput"') && indexHtml.includes('id="swapWriteInBtn"'));
   assert.ok(indexHtml.includes('id="selectWriteInInput"') && indexHtml.includes('id="selectWriteInBtn"'));
+});
+
+// ----------------------------------------------------------------------------
+// 24. TOP-LEVEL WORKOUT TOTAL TIME (WITH STRENGTH "est.") & TIMER "XX of YY" REMAINING
+// ----------------------------------------------------------------------------
+console.log('\n24. Top-Level Workout Total Time (with Strength "est.") & Timer "XX of YY" Remaining');
+
+test('getWorkoutTotalTimeInfo & getConsolidatedWorkoutSubtitle include total workout time for all 11 workouts and "est." with extended rests for Strength', () => {
+  // Verify Strength per-set work + rest exceeds HIIT 40/20 due to standard weight-lifting time + extended rests
+  assert.ok(
+    STRENGTH_WORK_SEC_PER_SET >= HIIT_WORK_SEC_PER_SET,
+    'Strength work time per set should be at least HIIT work time'
+  );
+  assert.ok(
+    STRENGTH_REST_SEC_PER_SET > HIIT_REST_SEC_PER_SET,
+    'Strength rest time per set must be more extended than HIIT rest time'
+  );
+
+  const byId = Object.fromEntries(sheetData.workouts.map(w => [w.id, w]));
+
+  // Strength workouts must include "est." and take longer than equivalent-set HIIT counterparts
+  const sDuos = getWorkoutTotalTimeInfo({ workout: byId['strength-duos'] });
+  const tDuos = getWorkoutTotalTimeInfo({ workout: byId['timed-duos-40-20'] });
+  assert.equal(sDuos.isEstimated, true);
+  assert.equal(sDuos.label, '40 min (est.)');
+  assert.equal(tDuos.isEstimated, false);
+  assert.equal(tDuos.label, '24 min');
+  assert.ok(sDuos.totalSeconds > tDuos.totalSeconds, 'Strength Duos must estimate longer total time than Timed Duos (40/20)');
+
+  const sTrios = getWorkoutTotalTimeInfo({ workout: byId['strength-trios'] });
+  const tTrios = getWorkoutTotalTimeInfo({ workout: byId['timed-trios-40-20'] });
+  assert.equal(sTrios.isEstimated, true);
+  assert.equal(sTrios.label, '45 min (est.)');
+  assert.equal(tTrios.isEstimated, false);
+  assert.equal(tTrios.label, '27 min');
+  assert.ok(sTrios.totalSeconds > tTrios.totalSeconds, 'Strength Trios must estimate longer total time than Timed Trios (40/20)');
+
+  const sQuads = getWorkoutTotalTimeInfo({ workout: byId['strength-quads'] });
+  assert.equal(sQuads.isEstimated, true);
+  assert.equal(sQuads.label, '44 min (est.)');
+
+  const expectedLabels = {
+    'strength-duos': '40 min (est.)',
+    'strength-trios': '45 min (est.)',
+    'strength-quads': '44 min (est.)',
+    'timed-duos-40-20': '24 min',
+    'timed-trios-40-20': '27 min',
+    '8-excercises-40-20': '24 min',
+    '30-20-10-10-20-30': '36 min',
+    '10-to-1-to-10': '28 min (est.)',
+    '6-excercise-pyramid': '33 min',
+    '8x8-duos': '35 min',
+    '5-constant-5-change-40-20': '30 min'
+  };
+
+  for (const wk of sheetData.workouts) {
+    const info = getWorkoutTotalTimeInfo({ workout: wk });
+    assert.equal(
+      info.label,
+      expectedLabels[wk.id],
+      `Unexpected total time label for ${wk.id}: got "${info.label}", expected "${expectedLabels[wk.id]}"`
+    );
+
+    const subtitle = getConsolidatedWorkoutSubtitle({ workout: wk });
+    assert.ok(
+      subtitle.endsWith(`· ${expectedLabels[wk.id]}`),
+      `Consolidated subtitle for ${wk.id} ("${subtitle}") must end with "· ${expectedLabels[wk.id]}"`
+    );
+    if (wk.workoutCategory === 'Strength') {
+      assert.ok(
+        subtitle.includes('est.'),
+        `Strength workout ${wk.id} subtitle ("${subtitle}") must include "est."`
+      );
+    }
+  }
+});
+
+test('computeTimerRemainingAndTotal calculates XX of YY for single round vs all rounds, countdown ticks, and step jumps', () => {
+  const wk = generateWorkout(sheetData, {
+    workoutCategory: 'HIIT',
+    bodyCategory: 'All',
+    equipment: 'Any',
+    workoutType: 'Timed Duos (40/20)'
+  });
+
+  // 1) Single round selected (Round 1): 10s countdown + 6 * (40s work + 20s rest) = 370s = 06:10
+  const round1Steps = buildStockTimerSequence(wk, { roundIndex: 0, includeAllRounds: false });
+  const r1Start = computeTimerRemainingAndTotal(round1Steps, 0, 10);
+  assert.equal(r1Start.totalSeconds, 370);
+  assert.equal(r1Start.remainingTotalSeconds, 370);
+  assert.equal(r1Start.label, '06:10 of 06:10');
+
+  // Tick 4 seconds into the 10s countdown -> 6s left in step 0 -> 366s remaining (06:06 of 06:10)
+  const r1Tick = computeTimerRemainingAndTotal(round1Steps, 0, 6);
+  assert.equal(r1Tick.remainingTotalSeconds, 366);
+  assert.equal(r1Tick.label, '06:06 of 06:10');
+
+  // Jump ahead to Step 3 (index 2, first 20s Rest after 10s countdown + 40s work) -> 370 - 50 = 320s remaining (05:20 of 06:10)
+  const r1Jump = computeTimerRemainingAndTotal(round1Steps, 2, 20);
+  assert.equal(r1Jump.remainingTotalSeconds, 320);
+  assert.equal(r1Jump.label, '05:20 of 06:10');
+
+  // 2) All rounds selected (All 4 Rounds): 10s countdown + 24 * (40s work + 20s rest) = 1450s = 24:10
+  const allRoundsSteps = buildStockTimerSequence(wk, { roundIndex: 0, includeAllRounds: true });
+  const allStart = computeTimerRemainingAndTotal(allRoundsSteps, 0, 10);
+  assert.equal(allStart.totalSeconds, 1450);
+  assert.equal(allStart.remainingTotalSeconds, 1450);
+  assert.equal(allStart.label, '24:10 of 24:10');
+
+  // Halfway through Step 2 (index 1, 20s remaining on first 40s work): 1450 - 10 - 20 = 1420s = 23:40 of 24:10
+  const allMid = computeTimerRemainingAndTotal(allRoundsSteps, 1, 20);
+  assert.equal(allMid.remainingTotalSeconds, 1420);
+  assert.equal(allMid.label, '23:40 of 24:10');
+
+  // Final step completed (0s remaining on last step): 00:00 of 24:10
+  const allDone = computeTimerRemainingAndTotal(allRoundsSteps, allRoundsSteps.length - 1, 0);
+  assert.equal(allDone.remainingTotalSeconds, 0);
+  assert.equal(allDone.label, '00:00 of 24:10');
 });
 
 console.log(`\n🎉 ALL ${passed} QA TEST SUITES PASSED SUCCESSFULLY!`);
