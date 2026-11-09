@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>91 Exercises &amp; Diagrams — Fact-Check &amp; QA Gallery</title>
-  <link rel="stylesheet" href="./src/styles.css?v=32" />
+  <link rel="icon" type="image/svg+xml" href="./diagrams/app-icon.svg?v=33" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=33" />
+  <link rel="stylesheet" href="./src/styles.css?v=33" />
   <style>
     .qa-shell {
       max-width: 1180px;
@@ -107,9 +109,9 @@
   </div>
 
   <script type="module">
-    import { DataService } from './src/services/dataService.js?v=32';
-    import { SPECIFIC_MUSCLES } from './src/engine/muscleLoadAnalyzer.js?v=32';
-    import { filterExercisesByMuscleAndQuery } from './src/engine/workoutEngine.js?v=32';
+    import { DataService } from './src/services/dataService.js?v=33';
+    import { SPECIFIC_MUSCLES } from './src/engine/muscleLoadAnalyzer.js?v=33';
+    import { filterExercisesByMuscleAndQuery } from './src/engine/workoutEngine.js?v=33';
 
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
       const hadController = !!navigator.serviceWorker.controller;
@@ -119,11 +121,11 @@
         refreshing = true;
         window.location.reload();
       });
-      navigator.serviceWorker.register('./sw.js?v=32', { updateViaCache: 'none' }).then(reg => reg.update()).catch(() => {});
+      navigator.serviceWorker.register('./sw.js?v=33', { updateViaCache: 'none' }).then(reg => reg.update()).catch(() => {});
     }
 
     const ds = new DataService();
-    await ds.init('./data/sheet-data.json?v=32', './data/enrichments.json?v=32');
+    await ds.init('./data/sheet-data.json?v=33', './data/enrichments.json?v=33');
 
     const totalExCount = ds.sheetData.exercises.length;
     const totalWkCount = ds.sheetData.workouts.length;

@@ -16,6 +16,7 @@ function startLocalStaticServer(port = 8080) {
     '.json': 'application/json',
     '.webmanifest': 'application/manifest+json',
     '.svg': 'image/svg+xml',
+    '.png': 'image/png',
     '.m4a': 'audio/mp4',
     '.wav': 'audio/wav'
   };
@@ -1687,6 +1688,28 @@ async function runBrowserCDPTests(wsUrl) {
           const viewportFitCover = viewportContent.includes('viewport-fit=cover');
           const manifestJson = await fetch('./manifest.json').then(r => r.json());
           const manifestStandalone = manifestJson?.display === 'standalone';
+          const touchIconHref = document.querySelector('link[rel="apple-touch-icon"]')?.getAttribute('href') || '';
+          const precomposedHref = document.querySelector('link[rel="apple-touch-icon-precomposed"]')?.getAttribute('href') || '';
+          const medallionImg = document.querySelector('.brand-medallion');
+          const checkImgSize = src =>
+            new Promise(resolve => {
+              const img = new Image();
+              img.onload = () => resolve({ ok: true, w: img.naturalWidth, h: img.naturalHeight });
+              img.onerror = () => resolve({ ok: false, w: 0, h: 0 });
+              img.src = src;
+            });
+          const [touch512, touch180, touchPre] = await Promise.all([
+            checkImgSize('./apple-touch-icon.png'),
+            checkImgSize('./apple-touch-icon-180x180.png'),
+            checkImgSize('./apple-touch-icon-precomposed.png')
+          ]);
+          const safariTouchIconsValid =
+            touchIconHref.includes('.png') &&
+            precomposedHref.includes('.png') &&
+            touch512.ok && touch512.w === 512 && touch512.h === 512 &&
+            touch180.ok && touch180.w === 180 && touch180.h === 180 &&
+            touchPre.ok && touchPre.w === 512 && touchPre.h === 512 &&
+            !!medallionImg && medallionImg.complete && medallionImg.naturalWidth > 0;
 
           // Scroll down 100px and verify sticky .top-nav stays clear of 59px Dynamic Island
           window.scrollTo(0, 100);
@@ -1739,6 +1762,7 @@ async function runBrowserCDPTests(wsUrl) {
             appleCapable,
             viewportFitCover,
             manifestStandalone,
+            safariTouchIconsValid,
             navigatorStandalone: navigator.standalone === true,
             settingsBtnBelowDynamicIsland: settingsBtnRect.top >= 59 && topNavRect.height >= 85,
             timerHeaderBelowDynamicIsland: timerTopBarRect.top >= 59,
@@ -1810,6 +1834,7 @@ async function runBrowserCDPTests(wsUrl) {
           !safariShortcutPrep.appleCapable ||
           !safariShortcutPrep.viewportFitCover ||
           !safariShortcutPrep.manifestStandalone ||
+          !safariShortcutPrep.safariTouchIconsValid ||
           !safariShortcutPrep.navigatorStandalone ||
           !safariShortcutPrep.settingsBtnBelowDynamicIsland ||
           !safariShortcutPrep.timerHeaderBelowDynamicIsland ||

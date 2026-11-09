@@ -1,4 +1,4 @@
-const CACHE_NAME = 'joshal-workout-pwa-v32';
+const CACHE_NAME = 'joshal-workout-pwa-v33';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -14,7 +14,10 @@ const CORE_ASSETS = [
   './data/enrichments.json',
   './data/speech-pack.json',
   './data/speech-pack.m4a',
-  './diagrams/app-icon.svg'
+  './diagrams/app-icon.svg',
+  './diagrams/apple-touch-icon.png',
+  './apple-touch-icon.png',
+  './apple-touch-icon-180x180.png'
 ];
 
 self.addEventListener('install', event => {

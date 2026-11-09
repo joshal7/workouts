@@ -1,18 +1,318 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="iconBg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0f172a" />
-      <stop offset="50%" stop-color="#1e3a8a" />
-      <stop offset="100%" stop-color="#0284c7" />
+    <!-- Deep Stylized Cobalt-to-Obsidian Base (49ers-inspired studio tonal curve) -->
+    <linearGradient id="blueBgBase" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1D5CE0"/>
+      <stop offset="46%" stop-color="#113B99"/>
+      <stop offset="80%" stop-color="#071B4D"/>
+      <stop offset="100%" stop-color="#020716"/>
     </linearGradient>
+
+    <!-- Luminous Center-Top Electric Blue Spotlight -->
+    <radialGradient id="blueSpotlight" cx="50%" cy="41%" r="58%" fx="50%" fy="35%">
+      <stop offset="0%" stop-color="#4DA0FF" stop-opacity="0.68"/>
+      <stop offset="46%" stop-color="#2563EB" stop-opacity="0.38"/>
+      <stop offset="82%" stop-color="#0A2463" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#020612" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Cool Ice-Steel Ambient Glow Behind Dumbbell -->
+    <radialGradient id="iceAmbient" cx="50%" cy="42%" r="45%">
+      <stop offset="0%" stop-color="#E0F2FE" stop-opacity="0.20"/>
+      <stop offset="65%" stop-color="#60A5FA" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Smooth Radial Edge Vignette Fading All Edges & Corners to Black -->
+    <radialGradient id="blackEdgeVignette" cx="50%" cy="48%" r="69%">
+      <stop offset="48%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="76%" stop-color="#020611" stop-opacity="0.54"/>
+      <stop offset="92%" stop-color="#000000" stop-opacity="0.84"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.97"/>
+    </radialGradient>
+
+    <!-- Subtle Perimeter Black Feathering (visible inside iOS superellipse edges too) -->
+    <linearGradient id="topEdgeFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.62"/>
+      <stop offset="14%" stop-color="#000000" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="bottomEdgeFade" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.76"/>
+      <stop offset="18%" stop-color="#000000" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="leftEdgeFade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.68"/>
+      <stop offset="15%" stop-color="#000000" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="rightEdgeFade" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.68"/>
+      <stop offset="15%" stop-color="#000000" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Stylized Woven Carbon / Precision Gym-Knurl Texture -->
+    <pattern id="athleticKnurlTex" width="16" height="16" patternUnits="userSpaceOnUse">
+      <!-- Subtle 3D Woven Diamond Facets -->
+      <polygon points="8,0 16,8 8,16 0,8" fill="#000818" fill-opacity="0.16"/>
+      <polygon points="8,1.5 14.5,8 8,8 1.5,8" fill="#93C5FD" fill-opacity="0.045"/>
+      <path d="M 0 8 L 8 0 L 16 8 L 8 16 Z" fill="none" stroke="#00040D" stroke-opacity="0.24" stroke-width="1.1"/>
+      <path d="M 0 7 L 7 0 M 9 0 L 16 7" fill="none" stroke="#BAE6FD" stroke-opacity="0.075" stroke-width="0.8"/>
+    </pattern>
+
+    <!-- Radial Mask so Stylized Texture Glows in Blue Zone & Fades into Black Perimeter -->
+    <radialGradient id="texMaskGrad" cx="50%" cy="45%" r="64%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.88"/>
+      <stop offset="56%" stop-color="#FFFFFF" stop-opacity="0.68"/>
+      <stop offset="86%" stop-color="#FFFFFF" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <mask id="texFadeMask">
+      <rect width="512" height="512" fill="url(#texMaskGrad)"/>
+    </mask>
+
+    <!-- Diagonal Stylized Brushed Light Band Gradients (feathered perpendicular to -45deg beam) -->
+    <linearGradient id="diagSheenBand1" gradientUnits="userSpaceOnUse" x1="50" y1="50" x2="145" y2="145">
+      <stop offset="0%" stop-color="#60A5FA" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#BAE6FD" stop-opacity="0.085"/>
+      <stop offset="100%" stop-color="#60A5FA" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="diagSheenBand2" gradientUnits="userSpaceOnUse" x1="300" y1="300" x2="395" y2="395">
+      <stop offset="0%" stop-color="#60A5FA" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#93C5FD" stop-opacity="0.065"/>
+      <stop offset="100%" stop-color="#60A5FA" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Top Specular Studio Glass Highlight -->
+    <linearGradient id="glassSheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.14"/>
+      <stop offset="40%" stop-color="#93C5FD" stop-opacity="0.03"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Dumbbell Outer White-Platinum Keyline Rim Gradient -->
+    <linearGradient id="outerRimGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="52%" stop-color="#E2E8F0"/>
+      <stop offset="100%" stop-color="#93C5FD"/>
+    </linearGradient>
+
+    <!-- Inner Heavy Plate Brushed Platinum-Titanium Gradient -->
+    <linearGradient id="plateInnerGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="16%" stop-color="#F1F5F9"/>
+      <stop offset="44%" stop-color="#CBD5E1"/>
+      <stop offset="70%" stop-color="#64748B"/>
+      <stop offset="89%" stop-color="#293548"/>
+      <stop offset="100%" stop-color="#475569"/>
+    </linearGradient>
+
+    <!-- Outer Secondary Plate Brushed Steel Gradient -->
+    <linearGradient id="plateOuterGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F8FAFC"/>
+      <stop offset="18%" stop-color="#E2E8F0"/>
+      <stop offset="48%" stop-color="#94A3B8"/>
+      <stop offset="78%" stop-color="#475569"/>
+      <stop offset="100%" stop-color="#1E293B"/>
+    </linearGradient>
+
+    <!-- End-Cap & Collar Chrome Gradient -->
+    <linearGradient id="hubCapGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="28%" stop-color="#E2E8F0"/>
+      <stop offset="68%" stop-color="#64748B"/>
+      <stop offset="90%" stop-color="#1E293B"/>
+      <stop offset="100%" stop-color="#475569"/>
+    </linearGradient>
+
+    <!-- Cylindrical Chrome Handle Bar Base Gradient -->
+    <linearGradient id="handleShaftGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#CBD5E1"/>
+      <stop offset="22%" stop-color="#FFFFFF"/>
+      <stop offset="48%" stop-color="#CBD5E1"/>
+      <stop offset="78%" stop-color="#475569"/>
+      <stop offset="93%" stop-color="#1E293B"/>
+      <stop offset="100%" stop-color="#60A5FA"/>
+    </linearGradient>
+
+    <!-- Cylindrical Shading Overlay for Knurled Grip -->
+    <linearGradient id="knurlCylinderShade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0F172A" stop-opacity="0.32"/>
+      <stop offset="22%" stop-color="#FFFFFF" stop-opacity="0.52"/>
+      <stop offset="48%" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="82%" stop-color="#0F172A" stop-opacity="0.48"/>
+      <stop offset="100%" stop-color="#38BDF8" stop-opacity="0.22"/>
+    </linearGradient>
+
+    <!-- Fine CNC Diamond Knurling Pattern -->
+    <pattern id="barKnurl" width="6" height="6" patternUnits="userSpaceOnUse">
+      <path d="M 0 3 L 3 0 L 6 3 L 3 6 Z" fill="none" stroke="#1E293B" stroke-opacity="0.46" stroke-width="0.9"/>
+      <path d="M 0 2.2 L 3 -0.8 L 6 2.2" fill="none" stroke="#FFFFFF" stroke-opacity="0.38" stroke-width="0.65"/>
+    </pattern>
+
+    <!-- Electric Blue Anodized Power Groove Gradient -->
+    <linearGradient id="blueAccentGroove" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#BAE6FD"/>
+      <stop offset="24%" stop-color="#3B82F6"/>
+      <stop offset="68%" stop-color="#1D4ED8"/>
+      <stop offset="90%" stop-color="#1E40AF"/>
+      <stop offset="100%" stop-color="#60A5FA"/>
+    </linearGradient>
+
+    <!-- Flanking Metallic Ice-Blue Accent Rule Gradients -->
+    <linearGradient id="blueRuleLeft" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3B82F6" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#BAE6FD" stop-opacity="0.92"/>
+    </linearGradient>
+    <linearGradient id="blueRuleRight" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#BAE6FD" stop-opacity="0.92"/>
+      <stop offset="100%" stop-color="#3B82F6" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Studio Drop Shadow for Stylized Dumbbell -->
+    <filter id="dumbbellShadow" x="-18%" y="-22%" width="136%" height="155%">
+      <feDropShadow dx="0" dy="14" stdDeviation="15" flood-color="#00030A" flood-opacity="0.80"/>
+      <feDropShadow dx="0" dy="3.5" stdDeviation="3.5" flood-color="#000000" flood-opacity="0.58"/>
+    </filter>
+
+    <!-- Soft Shadow for JOSHAL Wordmark -->
+    <filter id="wordmarkShadow" x="-20%" y="-30%" width="140%" height="170%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#00030A" flood-opacity="0.76"/>
+    </filter>
+
+    <clipPath id="iconClip">
+      <rect width="512" height="512" rx="112"/>
+    </clipPath>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#iconBg)" />
-  <g transform="translate(0, 6)" stroke="#facc15" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" fill="none">
-    <line x1="126" y1="256" x2="386" y2="256" />
-    <rect x="86" y="168" width="40" height="176" rx="16" fill="#facc15" stroke="none" />
-    <rect x="44" y="198" width="28" height="116" rx="12" fill="#f97316" stroke="none" />
-    <rect x="386" y="168" width="40" height="176" rx="16" fill="#facc15" stroke="none" />
-    <rect x="440" y="198" width="28" height="116" rx="12" fill="#f97316" stroke="none" />
+
+  <g clip-path="url(#iconClip)">
+    <!-- 1. Blue-to-Black Studio Background + Stylized Athletic Texture -->
+    <rect width="512" height="512" fill="url(#blueBgBase)"/>
+    <rect width="512" height="512" fill="url(#blueSpotlight)"/>
+    <rect width="512" height="512" fill="url(#iceAmbient)"/>
+
+    <!-- Stylized Woven Carbon / Knurl Texture Layer -->
+    <rect width="512" height="512" fill="url(#athleticKnurlTex)" mask="url(#texFadeMask)"/>
+
+    <!-- Dynamic Diagonal Brushed Studio Light Sheen & Crisp Stadium Rays -->
+    <polygon points="-120,220 220,-120 355,-120 -120,355" fill="url(#diagSheenBand1)"/>
+    <polygon points="130,600 600,130 600,265 265,600" fill="url(#diagSheenBand2)"/>
+    <g stroke="#BAE6FD" stroke-opacity="0.055" stroke-width="1.5">
+      <line x1="-60" y1="130" x2="210" y2="-40"/>
+      <line x1="-60" y1="215" x2="345" y2="-40"/>
+      <line x1="-60" y1="300" x2="480" y2="-40"/>
+      <line x1="-40" y1="385" x2="572" y2="0"/>
+      <line x1="50" y1="540" x2="572" y2="210"/>
+      <line x1="185" y1="545" x2="572" y2="300"/>
+      <line x1="320" y1="550" x2="572" y2="390"/>
+    </g>
+
+    <!-- Top Specular Studio Glass Arc -->
+    <ellipse cx="256" cy="-28" rx="340" ry="172" fill="url(#glassSheen)"/>
+
+    <!-- Smooth Black Edge & Corner Vignettes -->
+    <rect width="512" height="512" fill="url(#blackEdgeVignette)"/>
+    <rect width="512" height="512" fill="url(#topEdgeFade)"/>
+    <rect width="512" height="512" fill="url(#bottomEdgeFade)"/>
+    <rect width="512" height="512" fill="url(#leftEdgeFade)"/>
+    <rect width="512" height="512" fill="url(#rightEdgeFade)"/>
+
+    <!-- 2. Stylized 3D Sculpted Dumbbell Emblem (Centered at 256, 214) -->
+    <g filter="url(#dumbbellShadow)">
+      <!-- Single Continuous Chamfered Silhouette Path for Clean Outer White-Platinum Keyline Rim -->
+      <path id="dumbbellSilhouette" d="
+        M 135 116 L 170 116 L 180 126 L 180 183 L 196 183 L 201 192 L 311 192 L 316 183 L 332 183 L 332 126 L 342 116 L 377 116 L 389 129 L 389 142 L 422 142 L 433 154 L 433 178 L 448 178 L 456 187 L 456 241 L 448 250 L 433 250 L 433 274 L 422 286 L 389 286 L 389 299 L 377 312 L 342 312 L 332 302 L 332 245 L 316 245 L 311 236 L 201 236 L 196 245 L 180 245 L 180 302 L 170 312 L 135 312 L 123 299 L 123 286 L 90 286 L 79 274 L 79 250 L 64 250 L 56 241 L 56 187 L 64 178 L 79 178 L 79 154 L 90 142 L 123 142 L 123 129 Z
+      " fill="url(#outerRimGrad)" stroke="url(#outerRimGrad)" stroke-width="15" stroke-linejoin="round"/>
+
+      <!-- Bold Black Structural Casing -->
+      <path d="
+        M 135 116 L 170 116 L 180 126 L 180 183 L 196 183 L 201 192 L 311 192 L 316 183 L 332 183 L 332 126 L 342 116 L 377 116 L 389 129 L 389 142 L 422 142 L 433 154 L 433 178 L 448 178 L 456 187 L 456 241 L 448 250 L 433 250 L 433 274 L 422 286 L 389 286 L 389 299 L 377 312 L 342 312 L 332 302 L 332 245 L 316 245 L 311 236 L 201 236 L 196 245 L 180 245 L 180 302 L 170 312 L 135 312 L 123 299 L 123 286 L 90 286 L 79 274 L 79 250 L 64 250 L 56 241 L 56 187 L 64 178 L 79 178 L 79 154 L 90 142 L 123 142 L 123 129 Z
+      " fill="#000000" stroke="#000000" stroke-width="8.5" stroke-linejoin="round"/>
+
+      <!-- Center Ergonomic Chrome Handle + CNC Diamond Knurl -->
+      <rect x="200" y="194" width="112" height="40" fill="url(#handleShaftGrad)"/>
+      <rect x="209" y="194" width="94" height="40" fill="url(#barKnurl)"/>
+      <rect x="209" y="194" width="94" height="40" fill="url(#knurlCylinderShade)"/>
+      <!-- Crisp Specular Bar Streak -->
+      <rect x="202" y="199" width="108" height="4.5" rx="2.2" fill="#FFFFFF" fill-opacity="0.62"/>
+      <!-- Machined Knurl Ring Grooves -->
+      <rect x="207" y="194" width="2.8" height="40" fill="#090F1C"/>
+      <rect x="302.2" y="194" width="2.8" height="40" fill="#090F1C"/>
+
+      <!-- Flared Chrome Handle Collars -->
+      <polygon points="183,185.5 195,185.5 199,193 199,235 195,242.5 183,242.5" fill="url(#hubCapGrad)"/>
+      <polygon points="183,185.5 195,185.5 199,193 183,193" fill="#FFFFFF" fill-opacity="0.65"/>
+      <polygon points="317,185.5 329,185.5 329,242.5 317,242.5 313,235 313,193" fill="url(#hubCapGrad)"/>
+      <polygon points="317,185.5 329,185.5 329,193 313,193" fill="#FFFFFF" fill-opacity="0.65"/>
+
+      <!-- LEFT & RIGHT END-CAP LOCKING HUBS -->
+      <polygon points="65,180.5 76.5,180.5 76.5,247.5 65,247.5 58.5,240 58.5,188" fill="url(#hubCapGrad)"/>
+      <polygon points="65,180.5 76.5,180.5 76.5,190 58.5,190 58.5,188" fill="#FFFFFF" fill-opacity="0.72"/>
+      <polygon points="58.5,238 76.5,238 76.5,247.5 65,247.5 58.5,240" fill="#0F172A" fill-opacity="0.55"/>
+
+      <polygon points="435.5,180.5 447,180.5 453.5,188 453.5,240 447,247.5 435.5,247.5" fill="url(#hubCapGrad)"/>
+      <polygon points="435.5,180.5 447,180.5 453.5,188 453.5,190 435.5,190" fill="#FFFFFF" fill-opacity="0.72"/>
+      <polygon points="435.5,238 453.5,238 453.5,240 447,247.5 435.5,247.5" fill="#0F172A" fill-opacity="0.55"/>
+
+      <!-- LEFT OUTER SECONDARY PLATE -->
+      <polygon points="91,144.5 119.5,144.5 119.5,283.5 91,283.5 81.5,273 81.5,155" fill="url(#plateOuterGrad)"/>
+      <!-- Angled 3D Top Bevel Highlight -->
+      <polygon points="91,144.5 119.5,144.5 119.5,157 86,157 81.5,155" fill="#FFFFFF" fill-opacity="0.78"/>
+      <!-- Inner Vertical Rim Highlight -->
+      <rect x="81.5" y="155" width="3" height="118" fill="#FFFFFF" fill-opacity="0.28"/>
+      <!-- Angled 3D Bottom Shadow Bevel -->
+      <polygon points="86,271 119.5,271 119.5,283.5 91,283.5 81.5,273" fill="#0F172A" fill-opacity="0.58"/>
+
+      <!-- RIGHT OUTER SECONDARY PLATE -->
+      <polygon points="392.5,144.5 421,144.5 430.5,155 430.5,273 421,283.5 392.5,283.5" fill="url(#plateOuterGrad)"/>
+      <!-- Angled 3D Top Bevel Highlight -->
+      <polygon points="392.5,144.5 421,144.5 430.5,155 426,157 392.5,157" fill="#FFFFFF" fill-opacity="0.78"/>
+      <!-- Inner Vertical Rim Highlight -->
+      <rect x="392.5" y="144.5" width="3" height="139" fill="#FFFFFF" fill-opacity="0.24"/>
+      <!-- Angled 3D Bottom Shadow Bevel -->
+      <polygon points="392.5,271 426,271 430.5,273 421,283.5 392.5,283.5" fill="#0F172A" fill-opacity="0.58"/>
+
+      <!-- LEFT INNER HEAVY PLATE -->
+      <polygon points="136,118.5 169,118.5 177.5,127.5 177.5,300.5 169,309.5 136,309.5 125.5,298 125.5,130" fill="url(#plateInnerGrad)"/>
+      <!-- Sculpted 3D Top Bevel Facet -->
+      <polygon points="136,118.5 169,118.5 177.5,127.5 173,134 130,134 125.5,130" fill="#FFFFFF" fill-opacity="0.88"/>
+      <!-- Crisp Left Chamfer Specular Edge -->
+      <polygon points="125.5,130 130,134 130,294 125.5,298" fill="#FFFFFF" fill-opacity="0.34"/>
+      <!-- Sculpted 3D Bottom Shadow Bevel -->
+      <polygon points="130,294 173,294 177.5,300.5 169,309.5 136,309.5 125.5,298" fill="#0F172A" fill-opacity="0.56"/>
+      <!-- Stylized Electric-Blue Anodized Power Groove -->
+      <rect x="145.5" y="141" width="13" height="146" rx="6.5" fill="#071126" stroke="#FFFFFF" stroke-opacity="0.38" stroke-width="1"/>
+      <rect x="148" y="143.5" width="8" height="141" rx="4" fill="url(#blueAccentGroove)"/>
+      <rect x="149.8" y="148" width="2.4" height="58" rx="1.2" fill="#E0F2FE" fill-opacity="0.86"/>
+
+      <!-- RIGHT INNER HEAVY PLATE -->
+      <polygon points="343,118.5 376,118.5 386.5,130 386.5,298 376,309.5 343,309.5 334.5,300.5 334.5,127.5" fill="url(#plateInnerGrad)"/>
+      <!-- Sculpted 3D Top Bevel Facet -->
+      <polygon points="343,118.5 376,118.5 386.5,130 382,134 339,134 334.5,127.5" fill="#FFFFFF" fill-opacity="0.88"/>
+      <!-- Crisp Left Chamfer Specular Edge -->
+      <polygon points="334.5,127.5 339,134 339,294 334.5,300.5" fill="#FFFFFF" fill-opacity="0.34"/>
+      <!-- Sculpted 3D Bottom Shadow Bevel -->
+      <polygon points="339,294 382,294 386.5,298 376,309.5 343,309.5 334.5,300.5" fill="#0F172A" fill-opacity="0.56"/>
+      <!-- Stylized Electric-Blue Anodized Power Groove -->
+      <rect x="353.5" y="141" width="13" height="146" rx="6.5" fill="#071126" stroke="#FFFFFF" stroke-opacity="0.38" stroke-width="1"/>
+      <rect x="356" y="143.5" width="8" height="141" rx="4" fill="url(#blueAccentGroove)"/>
+      <rect x="357.8" y="148" width="2.4" height="58" rx="1.2" fill="#E0F2FE" fill-opacity="0.86"/>
+    </g>
+
+    <!-- 3. Small "JOSHAL" Caps Lockup Beneath (49ers-Inspired Proportions & 3D Extrusion) -->
+    <g filter="url(#wordmarkShadow)">
+      <!-- Symmetrical Tapered Ice-Blue Metallic Flanking Lines & Dots -->
+      <rect x="62" y="388.5" width="58" height="2" rx="1" fill="url(#blueRuleLeft)"/>
+      <rect x="392" y="388.5" width="58" height="2" rx="1" fill="url(#blueRuleRight)"/>
+      <circle cx="127" cy="389.5" r="2.3" fill="#BAE6FD" opacity="0.92"/>
+      <circle cx="385" cy="389.5" r="2.3" fill="#BAE6FD" opacity="0.92"/>
+
+      <!-- Wide Athletic Caps Proportions Matching 49ers JOSHAL Lockup -->
+      <g transform="translate(256.5, 402) scale(1.15, 1)">
+        <!-- 3D Black Block Extrusion -->
+        <text x="3.2" y="3.5" text-anchor="middle" font-family="Georgia, 'Charter', 'Times New Roman', serif" font-weight="900" font-size="37" letter-spacing="5" fill="#000000" stroke="#000000" stroke-width="3.2" stroke-linejoin="miter">JOSHAL</text>
+        <text x="1.6" y="1.8" text-anchor="middle" font-family="Georgia, 'Charter', 'Times New Roman', serif" font-weight="900" font-size="37" letter-spacing="5" fill="#000000" stroke="#000000" stroke-width="3.2" stroke-linejoin="miter">JOSHAL</text>
+        <!-- Crisp Black Outline + Pure White Face -->
+        <text x="0" y="0" text-anchor="middle" font-family="Georgia, 'Charter', 'Times New Roman', serif" font-weight="900" font-size="37" letter-spacing="5" fill="#FFFFFF" stroke="#000000" stroke-width="2.8" stroke-linejoin="miter" paint-order="stroke fill">JOSHAL</text>
+      </g>
+    </g>
   </g>
-  <path d="M 272 118 L 210 250 L 266 250 L 238 394 L 318 242 L 260 242 Z" fill="#38bdf8" stroke="#0f172a" stroke-width="10" stroke-linejoin="round" />
 </svg>
