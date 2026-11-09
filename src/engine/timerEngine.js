@@ -1164,16 +1164,16 @@ export function getTransitionPulseGainScale({ isDucked = false, consecutiveDucke
 /**
  * Build the speech & transition-ducking plan for `steps[stepIndex]`:
  * - Returns `hasSpeech: false` if `spokenExerciseNames` is disabled, there is no next step,
- *   or `nextStep.type !== 'work'` (so an exercise before Rest or before a 10s Transition does NOT count down).
+ *   or `nextStep.type` is neither `'work'` nor `'rest'` (so an exercise before a 10s Transition does NOT count down).
  * - Mode `'transition-ducked'`: For 10s yellow Transitions / Prep Countdowns (`shouldPlaySteadyTransitionPulse(step)`):
  *   1) First transition ding plays at full regular volume (at `duration * 1000` ms remaining)
  *   2) Repeated transition dings fade to low background sound while "[Exercise Name]" is spoken
  *   3) Repeated transition dings resume at regular volume
  *   4) At 3, 2, 1 seconds before transition ends, repeated transition dings fade to low background sound for "3, 2, 1"
  *   5) Next exercise starts with its normal full-volume 'work-start' ding
- * - Mode `'pre-transition-lead'`: For standard steps preceding an exercise (e.g. Rest -> Work, or Work -> Work):
- *   Starts at `3s + duration("[Exercise Name] in")` before the transition, saying "[Exercise Name] in",
- *   then "3" (at 3s), "2" (at 2s), "1" (at 1s), followed by the existing 'work-start' ding.
+ * - Mode `'pre-transition-lead'`: For standard steps preceding an exercise or rest block (e.g. Work -> Rest, Rest -> Work, or Work -> Work):
+ *   Starts at `3s + duration("[Exercise Name | Rest] in")` before the transition, saying "[Exercise Name | Rest] in",
+ *   then "3" (at 3s), "2" (at 2s), "1" (at 1s), followed by the existing 'work-start' or 'rest-start' ding.
  */
 export function buildStepSpeechPlan(
   steps,
@@ -1192,11 +1192,13 @@ export function buildStepSpeechPlan(
   if (!spokenExerciseNames || !Array.isArray(steps)) return emptyPlan;
   const step = steps[stepIndex];
   const nextStep = steps[stepIndex + 1];
-  if (!step || !nextStep || nextStep.type !== 'work') {
+  if (!step || !nextStep || (nextStep.type !== 'work' && nextStep.type !== 'rest')) {
     return emptyPlan;
   }
 
-  const spokenName = formatExerciseNameForSpeech(nextStep.exerciseName || 'Work');
+  const rawTargetName =
+    nextStep.type === 'rest' ? 'Rest' : nextStep.exerciseName || 'Work';
+  const spokenName = formatExerciseNameForSpeech(rawTargetName);
   if (!spokenName) return emptyPlan;
 
   const stepDurationMs = Math.max(1, Number(step.duration) || 1) * 1000;

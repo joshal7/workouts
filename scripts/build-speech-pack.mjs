@@ -280,7 +280,7 @@ function main() {
     const formatted = formatExerciseNameForSpeech(item.label);
     if (formatted) baseNames.add(formatted);
   }
-  for (const extra of ['Work', 'Curls', 'Bench Press', 'Squats', 'Push-Ups', 'Plank', 'Burpees']) {
+  for (const extra of ['Work', 'Rest', 'Curls', 'Bench Press', 'Squats', 'Push-Ups', 'Plank', 'Burpees']) {
     baseNames.add(formatExerciseNameForSpeech(extra));
   }
 

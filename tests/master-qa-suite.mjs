@@ -1374,14 +1374,45 @@ async function runBrowserCDPTests(wsUrl) {
           );
           document.getElementById('closeTimerModalBtn').click();
 
-          // 3) Verify Standard Rest -> Work lead ("[Exercise] in 3, 2, 1" -> [Ding]) in Timed Duos (40/20)
+          // 3) Verify Standard Work -> Rest lead ("Rest in 3, 2, 1" -> [rest-start ding])
+          //    AND Rest -> Work lead ("[Exercise] in 3, 2, 1" -> [work-start ding]) in Timed Duos (40/20)
           typeSelect.value = 'Timed Duos (40/20)';
           typeSelect.dispatchEvent(new Event('change'));
           document.getElementById('generateWorkoutBtn').click();
           document.querySelector('[data-action="open-round-timer"][data-round-index="0"]').click();
-          // Step 2 = 20s blue Rest -> Step 3 = Work
+
+          // Step 1 = 40s Work -> Step 2 = 20s blue Rest -> Step 3 = 40s Work
           ts.steps[3].exerciseName = 'Bench Press';
-          document.querySelector('[data-action="jump-timer-step"][data-step-index="2"]').click();
+          document.querySelector('[data-action="jump-timer-step"][data-step-index="1"]').click();
+          ts.soundLog = [];
+          ts.speechLog = [];
+          ts.remainingSeconds = 4;
+          ts.remainingMs = 3950;
+          document.getElementById('timerStartPauseBtn').click();
+          await new Promise(r => setTimeout(r, 150)); // Crosses "Rest in" lead time
+          ts.remainingSeconds = 4;
+          ts.remainingMs = 3030;
+          await new Promise(r => setTimeout(r, 90));
+          ts.remainingSeconds = 3;
+          ts.remainingMs = 2030;
+          await new Promise(r => setTimeout(r, 90));
+          ts.remainingSeconds = 2;
+          ts.remainingMs = 1030;
+          await new Promise(r => setTimeout(r, 90));
+          ts.remainingSeconds = 1;
+          ts.remainingMs = 60;
+          await new Promise(r => setTimeout(r, 130)); // Advances Step 1 (Work) -> Step 2 (Rest): plays 'rest-start' chime!
+          document.getElementById('timerStartPauseBtn').click(); // Pause on Step 2 (Rest)
+
+          const duosWorkToRestSpeechTexts = ts.speechLog.filter(s => s.stepIndex === 1).map(s => s.text);
+          const duosRestStartDing = ts.soundLog.find(
+            s => s.stepIndex === 2 && s.cueType === 'rest-start'
+          );
+          const duosStep2UsedWorkDing = ts.soundLog.some(
+            s => s.stepIndex === 2 && s.cueType === 'work-start'
+          );
+
+          // Now verify Step 2 (20s blue Rest) -> Step 3 (40s Work: Bench Press)
           ts.soundLog = [];
           ts.speechLog = [];
           ts.remainingSeconds = 4;
@@ -1449,6 +1480,9 @@ async function runBrowserCDPTests(wsUrl) {
             count2DuckedDing,
             count1DuckedDing,
             benchWorkStartDing,
+            duosWorkToRestSpeechTexts,
+            duosRestStartDing,
+            duosStep2UsedWorkDing,
             duosRestSpeechTexts,
             duosWorkStartDing,
             offChecked,
@@ -1475,6 +1509,10 @@ async function runBrowserCDPTests(wsUrl) {
           !speechCheck.count1DuckedDing?.ducked ||
           speechCheck.benchWorkStartDing?.gainScale !== 1 ||
           speechCheck.benchWorkStartDing?.ducked !== false ||
+          JSON.stringify(speechCheck.duosWorkToRestSpeechTexts) !== JSON.stringify(['Rest in', '3', '2', '1']) ||
+          speechCheck.duosRestStartDing?.gainScale !== 1 ||
+          speechCheck.duosRestStartDing?.ducked !== false ||
+          speechCheck.duosStep2UsedWorkDing !== false ||
           JSON.stringify(speechCheck.duosRestSpeechTexts) !== JSON.stringify(['Bench Press in', '3', '2', '1']) ||
           speechCheck.duosWorkStartDing?.gainScale !== 1 ||
           !speechCheck.offChecked ||
@@ -1487,7 +1525,7 @@ async function runBrowserCDPTests(wsUrl) {
           throw new Error('Spoken Exercise Names E2E check failed: ' + JSON.stringify(speechCheck));
         }
         console.log(
-          '  ✅ PASS: Spoken Exercise Names verified (Settings ON default, Curls->10s Transition->Bench Press ducking, Duos "[Exercise] in 3, 2, 1", and Off toggle)'
+          '  ✅ PASS: Spoken Exercise Names verified (Settings ON default, Curls->10s Transition->Bench Press ducking, Duos "Rest in 3, 2, 1" + rest-start chime & "[Exercise] in 3, 2, 1" + work-start ding, and Off toggle)'
         );
 
         console.log('\n--- 11c. App-Switch Continuity, Pure Ambient WebAudio & Burst Auto-Suspend (Dings + Spoken Words) E2E ---');

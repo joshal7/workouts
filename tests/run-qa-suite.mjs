@@ -1959,12 +1959,27 @@ test('Dynamic speech lead time scales with exercise name duration ("[Exercise] i
   assert.ok(longLead > benchLead + 1200, `Expected long exercise lead (${longLead}ms) >> Bench Press lead (${benchLead}ms)`);
 });
 
-test('Standard Rest->Work & Work->Work announce "[Exercise] in 3, 2, 1" while Work->Rest stays silent', () => {
+test('Standard Work->Rest announces "Rest in 3, 2, 1" (+ rest-start chime) and Rest->Work & Work->Work announce "[Exercise] in 3, 2, 1" (+ work-start ding)', () => {
   const wkDuos = generateWorkout(sheetData, { workoutType: 'Timed Duos (40/20)', equipment: 'Any' });
   const duosSeq = buildStockTimerSequence(wkDuos, { roundIndex: 0 });
   // Step 0 = 10s Countdown, Step 1 = 40s Ex1 (Work), Step 2 = 20s Rest, Step 3 = 40s Ex2 (Work)
   const workToRestPlan = buildStepSpeechPlan(duosSeq, 1, { spokenExerciseNames: true });
-  assert.equal(workToRestPlan.hasSpeech, false, 'Work -> Rest must NOT announce "Rest in 3, 2, 1"');
+  assert.equal(workToRestPlan.hasSpeech, true, 'Work -> Rest must announce "Rest in 3, 2, 1"');
+  assert.equal(workToRestPlan.mode, 'pre-transition-lead');
+  assert.equal(workToRestPlan.spokenExerciseName, 'Rest');
+  assert.deepEqual(
+    workToRestPlan.cues.map(c => c.text),
+    ['Rest in', '3', '2', '1']
+  );
+  assert.equal(workToRestPlan.cues[0].triggerRemainingMs, computePreTransitionSpeechLeadMs('Rest'));
+  assert.equal(workToRestPlan.cues[1].triggerRemainingMs, 3000);
+  assert.equal(workToRestPlan.cues[2].triggerRemainingMs, 2000);
+  assert.equal(workToRestPlan.cues[3].triggerRemainingMs, 1000);
+  assert.equal(
+    getStepStartSoundType(duosSeq[2]),
+    'rest-start',
+    'Rest block must keep the rest-start chime (never work-start)'
+  );
 
   const restToWorkPlan = buildStepSpeechPlan(duosSeq, 2, { spokenExerciseNames: true });
   const ex2Spoken = formatExerciseNameForSpeech(duosSeq[3].exerciseName);
@@ -2086,8 +2101,8 @@ test('Pre-rendered 24kHz neural speech-pack.json & speech-pack.m4a cover all 91 
   const pack = JSON.parse(fs.readFileSync(packJsonPath, 'utf8'));
   assert.equal(pack.sampleRate, 24000);
   assert.equal(pack.voice, 'en-US-AvaNeural');
-  for (const requiredKey of ['3', '2', '1', 'in']) {
-    assert.ok(pack.clips[requiredKey]?.durationMs > 150, `Missing countdown word "${requiredKey}" in speech-pack.json`);
+  for (const requiredKey of ['3', '2', '1', 'in', 'Rest', 'Rest in']) {
+    assert.ok(pack.clips[requiredKey]?.durationMs > 150, `Missing countdown/rest word "${requiredKey}" in speech-pack.json`);
   }
 
   for (const ex of sheetData.exercises) {

@@ -1570,11 +1570,11 @@ function loadAndDecodeSpeechPack() {
 
   speechPackLoadPromise = (async () => {
     try {
-      // Versioned query (?v=30) allows both Safari SW cache AND Chrome iOS (CriOS WKWebView) HTTP disk cache
+      // Versioned query (?v=35) allows both Safari SW cache AND Chrome iOS (CriOS WKWebView) HTTP disk cache
       // to reuse the neural 24kHz voice pack locally without re-downloading over cellular every visit
       const [metaRes, audioRes] = await Promise.all([
-        fetch('./data/speech-pack.json?v=30'),
-        fetch('./data/speech-pack.m4a?v=30')
+        fetch('./data/speech-pack.json?v=35'),
+        fetch('./data/speech-pack.m4a?v=35')
       ]);
       if (!metaRes.ok || !audioRes.ok) return false;
 
@@ -1960,8 +1960,8 @@ function resumeContextForCue(ctx, onReady, { allowWhenStopped = false } = {}) {
 function hasUnbakedCustomSpeechStep() {
   if (!speechPackMeta?.clips) return false;
   for (const s of timerState.steps || []) {
-    if (s.type === 'work' && s.exerciseName) {
-      const key = formatExerciseNameForSpeech(s.exerciseName);
+    if ((s.type === 'work' || s.type === 'rest') && s.exerciseName) {
+      const key = formatExerciseNameForSpeech(s.type === 'rest' ? 'Rest' : s.exerciseName);
       if (!speechPackMeta.clips[key]) {
         return true;
       }
