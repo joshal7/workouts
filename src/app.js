@@ -1,4 +1,4 @@
-import { DataService } from './services/dataService.js?v=33';
+import { DataService } from './services/dataService.js?v=34';
 import {
   FOCUS_SNAP_STEPS,
   DEFAULT_FOCUS_WEIGHTS,
@@ -34,12 +34,12 @@ import {
   getPrimaryMuscle,
   getPrimaryBodyArea,
   createCustomWriteInExercise
-} from './engine/workoutEngine.js?v=33';
+} from './engine/workoutEngine.js?v=34';
 import {
   analyzeMuscleLoad,
   applyBalancedRecommendation,
   SPECIFIC_MUSCLES
-} from './engine/muscleLoadAnalyzer.js?v=33';
+} from './engine/muscleLoadAnalyzer.js?v=34';
 import {
   TIMER_COLORS,
   CUSTOM_TIMER_PRESETS,
@@ -60,15 +60,10 @@ import {
   getTransitionPulseGainScale,
   buildStepSpeechPlan,
   isRemainingMsInDuckWindow,
-  synthesizeCueWavDataUri,
-  buildRemainingAudioEvents,
   applySpeechPresenceGain,
   resolveSpeechPcmSamples,
-  buildSingleCueWavBytes,
-  computeTimelineTargetScrollLeft,
-  buildMasterTimelineWavBytes,
-  encodeWavBytesToDataUri
-} from './engine/timerEngine.js?v=33';
+  computeTimelineTargetScrollLeft
+} from './engine/timerEngine.js?v=34';
 
 const dataService = new DataService();
 
@@ -151,32 +146,22 @@ const timerState = {
   speechPackLoaded: false,
   speechPackClipCount: 0,
   getAudioContextState: () => (sharedAudioCtx ? sharedAudioCtx.state : 'uncreated'),
-  isMasterAudioPlaying: () =>
-    Boolean(masterTimelineAudio && !masterTimelineAudio.paused && !masterTimelineAudio.ended),
+  isMasterAudioPlaying: () => false,
   getMasterAudioState: () => ({
-    playing: Boolean(masterTimelineAudio && !masterTimelineAudio.paused && !masterTimelineAudio.ended),
-    inSync: Boolean(masterAudioSessionState.inSync),
-    inDom: Boolean(masterTimelineAudio && document.body?.contains(masterTimelineAudio)),
-    playsInline: Boolean(
-      masterTimelineAudio &&
-        masterTimelineAudio.playsInline &&
-        masterTimelineAudio.hasAttribute('playsinline') &&
-        masterTimelineAudio.hasAttribute('webkit-playsinline')
-    ),
-    sourceMode: masterAudioSessionState.preferDataUri ? 'data-uri' : 'blob',
-    hasMoreSegments: Boolean(masterAudioSessionState.hasMoreSegments),
-    lastBuildLatencyMs: masterAudioSessionState.lastBuildLatencyMs,
-    muted: masterTimelineAudio ? masterTimelineAudio.muted : false,
-    volume: masterTimelineAudio ? masterTimelineAudio.volume : 0,
-    currentTime: masterTimelineAudio ? masterTimelineAudio.currentTime : 0,
-    segmentDurationSec: masterAudioSessionState.segmentDurationSec,
-    bakedSpeechCount: masterAudioSessionState.bakedSpeechKeys
-      ? masterAudioSessionState.bakedSpeechKeys.size
-      : 0
+    playing: false,
+    inSync: false,
+    inDom: false,
+    playsInline: false,
+    sourceMode: 'none',
+    hasMoreSegments: false,
+    lastBuildLatencyMs: 0,
+    muted: true,
+    volume: 0,
+    currentTime: 0,
+    segmentDurationSec: 0,
+    bakedSpeechCount: 0
   }),
-  setPreferDataUriMode: val => {
-    masterAudioSessionState.preferDataUri = Boolean(val);
-  },
+  setPreferDataUriMode: () => {},
   getAudioEngineState: () => ({
     audioSessionType: timerState.audioSessionType,
     navigatorAudioSessionType:
@@ -185,28 +170,26 @@ const timerState = {
         : null,
     audioContextState: sharedAudioCtx ? sharedAudioCtx.state : 'uncreated',
     audioContextCurrentTime: sharedAudioCtx ? sharedAudioCtx.currentTime : 0,
-    masterAudioPlaying: Boolean(
-      masterTimelineAudio && !masterTimelineAudio.paused && !masterTimelineAudio.ended
-    ),
-    masterAudioInSync: Boolean(masterAudioSessionState.inSync),
-    cueBridgePlaying: Boolean(
-      cueBridgeAudioEl && !cueBridgeAudioEl.paused && !cueBridgeAudioEl.ended
-    ),
+    masterAudioPlaying: false,
+    masterAudioInSync: false,
+    cueBridgePlaying: false,
+    htmlMediaElementsInDom:
+      typeof document !== 'undefined' ? document.querySelectorAll('audio, video').length : 0,
     routeChangeCount: audioDiagnostics.routeChangeCount,
     contextRefreshCount: audioDiagnostics.contextRefreshCount,
     watchdogFallbackCount: audioDiagnostics.watchdogFallbackCount,
     webAudioSpeechCount: audioDiagnostics.webAudioSpeechCount,
     webAudioDingCount: audioDiagnostics.webAudioDingCount,
-    bgPauseRecoveryCount: audioDiagnostics.bgPauseRecoveryCount,
     fgResumeRetryCount: audioDiagnostics.fgResumeRetryCount,
+    autoSuspendCount: audioDiagnostics.autoSuspendCount,
     needsGestureRebuild: Boolean(audioCtxNeedsGestureRebuild),
     activeSpeechPlaying: Boolean(activeSpeechBufferSource),
     activeOscillatorCount: activeOscillatorNodes.size,
     lifecycleEpoch: audioLifecycleEpoch
   }),
   simulateRouteChange: (opts = {}) => handleAudioRouteChange('simulated-route-change', opts),
-  simulateHangingResume: val => {
-    simulatedHangingAudioResume = Boolean(val);
+  simulateDelayedResume: delayMs => {
+    simulatedDelayedResumeMs = Math.max(0, Number(delayMs) || 0);
   }
 };
 
@@ -279,8 +262,10 @@ const els = {
 };
 
 async function bootstrap() {
-  releaseAudioSessionToAuto();
-  await dataService.init('./data/sheet-data.json?v=33', './data/enrichments.json?v=33');
+  // Pre-configure OS Ambient audio mixing policy at startup so WebKit flushes AVAudioSessionCategoryAmbient
+  // to UIProcess & GPUProcess long before any timer AudioContext is created or resumed (prevents click race).
+  configureAmbientAudioSession();
+  await dataService.init('./data/sheet-data.json?v=34', './data/enrichments.json?v=34');
   loadAndDecodeSpeechPack();
   populateWorkoutTypeSelect();
   populateCustomTimerPresetsSelect();
@@ -296,7 +281,7 @@ async function bootstrap() {
       refreshing = true;
       window.location.reload();
     });
-    navigator.serviceWorker.register('./sw.js?v=33', { updateViaCache: 'none' }).then(reg => {
+    navigator.serviceWorker.register('./sw.js?v=34', { updateViaCache: 'none' }).then(reg => {
       reg.update().catch(() => {});
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
@@ -895,7 +880,9 @@ function renderEquipmentFilterPills(containerEl, activeValue, onSelect) {
 // HIIT & Custom Timer Controller
 // ============================================================================
 function stopTimerLoop({ allowCompletionTail = false } = {}) {
-  audioLifecycleEpoch += 1;
+  if (!allowCompletionTail) {
+    audioLifecycleEpoch += 1;
+  }
   clearPendingAudioRecoveryTimers();
   if (timerState.intervalId) {
     clearInterval(timerState.intervalId);
@@ -907,7 +894,6 @@ function stopTimerLoop({ allowCompletionTail = false } = {}) {
   cancelTimerSpeech();
   if (!allowCompletionTail) {
     cancelActiveWebAudioDings();
-    stopCueBridgeAudio();
   }
   stopTimerSessionKeepAlive({ allowCompletionTail });
 }
@@ -1477,35 +1463,23 @@ function renderTimerCustomizerView(wkState) {
 }
 
 // ============================================================================
-// Timer Audio Engine (Mixable Music/Podcast Ducking, Earbud Route Recovery,
-// Silent-Switch Bypass & Background App-Switch Continuity)
+// Timer Audio Engine (Pure Pre-Configured Ambient WebAudio Mixing, Burst-Only
+// Cues w/ Auto-Suspend, Zero <audio> Interruption & Earbud Route Recovery)
 // ============================================================================
 const SPEECH_PACK_SAMPLE_RATE = 24000;
 let sharedAudioCtx = null;
 let activeWakeLockSentinel = null;
 let audioIdleSuspendTimer = null;
-let cueSessionHoldTimer = null;
-let cueSessionActiveUntilWallMs = 0;
-let masterCompletionTailTimer = null;
-let masterTimelineAudio = null;
-let cueBridgeAudioEl = null;
-let masterAudioPrimedByGesture = false;
-let masterAudioPrimeInFlight = false;
-let cueBridgePrimedByGesture = false;
-let cueBridgePrimeInFlight = false;
-let cueBridgeActiveUntilWallMs = 0;
-let silentPrimeWavUri = null;
+let audioActiveUntilWallMs = 0;
 let activeSpeechBufferSource = null;
-let activeSpeechCueId = null;
 const activeOscillatorNodes = new Set();
 const completedForegroundSpeechIdsByStep = new Map();
 let audioCtxNeedsGestureRebuild = false;
 let routeRecoveryDebounceTimer = null;
 let fgResumeRetryTimers = [];
-let bgMasterResumeTimers = [];
 let audioLifecycleEpoch = 0;
 let simulatedStalledAudioClock = false;
-let simulatedHangingAudioResume = false;
+let simulatedDelayedResumeMs = 0;
 let speechPackMeta = null;
 const speechPcmMap = new Map();
 const speechAudioBufferCache = new WeakMap();
@@ -1520,22 +1494,8 @@ const audioDiagnostics = {
   watchdogFallbackCount: 0,
   webAudioSpeechCount: 0,
   webAudioDingCount: 0,
-  bgPauseRecoveryCount: 0,
-  fgResumeRetryCount: 0
-};
-
-const masterAudioSessionState = {
-  inSync: false,
-  blobUrl: null,
-  preferDataUri: false,
-  lastBuildLatencyMs: 0,
-  segmentStartOffsetSec: 0,
-  segmentDurationSec: 0,
-  segmentStartedWallMs: 0,
-  hasMoreSegments: false,
-  totalDurationSec: 0,
-  events: [],
-  bakedSpeechKeys: new Set()
+  fgResumeRetryCount: 0,
+  autoSuspendCount: 0
 };
 
 function clearForegroundResumeRetryTimers() {
@@ -1545,29 +1505,16 @@ function clearForegroundResumeRetryTimers() {
   fgResumeRetryTimers = [];
 }
 
-function clearBackgroundMasterResumeTimers() {
-  for (const tid of bgMasterResumeTimers) {
-    clearTimeout(tid);
-  }
-  bgMasterResumeTimers = [];
-}
-
 function clearPendingAudioRecoveryTimers() {
   if (routeRecoveryDebounceTimer) {
     clearTimeout(routeRecoveryDebounceTimer);
     routeRecoveryDebounceTimer = null;
   }
   clearForegroundResumeRetryTimers();
-  clearBackgroundMasterResumeTimers();
 }
 
 function hasNavigatorAudioSession() {
   return Boolean(typeof navigator !== 'undefined' && navigator.audioSession);
-}
-
-function isIosWebKitWithoutAudioSession() {
-  if (hasNavigatorAudioSession() || typeof navigator === 'undefined') return false;
-  return /iPhone|iPad|iPod|CriOS|FxiOS|EdgiOS/i.test(navigator.userAgent || '');
 }
 
 function isDocumentHidden() {
@@ -1575,249 +1522,27 @@ function isDocumentHidden() {
 }
 
 /**
- * Apply mixable OS AudioSession category — NEVER `'playback'` (which is exclusive on iOS,
- * pauses Spotify/Podcasts, and gets interrupted/silenced when music resumes on earbuds):
- * - `'transient'`: `AVAudioSessionCategoryPlayback` + `DuckOthers` (mixes with music/podcasts,
- *   smoothly ducks them during timer dings & voice, AND plays out loud even on Silent switch)
- * - `'ambient'`: `AVAudioSessionCategoryAmbient` (100% full unducked music volume between cues)
- * - `'auto'`: released when timer is paused/closed
+ * Pre-configure and maintain OS Ambient audio mixing policy (`'ambient'`).
+ * - Pre-setting `'ambient'` at startup (`bootstrap`), modal open (`openTimerModal`),
+ *   visibility return, and `pointerdown`/`touchstart` ensures WebKit's cross-process
+ *   `AVAudioSessionCategoryAmbient` settles in UIProcess & GPUProcess long before
+ *   any `AudioContext` renders (eliminating the synchronous click race condition).
+ * - NEVER assign `'playback'`, `'transient-solo'`, `'transient'`, or `'auto'`, and
+ *   NEVER create or `.play()` HTML5 `<audio>` elements, so external music, podcasts,
+ *   and audiobooks (Spotify, Apple Music, Libby, Hoopla, Podcasts) NEVER pause.
  */
-function applyNavigatorAudioSessionType(desiredType, { forceReassert = false } = {}) {
+function configureAmbientAudioSession() {
   try {
     if (hasNavigatorAudioSession()) {
-      if (forceReassert) {
-        try {
-          navigator.audioSession.type = 'auto';
-        } catch {}
+      if (navigator.audioSession.type !== 'ambient') {
+        navigator.audioSession.type = 'ambient';
       }
-      if (navigator.audioSession.type !== desiredType) {
-        navigator.audioSession.type = desiredType;
-      }
-      // Fallback to 'ambient' if browser rejects 'transient' enum (never exclusive 'playback')
-      if (desiredType === 'transient' && navigator.audioSession.type !== 'transient') {
-        try {
-          navigator.audioSession.type = 'ambient';
-        } catch {}
-      }
-      timerState.audioSessionType = navigator.audioSession.type || desiredType;
-    } else if (isDocumentHidden() && isMasterAudioCoveringTimeline()) {
-      timerState.audioSessionType = 'background-html5-media';
+      timerState.audioSessionType = navigator.audioSession.type || 'ambient';
     } else {
-      timerState.audioSessionType =
-        desiredType === 'transient'
-          ? 'transient-webaudio-mix'
-          : desiredType === 'auto'
-          ? 'auto'
-          : 'ambient-webaudio-mix';
+      timerState.audioSessionType = 'ambient-web-audio';
     }
   } catch {
-    timerState.audioSessionType =
-      desiredType === 'transient' ? 'transient-webaudio-mix' : 'ambient-webaudio-mix';
-  }
-}
-
-function clearCueSessionHoldTimer() {
-  if (cueSessionHoldTimer) {
-    clearTimeout(cueSessionHoldTimer);
-    cueSessionHoldTimer = null;
-  }
-}
-
-function configureAmbientAudioSession({ forceReassert = false } = {}) {
-  clearCueSessionHoldTimer();
-  cueSessionActiveUntilWallMs = 0;
-  applyNavigatorAudioSessionType('ambient', { forceReassert });
-}
-
-function releaseAudioSessionToAuto() {
-  clearCueSessionHoldTimer();
-  cueSessionActiveUntilWallMs = 0;
-  applyNavigatorAudioSessionType('auto');
-}
-
-function restoreAmbientOrAutoAfterCue() {
-  cueSessionHoldTimer = null;
-  if (timerState.isRunning && isDocumentHidden()) {
-    applyNavigatorAudioSessionType('transient');
-    return;
-  }
-  const now = Date.now();
-  if (now < cueSessionActiveUntilWallMs - 15) {
-    cueSessionHoldTimer = setTimeout(
-      restoreAmbientOrAutoAfterCue,
-      Math.max(20, cueSessionActiveUntilWallMs - now)
-    );
-    return;
-  }
-  cueSessionActiveUntilWallMs = 0;
-  if (timerState.isRunning) {
-    applyNavigatorAudioSessionType('ambient');
-  } else {
-    applyNavigatorAudioSessionType('auto');
-  }
-}
-
-function activateTransientCueAudioSession({
-  holdMs = 850,
-  forceReassert = false,
-  continuousBackground = false,
-  replaceHold = false
-} = {}) {
-  clearCueSessionHoldTimer();
-  applyNavigatorAudioSessionType('transient', { forceReassert });
-
-  if (continuousBackground) {
-    cueSessionActiveUntilWallMs = Number.POSITIVE_INFINITY;
-    return;
-  }
-
-  const targetUntil = Date.now() + Math.max(120, Math.ceil(holdMs));
-  if (
-    replaceHold ||
-    !Number.isFinite(cueSessionActiveUntilWallMs) ||
-    targetUntil > cueSessionActiveUntilWallMs
-  ) {
-    cueSessionActiveUntilWallMs = targetUntil;
-  }
-  cueSessionHoldTimer = setTimeout(
-    restoreAmbientOrAutoAfterCue,
-    Math.max(50, cueSessionActiveUntilWallMs - Date.now())
-  );
-}
-
-function getSilentPrimeWavUri() {
-  if (silentPrimeWavUri) return silentPrimeWavUri;
-  // 15ms silent 24kHz mono WAV (< 800 bytes) used strictly under 'ambient' session to gesture-bless <audio>
-  const silentPcm = new Int16Array(Math.round(SPEECH_PACK_SAMPLE_RATE * 0.015));
-  silentPrimeWavUri = encodeWavBytesToDataUri(
-    buildSingleCueWavBytes(silentPcm, SPEECH_PACK_SAMPLE_RATE, 1.0)
-  );
-  return silentPrimeWavUri;
-}
-
-function ensureCueBridgeAudioElement() {
-  if (cueBridgeAudioEl) return cueBridgeAudioEl;
-  if (typeof document === 'undefined' && typeof Audio === 'undefined') return null;
-
-  cueBridgeAudioEl =
-    typeof document !== 'undefined' && typeof document.createElement === 'function'
-      ? document.createElement('audio')
-      : new Audio();
-  cueBridgeAudioEl.id = 'workoutCueBridgeAudio';
-  cueBridgeAudioEl.preload = 'auto';
-  cueBridgeAudioEl.playsInline = true;
-  cueBridgeAudioEl.muted = false;
-  cueBridgeAudioEl.volume = 1.0;
-  cueBridgeAudioEl.hidden = true;
-  if ('disableRemotePlayback' in cueBridgeAudioEl) {
-    cueBridgeAudioEl.disableRemotePlayback = true;
-  }
-  if (typeof cueBridgeAudioEl.setAttribute === 'function') {
-    cueBridgeAudioEl.setAttribute('playsinline', '');
-    cueBridgeAudioEl.setAttribute('webkit-playsinline', '');
-    cueBridgeAudioEl.setAttribute('aria-hidden', 'true');
-  }
-  if (typeof document !== 'undefined' && document.body && !document.body.contains(cueBridgeAudioEl)) {
-    document.body.appendChild(cueBridgeAudioEl);
-  }
-  return cueBridgeAudioEl;
-}
-
-function stopCueBridgeAudio() {
-  cueBridgeActiveUntilWallMs = 0;
-  if (!cueBridgeAudioEl) return;
-  try {
-    if (!cueBridgeAudioEl.paused) {
-      cueBridgeAudioEl.pause();
-    }
-    cueBridgeAudioEl.currentTime = 0;
-  } catch {}
-}
-
-function primeBackgroundAndBridgeElementsFromGesture() {
-  // On CriOS without navigator.audioSession, avoid touching <audio>.play() in foreground so Spotify never pauses
-  if (isIosWebKitWithoutAudioSession()) return;
-
-  // Prime under 'ambient' so blessing <audio> elements never pauses or ducks background music/podcasts
-  const prevNavType = hasNavigatorAudioSession() ? navigator.audioSession.type : null;
-  if (hasNavigatorAudioSession() && prevNavType !== 'transient') {
-    try {
-      navigator.audioSession.type = 'ambient';
-    } catch {}
-  }
-
-  const primeUri = getSilentPrimeWavUri();
-
-  if (
-    !masterAudioPrimedByGesture &&
-    !masterAudioPrimeInFlight &&
-    !masterAudioSessionState.inSync
-  ) {
-    const masterEl = ensureMasterAudioElement();
-    if (masterEl) {
-      try {
-        masterAudioPrimeInFlight = true;
-        masterEl.src = primeUri;
-        masterEl.muted = false;
-        masterEl.volume = 0.001;
-        const p = masterEl.play();
-        if (p && typeof p.then === 'function') {
-          p.then(() => {
-            masterAudioPrimeInFlight = false;
-            masterAudioPrimedByGesture = true;
-            if (!masterAudioSessionState.inSync) {
-              try {
-                masterEl.pause();
-                masterEl.volume = 1.0;
-              } catch {}
-            }
-          }).catch(() => {
-            masterAudioPrimeInFlight = false;
-          });
-        } else {
-          masterAudioPrimeInFlight = false;
-          masterAudioPrimedByGesture = true;
-        }
-      } catch {
-        masterAudioPrimeInFlight = false;
-      }
-    }
-  }
-
-  if (
-    !cueBridgePrimedByGesture &&
-    !cueBridgePrimeInFlight &&
-    cueBridgeActiveUntilWallMs <= Date.now()
-  ) {
-    const bridgeEl = ensureCueBridgeAudioElement();
-    if (bridgeEl) {
-      try {
-        cueBridgePrimeInFlight = true;
-        bridgeEl.src = primeUri;
-        bridgeEl.muted = false;
-        bridgeEl.volume = 0.001;
-        const p = bridgeEl.play();
-        if (p && typeof p.then === 'function') {
-          p.then(() => {
-            cueBridgePrimeInFlight = false;
-            cueBridgePrimedByGesture = true;
-            if (cueBridgeActiveUntilWallMs <= Date.now()) {
-              try {
-                bridgeEl.pause();
-                bridgeEl.volume = 1.0;
-              } catch {}
-            }
-          }).catch(() => {
-            cueBridgePrimeInFlight = false;
-          });
-        } else {
-          cueBridgePrimeInFlight = false;
-          cueBridgePrimedByGesture = true;
-        }
-      } catch {
-        cueBridgePrimeInFlight = false;
-      }
-    }
+    timerState.audioSessionType = 'ambient-web-audio';
   }
 }
 
@@ -1904,17 +1629,6 @@ function loadAndDecodeSpeechPack() {
 
       timerState.speechPackLoaded = speechPcmMap.size > 0;
       timerState.speechPackClipCount = speechPcmMap.size;
-
-      // If timer is currently backgrounded and Master <audio> started before decode finished, hot-upgrade in sync
-      if (
-        timerState.isRunning &&
-        isDocumentHidden() &&
-        masterAudioSessionState.inSync &&
-        speechPcmMap.size > 0
-      ) {
-        advanceTimerToNow();
-        startOrSyncMasterTimelineAudio();
-      }
       return true;
     } catch {
       return false;
@@ -1924,319 +1638,6 @@ function loadAndDecodeSpeechPack() {
   return speechPackLoadPromise;
 }
 
-function recoverInterruptedMasterTimelineAudio() {
-  if (!timerState.isRunning || !isDocumentHidden() || !masterAudioSessionState.inSync) return;
-  const epoch = audioLifecycleEpoch;
-  clearBackgroundMasterResumeTimers();
-
-  const attemptResume = attemptIdx => {
-    if (
-      epoch !== audioLifecycleEpoch ||
-      !timerState.isRunning ||
-      !isDocumentHidden() ||
-      !masterAudioSessionState.inSync ||
-      !masterTimelineAudio
-    ) {
-      return;
-    }
-    if (!masterTimelineAudio.paused && !masterTimelineAudio.ended) {
-      return;
-    }
-
-    advanceTimerToNow();
-    if (!timerState.isRunning) return;
-
-    // Re-assert mixable 'transient' without 'auto' bounce first so Spotify/Podcasts keep playing cleanly
-    activateTransientCueAudioSession({
-      continuousBackground: true,
-      forceReassert: attemptIdx >= 2
-    });
-
-    const elapsedSec = Math.max(0, (Date.now() - masterAudioSessionState.segmentStartedWallMs) / 1000);
-    if (
-      masterTimelineAudio.src &&
-      elapsedSec < Math.max(0.2, masterAudioSessionState.segmentDurationSec - 0.5)
-    ) {
-      try {
-        masterTimelineAudio.muted = false;
-        masterTimelineAudio.volume = 1.0;
-        masterTimelineAudio.currentTime = elapsedSec;
-        const p = masterTimelineAudio.play();
-        if (p && typeof p.then === 'function') {
-          p.then(() => {
-            audioDiagnostics.bgPauseRecoveryCount += 1;
-          }).catch(() => {});
-        } else {
-          audioDiagnostics.bgPauseRecoveryCount += 1;
-        }
-        return;
-      } catch {}
-    }
-
-    startOrSyncMasterTimelineAudio();
-    audioDiagnostics.bgPauseRecoveryCount += 1;
-  };
-
-  attemptResume(0);
-  for (const [i, delayMs] of [120, 400, 900, 1800].entries()) {
-    bgMasterResumeTimers.push(setTimeout(() => attemptResume(i + 1), delayMs));
-  }
-}
-
-function ensureMasterAudioElement() {
-  if (masterTimelineAudio) return masterTimelineAudio;
-  if (typeof document === 'undefined' && typeof Audio === 'undefined') return null;
-
-  masterTimelineAudio =
-    typeof document !== 'undefined' && typeof document.createElement === 'function'
-      ? document.createElement('audio')
-      : new Audio();
-  masterTimelineAudio.id = 'masterWorkoutTimelineAudio';
-  masterTimelineAudio.preload = 'auto';
-  masterTimelineAudio.playsInline = true;
-  masterTimelineAudio.muted = false;
-  masterTimelineAudio.volume = 1.0;
-  masterTimelineAudio.hidden = true;
-  if ('disableRemotePlayback' in masterTimelineAudio) {
-    masterTimelineAudio.disableRemotePlayback = true;
-  }
-  if (typeof masterTimelineAudio.setAttribute === 'function') {
-    masterTimelineAudio.setAttribute('playsinline', '');
-    masterTimelineAudio.setAttribute('webkit-playsinline', '');
-    masterTimelineAudio.setAttribute('aria-hidden', 'true');
-  }
-  if (typeof document !== 'undefined' && document.body && !document.body.contains(masterTimelineAudio)) {
-    document.body.appendChild(masterTimelineAudio);
-  }
-
-  // Drive timer progression from hardware media playback ticks when backgrounded in another app
-  masterTimelineAudio.addEventListener('timeupdate', () => {
-    if (!timerState.isRunning || !masterAudioSessionState.inSync) return;
-    advanceTimerToNow();
-    if (
-      masterAudioSessionState.inSync &&
-      masterAudioSessionState.hasMoreSegments &&
-      masterTimelineAudio.currentTime >= masterAudioSessionState.segmentDurationSec - 2.0
-    ) {
-      rolloverNextMasterSegment();
-    }
-  });
-
-  // If external music/podcast activation or OS interruption pauses Master <audio> while backgrounded,
-  // auto-resume at exact wall-clock offset so BOTH music and timer keep playing unpaused
-  masterTimelineAudio.addEventListener('pause', () => {
-    if (
-      timerState.isRunning &&
-      isDocumentHidden() &&
-      masterAudioSessionState.inSync &&
-      !masterTimelineAudio.ended
-    ) {
-      recoverInterruptedMasterTimelineAudio();
-    }
-  });
-
-  masterTimelineAudio.addEventListener('ended', () => {
-    if (timerState.isRunning && isDocumentHidden() && masterAudioSessionState.inSync) {
-      advanceTimerToNow();
-      if (timerState.isRunning) {
-        startOrSyncMasterTimelineAudio();
-      }
-    }
-  });
-
-  masterTimelineAudio.addEventListener('error', () => {
-    if (
-      timerState.isRunning &&
-      isDocumentHidden() &&
-      masterAudioSessionState.inSync &&
-      !masterAudioSessionState.preferDataUri
-    ) {
-      masterAudioSessionState.preferDataUri = true;
-      advanceTimerToNow();
-      startOrSyncMasterTimelineAudio();
-    }
-  });
-
-  return masterTimelineAudio;
-}
-
-function clearMasterCompletionTailTimer() {
-  if (masterCompletionTailTimer) {
-    clearTimeout(masterCompletionTailTimer);
-    masterCompletionTailTimer = null;
-  }
-}
-
-function revokeBlobUrlSafe(urlToRevoke) {
-  if (!urlToRevoke) return;
-  try {
-    URL.revokeObjectURL(urlToRevoke);
-  } catch {}
-}
-
-function revokeMasterAudioBlobUrl() {
-  if (masterAudioSessionState.blobUrl) {
-    revokeBlobUrlSafe(masterAudioSessionState.blobUrl);
-    masterAudioSessionState.blobUrl = null;
-  }
-}
-
-function stopMasterTimelineAudio({ allowCompletionTail = false, keepSession = false } = {}) {
-  clearMasterCompletionTailTimer();
-  clearBackgroundMasterResumeTimers();
-  const wasActive =
-    masterAudioSessionState.inSync || Boolean(masterTimelineAudio && !masterTimelineAudio.paused);
-  masterAudioSessionState.inSync = false;
-  masterAudioSessionState.hasMoreSegments = false;
-  masterAudioSessionState.bakedSpeechKeys = new Set();
-
-  if (!masterTimelineAudio) {
-    revokeMasterAudioBlobUrl();
-    if (!keepSession && !timerState.isRunning) {
-      releaseAudioSessionToAuto();
-    }
-    return;
-  }
-
-  const epoch = audioLifecycleEpoch;
-  const teardownNow = () => {
-    if (wasActive || masterTimelineAudio.hasAttribute('src')) {
-      try {
-        if (!masterTimelineAudio.paused) {
-          masterTimelineAudio.pause();
-        }
-        if (masterAudioSessionState.blobUrl || !masterAudioPrimedByGesture) {
-          masterTimelineAudio.removeAttribute('src');
-        }
-      } catch {}
-    }
-    revokeMasterAudioBlobUrl();
-    if (!keepSession && !timerState.isRunning && epoch === audioLifecycleEpoch) {
-      releaseAudioSessionToAuto();
-    }
-  };
-
-  if (allowCompletionTail && !masterTimelineAudio.paused) {
-    masterCompletionTailTimer = setTimeout(() => {
-      masterCompletionTailTimer = null;
-      if (!timerState.isRunning && epoch === audioLifecycleEpoch) {
-        teardownNow();
-      }
-    }, 900);
-  } else {
-    teardownNow();
-  }
-}
-
-function playMasterSegmentAtOffset(startOffsetSec) {
-  const audioEl = ensureMasterAudioElement();
-  if (!audioEl) return false;
-
-  const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now();
-  const useDataUri = masterAudioSessionState.preferDataUri;
-  const built = buildMasterTimelineWavBytes({
-    totalDurationSec: masterAudioSessionState.totalDurationSec,
-    events: masterAudioSessionState.events,
-    startOffsetSec,
-    maxWindowSec: useDataUri ? 240 : 3600,
-    speechPcmMap: speechPcmMap.size > 0 ? speechPcmMap : null,
-    sampleRate: SPEECH_PACK_SAMPLE_RATE
-  });
-
-  const previousBlobUrl = masterAudioSessionState.blobUrl;
-  let nextMediaSrc;
-  if (useDataUri || typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
-    masterAudioSessionState.preferDataUri = true;
-    masterAudioSessionState.blobUrl = null;
-    nextMediaSrc = encodeWavBytesToDataUri(built.wavBytes);
-  } else {
-    const blob = new Blob([built.wavBytes], { type: 'audio/wav' });
-    nextMediaSrc = URL.createObjectURL(blob);
-    masterAudioSessionState.blobUrl = nextMediaSrc;
-  }
-
-  masterAudioSessionState.lastBuildLatencyMs = Number(
-    ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0).toFixed(2)
-  );
-  masterAudioSessionState.segmentStartOffsetSec = built.segmentStartOffsetSec;
-  masterAudioSessionState.segmentDurationSec = built.segmentDurationSec;
-  masterAudioSessionState.segmentStartedWallMs = Date.now();
-  masterAudioSessionState.hasMoreSegments = built.hasMoreSegments;
-  masterAudioSessionState.bakedSpeechKeys = built.bakedSpeechKeys;
-  masterAudioSessionState.inSync = true;
-
-  // Use mixable 'transient' (Playback + DuckOthers), NEVER exclusive 'playback'
-  activateTransientCueAudioSession({ continuousBackground: true });
-  audioEl.muted = false;
-  audioEl.volume = 1.0;
-  audioEl.src = nextMediaSrc;
-  if (previousBlobUrl && previousBlobUrl !== nextMediaSrc) {
-    setTimeout(() => revokeBlobUrlSafe(previousBlobUrl), 250);
-  }
-
-  const playPromise = audioEl.play();
-  if (playPromise && typeof playPromise.catch === 'function') {
-    playPromise.catch(() => {
-      if (timerState.isRunning && isDocumentHidden() && !masterAudioSessionState.preferDataUri) {
-        masterAudioSessionState.preferDataUri = true;
-        audioEl.src = encodeWavBytesToDataUri(built.wavBytes);
-        audioEl.play().catch(() => {
-          recoverInterruptedMasterTimelineAudio();
-        });
-        return;
-      }
-      if (timerState.isRunning && isDocumentHidden()) {
-        recoverInterruptedMasterTimelineAudio();
-      } else {
-        masterAudioSessionState.inSync = false;
-      }
-    });
-  }
-  return true;
-}
-
-function startOrSyncMasterTimelineAudio({ interruptedSpeechId = null } = {}) {
-  clearMasterCompletionTailTimer();
-  if (!timerState.isRunning || !timerState.steps.length) return false;
-
-  const doneSet = completedForegroundSpeechIdsByStep.get(timerState.currentStepIndex) || null;
-  const timeline = buildRemainingAudioEvents(
-    timerState.steps,
-    timerState.currentStepIndex,
-    timerState.remainingMs,
-    {
-      spokenExerciseNames: dataService.isSpokenExerciseNamesEnabled(),
-      durationLookupFn: getExactSpeechClipDurationMs,
-      rate: 1.0,
-      calibration: timerState.speechRateCalibration,
-      completedSpeechIds: doneSet,
-      interruptedSpeechId
-    }
-  );
-
-  masterAudioSessionState.totalDurationSec = timeline.totalDurationSec;
-  masterAudioSessionState.events = timeline.events;
-
-  return playMasterSegmentAtOffset(0);
-}
-
-function rolloverNextMasterSegment() {
-  if (!timerState.isRunning || !masterTimelineAudio) return;
-  const elapsedInCurrent = masterTimelineAudio.currentTime || 0;
-  const nextOffsetSec = masterAudioSessionState.segmentStartOffsetSec + elapsedInCurrent;
-  if (nextOffsetSec >= masterAudioSessionState.totalDurationSec + 0.5) return;
-  playMasterSegmentAtOffset(nextOffsetSec);
-}
-
-function isMasterAudioCoveringTimeline() {
-  return Boolean(
-    masterAudioSessionState.inSync &&
-      masterTimelineAudio &&
-      !masterTimelineAudio.paused &&
-      !masterTimelineAudio.ended
-  );
-}
-
 function clearAudioIdleSuspendTimer() {
   if (audioIdleSuspendTimer) {
     clearTimeout(audioIdleSuspendTimer);
@@ -2244,50 +1645,53 @@ function clearAudioIdleSuspendTimer() {
   }
 }
 
-function suspendAudioContextAndReleaseSession() {
+function suspendAudioContextNow() {
   clearAudioIdleSuspendTimer();
-  const epoch = audioLifecycleEpoch;
-  // Step down to mixable 'ambient' immediately so background music/podcasts stay at 100% volume
-  // while sharedAudioCtx finishes suspending asynchronously, then release to 'auto'
-  if (hasNavigatorAudioSession() && navigator.audioSession.type === 'transient') {
-    applyNavigatorAudioSessionType('ambient');
-  }
-
-  let released = false;
-  const finalizeRelease = () => {
-    if (released) return;
-    released = true;
-    if (!timerState.isRunning && epoch === audioLifecycleEpoch) {
-      releaseAudioSessionToAuto();
-    }
-  };
-
+  audioActiveUntilWallMs = 0;
+  configureAmbientAudioSession();
   try {
     if (sharedAudioCtx && sharedAudioCtx.state === 'running') {
-      const p = sharedAudioCtx.suspend();
-      if (p && typeof p.then === 'function') {
-        p.then(finalizeRelease).catch(finalizeRelease);
-        setTimeout(finalizeRelease, 65);
-        return;
-      }
+      audioDiagnostics.autoSuspendCount += 1;
+      sharedAudioCtx.suspend().catch(() => {});
     }
   } catch {}
-
-  finalizeRelease();
 }
 
-function scheduleIdleAudioSuspend(delayMs) {
+/**
+ * Automatically suspend `sharedAudioCtx` right after each burst cue finishes so no
+ * CoreAudio render stream stays open during silent 20s-60s work/rest stretches.
+ * Keeps `sharedAudioCtx` smoothly bridged across consecutive 1s countdown cues.
+ */
+function scheduleIdleAudioSuspend(delayMs, { replaceHold = false } = {}) {
+  const safeDelay = Math.max(60, Math.ceil(Number(delayMs) || 180));
+  const targetUntil = Date.now() + safeDelay;
+  if (replaceHold || targetUntil > audioActiveUntilWallMs) {
+    audioActiveUntilWallMs = targetUntil;
+  }
   clearAudioIdleSuspendTimer();
   const epoch = audioLifecycleEpoch;
-  audioIdleSuspendTimer = setTimeout(() => {
+
+  const checkAndSuspend = () => {
     audioIdleSuspendTimer = null;
-    if (!timerState.isRunning && epoch === audioLifecycleEpoch) {
-      suspendAudioContextAndReleaseSession();
+    if (epoch !== audioLifecycleEpoch) return;
+    const now = Date.now();
+    const cueStillPlaying =
+      Boolean(activeSpeechBufferSource) || activeOscillatorNodes.size > 0;
+    if (cueStillPlaying || now < audioActiveUntilWallMs - 15) {
+      const waitMoreMs = Math.max(45, audioActiveUntilWallMs - now, cueStillPlaying ? 90 : 45);
+      audioIdleSuspendTimer = setTimeout(checkAndSuspend, waitMoreMs);
+      return;
     }
-  }, delayMs);
+    suspendAudioContextNow();
+  };
+
+  audioIdleSuspendTimer = setTimeout(
+    checkAndSuspend,
+    Math.max(45, audioActiveUntilWallMs - Date.now())
+  );
 }
 
-function scheduleForegroundAudioResumeRetries(reason = 'interruption') {
+function scheduleForegroundAudioResumeRetries() {
   clearForegroundResumeRetryTimers();
   const epoch = audioLifecycleEpoch;
 
@@ -2301,25 +1705,22 @@ function scheduleForegroundAudioResumeRetries(reason = 'interruption') {
     ) {
       return;
     }
+    // Only proactively wake if we are inside an active cue window; during silent intervals stay suspended
+    if (Date.now() >= audioActiveUntilWallMs && !activeSpeechBufferSource && activeOscillatorNodes.size === 0) {
+      return;
+    }
     if (sharedAudioCtx.state === 'running') {
       return;
     }
     audioDiagnostics.fgResumeRetryCount += 1;
-    // Re-assert desired mixable session ('transient' if cue active, else 'ambient') without 'auto' bounce
-    const desired =
-      Number.isFinite(cueSessionActiveUntilWallMs) && cueSessionActiveUntilWallMs > Date.now()
-        ? 'transient'
-        : 'ambient';
-    applyNavigatorAudioSessionType(desired);
-    if (!simulatedHangingAudioResume) {
-      try {
-        sharedAudioCtx.resume().catch(() => {});
-      } catch {}
-    }
+    configureAmbientAudioSession();
+    try {
+      sharedAudioCtx.resume().catch(() => {});
+    } catch {}
   };
 
   tryResume();
-  for (const delayMs of [60, 200, 500, 1000]) {
+  for (const delayMs of [60, 200, 500]) {
     fgResumeRetryTimers.push(setTimeout(tryResume, delayMs));
   }
 }
@@ -2330,19 +1731,18 @@ function attachAudioContextLifecycleListeners(ctx) {
   ctx.addEventListener('statechange', () => {
     if (ctx !== sharedAudioCtx) return;
     if (ctx.state === 'interrupted') {
-      // Remember OS interruption even if paused/backgrounded so next Start tap rebuilds fresh if needed
+      // Remember OS interruption so next gesture or route recovery rebuilds cleanly if needed
       audioCtxNeedsGestureRebuild = true;
-    }
-    if (!timerState.isRunning || isDocumentHidden()) return;
-    // Non-disruptively resume foreground AudioContext when external music starts/stops or Siri ends
-    if (ctx.state === 'interrupted' || ctx.state === 'suspended') {
-      scheduleForegroundAudioResumeRetries(`statechange:${ctx.state}`);
+      if (timerState.isRunning && !isDocumentHidden()) {
+        scheduleForegroundAudioResumeRetries();
+      }
     }
   });
 }
 
-function ensureSharedAudioContext({ fromUserGesture = false } = {}) {
+function ensureSharedAudioContext({ fromUserGesture = false, autoResume = true } = {}) {
   try {
+    configureAmbientAudioSession();
     const AudioCtx =
       typeof window !== 'undefined' ? window.AudioContext || window.webkitAudioContext : null;
     if (!AudioCtx) return null;
@@ -2368,12 +1768,12 @@ function ensureSharedAudioContext({ fromUserGesture = false } = {}) {
       attachAudioContextLifecycleListeners(sharedAudioCtx);
     }
 
-    if (sharedAudioCtx.state !== 'running' && !simulatedHangingAudioResume) {
+    if (autoResume && sharedAudioCtx.state !== 'running' && simulatedDelayedResumeMs <= 0) {
       sharedAudioCtx.resume().catch(() => {});
     }
 
     if (fromUserGesture) {
-      // Classic 1-frame silent buffer unlock for iOS WebKit RemoteIO AudioUnit
+      // Classic 1-frame silent buffer unlock for iOS WebKit RemoteIO AudioUnit on the ambient bus
       try {
         const silentBuf = sharedAudioCtx.createBuffer(1, 1, sharedAudioCtx.sampleRate || 24000);
         const src = sharedAudioCtx.createBufferSource();
@@ -2400,28 +1800,22 @@ function scheduleDebouncedRouteRecovery(reason) {
 }
 
 /**
- * Recover audio routing immediately when earbuds/AirPods connect or disconnect (`devicechange`)
- * or when the hardware output clock stalls (`watchdog-stall`), so phone-speaker playback works
- * immediately without needing to put earbuds back in or reopen the app.
+ * Recover WebAudio routing purely on the `'ambient'` mixing bus when earbuds/AirPods
+ * connect or disconnect (`devicechange`) or when a hardware output clock stalls,
+ * without ever setting `'auto'` or touching an `<audio>` element.
  */
 async function handleAudioRouteChange(reason = 'devicechange', { simulateStalledContext = false } = {}) {
   audioDiagnostics.routeChangeCount += 1;
+  configureAmbientAudioSession();
 
   if (simulateStalledContext) {
     simulatedStalledAudioClock = true;
     return true;
   }
 
-  const desiredSession = !timerState.isRunning
-    ? 'auto'
-    : isDocumentHidden() || cueSessionActiveUntilWallMs > Date.now()
-    ? 'transient'
-    : 'ambient';
-  applyNavigatorAudioSessionType(desiredSession, { forceReassert: true });
-
-  if (timerState.isRunning && isDocumentHidden()) {
-    advanceTimerToNow();
-    startOrSyncMasterTimelineAudio();
+  if (!timerState.isRunning) {
+    audioCtxNeedsGestureRebuild = true;
+    suspendAudioContextNow();
     return true;
   }
 
@@ -2429,11 +1823,11 @@ async function handleAudioRouteChange(reason = 'devicechange', { simulateStalled
     typeof window !== 'undefined' ? window.AudioContext || window.webkitAudioContext : null;
   if (!AudioCtx) return false;
 
-  // 1) Try spinning up a clean fresh AudioContext at the new hardware speaker sample rate
+  // 1) Try spinning up a clean fresh AudioContext at the new hardware speaker sample rate under 'ambient'
   try {
     const candidate = new AudioCtx();
     attachAudioContextLifecycleListeners(candidate);
-    if (candidate.state !== 'running' && !simulatedHangingAudioResume) {
+    if (candidate.state !== 'running') {
       await candidate.resume().catch(() => {});
     }
     const t0 = candidate.currentTime;
@@ -2452,7 +1846,13 @@ async function handleAudioRouteChange(reason = 'devicechange', { simulateStalled
         }, 200);
       }
       if (!timerState.isRunning) {
-        suspendAudioContextAndReleaseSession();
+        suspendAudioContextNow();
+      } else if (
+        Date.now() >= audioActiveUntilWallMs &&
+        !activeSpeechBufferSource &&
+        activeOscillatorNodes.size === 0
+      ) {
+        scheduleIdleAudioSuspend(160);
       }
       return true;
     }
@@ -2461,8 +1861,7 @@ async function handleAudioRouteChange(reason = 'devicechange', { simulateStalled
     } catch {}
   } catch {}
 
-  // 2) If browser blocked a brand-new AudioContext outside a gesture, mark for next tap AND
-  // rebind the existing gesture-blessed AudioContext to the active speaker route
+  // 2) Fallback: rebind existing gesture-blessed AudioContext to the active speaker route
   audioCtxNeedsGestureRebuild = true;
   simulatedStalledAudioClock = false;
   if (sharedAudioCtx && sharedAudioCtx.state !== 'closed') {
@@ -2472,125 +1871,111 @@ async function handleAudioRouteChange(reason = 'devicechange', { simulateStalled
       if (sharedAudioCtx.state === 'running' && !cueActivelyPlaying) {
         await sharedAudioCtx.suspend().catch(() => {});
       }
-      if (timerState.isRunning && sharedAudioCtx.state !== 'running' && !simulatedHangingAudioResume) {
+      if (timerState.isRunning && sharedAudioCtx.state !== 'running') {
         await sharedAudioCtx.resume().catch(() => {});
       }
       audioDiagnostics.contextRefreshCount += 1;
+      if (
+        timerState.isRunning &&
+        Date.now() >= audioActiveUntilWallMs &&
+        !activeSpeechBufferSource &&
+        activeOscillatorNodes.size === 0
+      ) {
+        scheduleIdleAudioSuspend(160);
+      }
       return sharedAudioCtx.state === 'running';
     } catch {}
   }
   return false;
 }
 
-function playFallbackWavViaCueBridge(wavUri, holdMs = 850) {
-  if (!wavUri) return false;
-  const bridgeEl = ensureCueBridgeAudioElement();
-  if (!bridgeEl) return false;
-  try {
-    cueBridgeActiveUntilWallMs = Date.now() + Math.max(250, Math.ceil(holdMs));
-    activateTransientCueAudioSession({ holdMs });
-    bridgeEl.muted = false;
-    bridgeEl.volume = 1.0;
-    bridgeEl.src = wavUri;
-    const p = bridgeEl.play();
-    if (p && typeof p.catch === 'function') {
-      p.catch(() => {});
-    }
-    audioDiagnostics.watchdogFallbackCount += 1;
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function armWebAudioCueWatchdog(ctx, fallbackWavUriGetter, holdMs = 850) {
-  if (!ctx || typeof fallbackWavUriGetter !== 'function') return;
+/**
+ * Pure-WebAudio hardware clock stall watchdog: only inspects `ctx.currentTime` AFTER
+ * `ctx.state === 'running'`. If Bluetooth disconnect froze the output unit, refreshes
+ * `sharedAudioCtx` under `'ambient'` and replays on WebAudio (never `<audio>.play()`).
+ */
+function armWebAudioClockWatchdog(ctx, replayOnWebAudioFn) {
+  if (!ctx || typeof replayOnWebAudioFn !== 'function') return;
   const tStart = ctx.currentTime;
   const forceStall = simulatedStalledAudioClock;
   const epoch = audioLifecycleEpoch;
   setTimeout(() => {
-    if (
-      epoch !== audioLifecycleEpoch ||
-      !timerState.isRunning ||
-      isDocumentHidden() ||
-      isMasterAudioCoveringTimeline()
-    ) {
+    if (epoch !== audioLifecycleEpoch || !timerState.isRunning || isDocumentHidden()) {
       return;
     }
     const clockStalled =
       forceStall ||
-      !sharedAudioCtx ||
-      sharedAudioCtx.state !== 'running' ||
-      (sharedAudioCtx === ctx && sharedAudioCtx.currentTime <= tStart);
+      (sharedAudioCtx === ctx &&
+        sharedAudioCtx.state === 'running' &&
+        sharedAudioCtx.currentTime <= tStart);
     if (clockStalled) {
       simulatedStalledAudioClock = false;
-      const wavUri = fallbackWavUriGetter();
-      playFallbackWavViaCueBridge(wavUri, holdMs);
-      handleAudioRouteChange('watchdog-stall').catch(() => {});
+      audioDiagnostics.watchdogFallbackCount += 1;
+      handleAudioRouteChange('watchdog-stall')
+        .then(recovered => {
+          if (recovered && epoch === audioLifecycleEpoch && timerState.isRunning) {
+            replayOnWebAudioFn();
+          }
+        })
+        .catch(() => {});
     }
-  }, 110);
+  }, 160);
 }
 
-function resumeContextOrPlayCueBridge(ctx, onReady, fallbackWavUriGetter, holdMs = 850) {
+function resumeContextForCue(ctx, onReady, { allowWhenStopped = false } = {}) {
   const epoch = audioLifecycleEpoch;
-  let settled = false;
-
-  const triggerFallback = () => {
-    if (settled || epoch !== audioLifecycleEpoch) return;
-    settled = true;
-    playFallbackWavViaCueBridge(fallbackWavUriGetter(), holdMs);
-    if (timerState.isRunning && !isDocumentHidden()) {
-      scheduleForegroundAudioResumeRetries('resume-timeout');
-    }
+  const invokeIfValid = () => {
+    if (epoch !== audioLifecycleEpoch) return;
+    if (!timerState.isRunning && !allowWhenStopped) return;
+    if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') return;
+    onReady();
   };
 
-  const guardTimer = setTimeout(triggerFallback, 95);
-
-  if (simulatedHangingAudioResume) {
+  if (simulatedDelayedResumeMs > 0) {
+    const delay = simulatedDelayedResumeMs;
+    setTimeout(() => {
+      if (epoch !== audioLifecycleEpoch || (!timerState.isRunning && !allowWhenStopped)) return;
+      try {
+        const p = ctx.resume();
+        if (p && typeof p.then === 'function') {
+          p.then(invokeIfValid).catch(() => {});
+        } else {
+          invokeIfValid();
+        }
+      } catch {}
+    }, delay);
     return;
   }
 
   try {
     const p = ctx.resume();
     if (p && typeof p.then === 'function') {
-      p.then(() => {
-        if (settled || epoch !== audioLifecycleEpoch) return;
-        if (ctx.state !== 'running') {
-          clearTimeout(guardTimer);
-          triggerFallback();
-          return;
-        }
-        settled = true;
-        clearTimeout(guardTimer);
-        onReady();
-      }).catch(() => {
-        clearTimeout(guardTimer);
-        triggerFallback();
-      });
+      p.then(invokeIfValid).catch(() => {});
     } else if (ctx.state === 'running') {
-      settled = true;
-      clearTimeout(guardTimer);
-      onReady();
+      invokeIfValid();
     }
-  } catch {
-    clearTimeout(guardTimer);
-    triggerFallback();
+  } catch {}
+}
+
+function hasUnbakedCustomSpeechStep() {
+  if (!speechPackMeta?.clips) return false;
+  for (const s of timerState.steps || []) {
+    if (s.type === 'work' && s.exerciseName) {
+      const key = formatExerciseNameForSpeech(s.exerciseName);
+      if (!speechPackMeta.clips[key]) {
+        return true;
+      }
+    }
   }
+  return false;
 }
 
 function unlockAudioFromUserGesture() {
-  // Pre-assert mixable 'ambient' BEFORE resuming AudioContext so restarting from 'auto'
-  // never activates an unmixed audio session even for a single millisecond
-  if (hasNavigatorAudioSession() && navigator.audioSession.type === 'auto') {
-    applyNavigatorAudioSessionType('ambient');
-  }
+  configureAmbientAudioSession();
   ensureSharedAudioContext({ fromUserGesture: true });
-  primeBackgroundAndBridgeElementsFromGesture();
-  if (dataService.isSpokenExerciseNamesEnabled()) {
-    // Unlock speechSynthesis only as fallback for custom non-baked exercise names or cold-boot decode
-    if (!timerState.speechPackLoaded || timerState.customStepsOverride) {
-      unlockSpeechSynthesisFromGesture();
-    }
+  // Only unlock Web Speech API if the user typed a custom write-in label not in the 24kHz WebAudio pack
+  if (dataService.isSpokenExerciseNamesEnabled() && hasUnbakedCustomSpeechStep()) {
+    unlockSpeechSynthesisFromGesture();
   }
 }
 
@@ -2687,7 +2072,6 @@ function resetActiveStepSpeechState() {
 }
 
 function cancelActiveWebAudioSpeech() {
-  activeSpeechCueId = null;
   if (activeSpeechBufferSource) {
     try {
       activeSpeechBufferSource.stop();
@@ -2755,23 +2139,19 @@ function playSpeechPcmOnWebAudio(cue, stepIndex = timerState.currentStepIndex) {
   const pcmInt16 = resolveSpeechPcmSamples(cue.text, speechPcmMap, SPEECH_PACK_SAMPLE_RATE);
   if (!pcmInt16 || pcmInt16.length === 0) return false;
 
-  const ctx = ensureSharedAudioContext();
+  configureAmbientAudioSession();
+  const ctx = ensureSharedAudioContext({ autoResume: false });
   if (!ctx) return false;
 
   const clipDurationMs = Math.ceil((pcmInt16.length / SPEECH_PACK_SAMPLE_RATE) * 1000);
-  // Hold 'transient' smoothly across consecutive countdown cues ("Exercise in" -> "3" -> "2" -> "1" -> Ding)
-  // with +420ms cushion so Silent Mode never clips the final consonant tail
-  const holdMs = Math.max(clipDurationMs + 420, 1400);
-  const wasAlreadyTransient =
-    hasNavigatorAudioSession() && navigator.audioSession.type === 'transient';
+  // Bridge 'running' state smoothly across consecutive countdown phrases ("Exercise in" -> "3" -> "2" -> "1" -> Ding),
+  // then auto-suspend once the sequence completes so silent intervals keep zero active stream.
+  const holdMs =
+    cue.kind === 'exercise-name'
+      ? Math.max(clipDurationMs + 240, 600)
+      : Math.max(clipDurationMs + 380, 1400);
 
-  activateTransientCueAudioSession({ holdMs });
-  clearAudioIdleSuspendTimer();
-
-  const fallbackWavGetter = () =>
-    encodeWavBytesToDataUri(buildSingleCueWavBytes(pcmInt16, SPEECH_PACK_SAMPLE_RATE, 1.15));
-
-  const emitSpeechBuffer = () => {
+  const emitSpeechBuffer = ({ isReplay = false } = {}) => {
     if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') return;
     const activeCtx = sharedAudioCtx;
     const audioBuffer = getOrCreateSpeechAudioBuffer(activeCtx, cue.text, pcmInt16);
@@ -2786,11 +2166,9 @@ function playSpeechPcmOnWebAudio(cue, stepIndex = timerState.currentStepIndex) {
     gainNode.connect(activeCtx.destination);
 
     activeSpeechBufferSource = source;
-    activeSpeechCueId = cue.id || null;
     source.onended = () => {
       if (activeSpeechBufferSource === source) {
         activeSpeechBufferSource = null;
-        activeSpeechCueId = null;
         if (cue.id) {
           let doneSet = completedForegroundSpeechIdsByStep.get(stepIndex);
           if (!doneSet) {
@@ -2805,21 +2183,20 @@ function playSpeechPcmOnWebAudio(cue, stepIndex = timerState.currentStepIndex) {
       }
     };
 
-    // 45ms lead on 'ambient' -> 'transient' ensures WebKit's GPU-process AVAudioSession switch
-    // completes before sample 0 hits hardware when iPhone Silent switch is ON
-    const startLeadSec = wasAlreadyTransient ? 0.006 : 0.045;
-    source.start(activeCtx.currentTime + startLeadSec);
+    source.start(activeCtx.currentTime + 0.008);
     audioDiagnostics.webAudioSpeechCount += 1;
+    scheduleIdleAudioSuspend(holdMs);
 
-    armWebAudioCueWatchdog(activeCtx, fallbackWavGetter, holdMs);
+    if (!isReplay) {
+      armWebAudioClockWatchdog(activeCtx, () => emitSpeechBuffer({ isReplay: true }));
+    }
   };
 
-  if (ctx.state === 'running' && !simulatedStalledAudioClock && !simulatedHangingAudioResume) {
-    emitSpeechBuffer();
-  } else if (simulatedStalledAudioClock) {
+  scheduleIdleAudioSuspend(holdMs + simulatedDelayedResumeMs);
+  if (ctx.state === 'running' && simulatedDelayedResumeMs <= 0) {
     emitSpeechBuffer();
   } else {
-    resumeContextOrPlayCueBridge(ctx, emitSpeechBuffer, fallbackWavGetter, holdMs);
+    resumeContextForCue(ctx, () => emitSpeechBuffer());
   }
   return true;
 }
@@ -2900,21 +2277,13 @@ function speakTimerCue(cue, stepIndex, { logOnly = false } = {}) {
 
   if (logOnly) return;
 
-  // When backgrounded, spoken phrases baked into Master <audio> play on the continuous stream
-  const bakedKey = `${stepIndex}:${cue.id}`;
-  if (isMasterAudioCoveringTimeline() && masterAudioSessionState.bakedSpeechKeys.has(bakedKey)) {
-    return;
-  }
-
-  // Primary foreground path: play 24kHz neural voice clip directly through WebAudio ('transient' mix/duck)
+  // Primary path: play 24kHz neural voice clip directly through ambient WebAudio (never pauses music/podcasts)
   if (playSpeechPcmOnWebAudio(cue, stepIndex)) {
     return;
   }
 
-  // Fallback for custom user-entered interval labels not in speechPack
-  activateTransientCueAudioSession({
-    holdMs: Math.max((cue.estimatedDurationMs || 600) + 420, 1400)
-  });
+  // Fallback strictly for custom user-entered interval labels not in speechPack
+  configureAmbientAudioSession();
   try {
     if (
       typeof window !== 'undefined' &&
@@ -3012,32 +2381,27 @@ function computeSteadyPulseGainScale(stepIndex, nextSec) {
 
 function startTimerSessionKeepAlive() {
   unlockAudioFromUserGesture();
-  if (isDocumentHidden()) {
-    startOrSyncMasterTimelineAudio();
-  } else {
-    configureAmbientAudioSession();
-  }
+  configureAmbientAudioSession();
   requestScreenWakeLock();
 }
 
 function stopTimerSessionKeepAlive({ allowCompletionTail = false } = {}) {
-  stopMasterTimelineAudio({ allowCompletionTail, keepSession: allowCompletionTail });
   if (allowCompletionTail) {
-    scheduleIdleAudioSuspend(920);
+    scheduleIdleAudioSuspend(880);
   } else {
-    suspendAudioContextAndReleaseSession();
+    suspendAudioContextNow();
   }
   releaseScreenWakeLock();
 }
 
 /**
- * Play or log one of the distinct timer sound cues:
+ * Play or log one of the distinct timer sound cues as a short ambient WebAudio burst:
  * - 'work-start': bright rising double bell ding when starting an exercise block
  * - 'rest-start': warm descending two-tone chime when starting a rest block
  * - 'transition-pulse': steady light sound during a short transition / 10s countdown block
  * - 'workout-complete': 3-note completion fanfare
- * Foreground cues play via mixable WebAudio ('transient' during cue -> 'ambient' when idle) so music
- * and podcasts keep playing and smoothly duck only while the cue sounds; background cues use Master <audio>.
+ * Automatically suspends `sharedAudioCtx` right after the chime ends so silent intervals
+ * have zero active audio stream and background music/podcasts/audiobooks never pause.
  */
 function playTimerSoundCue(
   cueType,
@@ -3061,9 +2425,11 @@ function playTimerSoundCue(
     timerState.soundLog.shift();
   }
 
-  if (logOnly || isMasterAudioCoveringTimeline()) {
+  if (logOnly) {
     return;
   }
+
+  configureAmbientAudioSession();
 
   let maxNoteEndSec = 0.08;
   for (const note of profile.notes) {
@@ -3071,50 +2437,44 @@ function playTimerSoundCue(
     if (endSec > maxNoteEndSec) maxNoteEndSec = endSec;
   }
 
-  // Keep 'transient' smooth across consecutive 1s transition pulses; return to 'ambient' right after standalone start/complete chimes
-  // (+0.30s cushion guarantees hardware Silent Mode never clips the chime tail after the 45ms IPC lead)
-  const holdMs =
-    profile.id === 'transition-pulse'
-      ? 1350
-      : Math.ceil((maxNoteEndSec + 0.30) * 1000);
-  const wasAlreadyTransient =
-    hasNavigatorAudioSession() && navigator.audioSession.type === 'transient';
-
-  activateTransientCueAudioSession({
-    holdMs,
-    replaceHold: profile.id !== 'transition-pulse'
-  });
-  clearAudioIdleSuspendTimer();
+  // Keep context open across consecutive 1s transition ticks, but auto-suspend (~200ms)
+  // right after standalone work-start, rest-start, or workout-complete chimes finish.
+  const idlePadSec =
+    profile.id === 'transition-pulse' && timerState.isRunning && timerState.remainingSeconds > 1
+      ? 1.18
+      : 0.20;
+  const holdMs = Math.ceil((maxNoteEndSec + idlePadSec) * 1000);
+  const allowWhenStopped = profile.id === 'workout-complete';
 
   try {
-    const ctx = ensureSharedAudioContext();
+    const ctx = ensureSharedAudioContext({ autoResume: false });
     if (!ctx) return;
 
-    const fallbackWavGetter = () => synthesizeCueWavDataUri(profile.id);
-
-    const emitNotes = () => {
+    const emitNotes = ({ isReplay = false } = {}) => {
       if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') return;
       const activeCtx = sharedAudioCtx;
-      const startLeadSec = wasAlreadyTransient ? 0.008 : 0.045;
       scheduleSoundProfileOnContext(
         activeCtx,
         profile,
-        activeCtx.currentTime + startLeadSec,
+        activeCtx.currentTime + 0.008,
         effectiveGainScale
       );
       audioDiagnostics.webAudioDingCount += 1;
-      if (!timerState.isRunning) {
-        scheduleIdleAudioSuspend(Math.ceil((maxNoteEndSec + 0.32) * 1000));
+      scheduleIdleAudioSuspend(holdMs, {
+        replaceHold: profile.id !== 'transition-pulse' && !activeSpeechBufferSource
+      });
+      if (!isReplay && !allowWhenStopped) {
+        armWebAudioClockWatchdog(activeCtx, () => emitNotes({ isReplay: true }));
       }
-      armWebAudioCueWatchdog(activeCtx, fallbackWavGetter, holdMs);
     };
 
-    if (ctx.state === 'running' && !simulatedStalledAudioClock && !simulatedHangingAudioResume) {
-      emitNotes();
-    } else if (simulatedStalledAudioClock) {
+    scheduleIdleAudioSuspend(holdMs + simulatedDelayedResumeMs, {
+      replaceHold: profile.id !== 'transition-pulse' && !activeSpeechBufferSource
+    });
+    if (ctx.state === 'running' && simulatedDelayedResumeMs <= 0) {
       emitNotes();
     } else {
-      resumeContextOrPlayCueBridge(ctx, emitNotes, fallbackWavGetter, holdMs);
+      resumeContextForCue(ctx, () => emitNotes(), { allowWhenStopped });
     }
   } catch {}
 }
@@ -3125,19 +2485,6 @@ function advanceTimerToNow() {
   const now = Date.now();
   if (!lastTimerLoopTickWallMs) {
     lastTimerLoopTickWallMs = now;
-  }
-
-  // Detect external programmatic mutation of remainingMs (e.g. synthetic fast-forward jumps)
-  if (
-    typeof lastExpectedRemainingMs === 'number' &&
-    Math.abs(timerState.remainingMs - lastExpectedRemainingMs) > 45
-  ) {
-    if (masterAudioSessionState.inSync) {
-      masterAudioSessionState.inSync = false;
-      try {
-        masterTimelineAudio?.pause();
-      } catch {}
-    }
   }
 
   let deltaMs = Math.max(0, now - lastTimerLoopTickWallMs);
@@ -3224,31 +2571,25 @@ function advanceTimerToNow() {
 }
 
 function handleAppLifecycleSync() {
+  if (!isDocumentHidden()) {
+    configureAmbientAudioSession();
+  }
   if (!timerState.isRunning) return;
+
   // Never pause when switching to another app; immediately catch up wall-clock time
   advanceTimerToNow();
   if (!timerState.isRunning) return;
 
-  if (isDocumentHidden()) {
-    // App moved to background / lock screen -> hand off seamlessly to continuous Master <audio> on 'transient'
-    const interruptedId = activeSpeechCueId;
-    cancelActiveWebAudioSpeech();
-    if (!isMasterAudioCoveringTimeline()) {
-      startOrSyncMasterTimelineAudio({ interruptedSpeechId: interruptedId });
-    }
-  } else {
-    // Returned to foreground -> stop continuous <audio> and resume mixable burst WebAudio ('transient' <-> 'ambient')
-    if (masterAudioSessionState.inSync || (masterTimelineAudio && !masterTimelineAudio.paused)) {
-      stopMasterTimelineAudio({ keepSession: true });
-    }
-    ensureSharedAudioContext();
-    if (sharedAudioCtx && sharedAudioCtx.state !== 'running') {
-      scheduleForegroundAudioResumeRetries('foreground-return');
-    }
-    if (Number.isFinite(cueSessionActiveUntilWallMs) && cueSessionActiveUntilWallMs > Date.now()) {
-      applyNavigatorAudioSessionType('transient');
-    } else {
-      configureAmbientAudioSession();
+  if (!isDocumentHidden()) {
+    configureAmbientAudioSession();
+    if (
+      sharedAudioCtx &&
+      sharedAudioCtx.state !== 'running' &&
+      (Date.now() < audioActiveUntilWallMs ||
+        Boolean(activeSpeechBufferSource) ||
+        activeOscillatorNodes.size > 0)
+    ) {
+      scheduleForegroundAudioResumeRetries();
     }
     requestScreenWakeLock();
   }
@@ -3263,20 +2604,20 @@ function handleGestureAudioRecovery(e) {
     return;
   }
   if (!timerState.isRunning) return;
-  if (
-    audioCtxNeedsGestureRebuild ||
-    simulatedStalledAudioClock ||
-    !sharedAudioCtx ||
-    sharedAudioCtx.state !== 'running'
-  ) {
+  if (audioCtxNeedsGestureRebuild || simulatedStalledAudioClock) {
     ensureSharedAudioContext({ fromUserGesture: true });
-    primeBackgroundAndBridgeElementsFromGesture();
+    if (
+      Date.now() >= audioActiveUntilWallMs &&
+      !activeSpeechBufferSource &&
+      activeOscillatorNodes.size === 0
+    ) {
+      scheduleIdleAudioSuspend(120);
+    }
   }
 }
 
 function handleStartButtonPreGesture() {
-  if (timerState.isRunning) return;
-  unlockAudioFromUserGesture();
+  configureAmbientAudioSession();
 }
 
 if (typeof document !== 'undefined') {
@@ -3286,7 +2627,6 @@ if (typeof document !== 'undefined') {
 }
 if (typeof window !== 'undefined') {
   window.addEventListener('pageshow', handleAppLifecycleSync);
-  window.addEventListener('pagehide', handleAppLifecycleSync);
   window.addEventListener('focus', handleAppLifecycleSync);
 }
 if (typeof navigator !== 'undefined' && navigator.mediaDevices?.addEventListener) {
@@ -3336,6 +2676,7 @@ function toggleTimerPlayPause() {
   startTimerSessionKeepAlive();
 
   const initialStep = timerState.steps[timerState.currentStepIndex];
+  let playedInitialCue = false;
   if (
     initialStep &&
     Math.abs(timerState.remainingMs - (initialStep.duration || 10) * 1000) < 80
@@ -3344,8 +2685,18 @@ function toggleTimerPlayPause() {
     playTimerSoundCue(getStepStartSoundType(initialStep), timerState.currentStepIndex, {
       gainScale: 1.0
     });
+    playedInitialCue = true;
   }
   evaluateStepSpeechAtCurrentTime();
+
+  if (
+    !playedInitialCue &&
+    Date.now() >= audioActiveUntilWallMs &&
+    !activeSpeechBufferSource &&
+    activeOscillatorNodes.size === 0
+  ) {
+    scheduleIdleAudioSuspend(120);
+  }
 
   lastTimerLoopTickWallMs = Date.now();
   lastExpectedRemainingMs = timerState.remainingMs;
@@ -4880,9 +4231,6 @@ function bindEvents() {
       resetActiveStepSpeechState();
       if (!nextVal) {
         cancelTimerSpeech();
-      }
-      if (timerState.isRunning && isDocumentHidden()) {
-        startOrSyncMasterTimelineAudio();
       }
       renderSettingsModalContent();
       showToast(nextVal ? 'Spoken exercise names on' : 'Spoken exercise names off');

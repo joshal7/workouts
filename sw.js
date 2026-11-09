@@ -1,4 +1,4 @@
-const CACHE_NAME = 'joshal-workout-pwa-v33';
+const CACHE_NAME = 'joshal-workout-pwa-v34';
 const CORE_ASSETS = [
   './',
   './index.html',

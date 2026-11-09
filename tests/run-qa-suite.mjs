@@ -2300,15 +2300,23 @@ test('computeTimelineTargetScrollLeft keeps active step in lower-left until last
   }
 });
 
-test('Mixable AudioSession (never exclusive playback), vocal presence shaper, and speaker-bridge WAV helpers', () => {
+test('Pure pre-configured Ambient AudioSession (zero playback/transient/auto, zero <audio> elements) & vocal presence shaper', () => {
   const appJs = fs.readFileSync(path.join(rootDir, 'src', 'app.js'), 'utf8');
   assert.ok(
-    !/audioSession\.type\s*=\s*['"]playback['"]/.test(appJs),
-    'src/app.js must NEVER assign exclusive navigator.audioSession.type = "playback" (breaks music/podcasts & earbud recovery)'
+    !/audioSession\.type\s*=\s*['"](playback|transient|transient-solo|auto)['"]/.test(appJs),
+    'src/app.js must NEVER assign navigator.audioSession.type to playback, transient, transient-solo, or auto (causes external music/podcasts/audiobooks to pause on iOS)'
   );
   assert.ok(
-    appJs.includes("'transient'") && appJs.includes("'ambient'"),
-    'src/app.js must use mixable transient/ambient AudioSession switching'
+    /navigator\.audioSession\.type\s*=\s*['"]ambient['"]/.test(appJs),
+    'src/app.js must pre-configure navigator.audioSession.type = "ambient"'
+  );
+  assert.ok(
+    !/createElement\s*\(\s*['"](audio|video)['"]\s*\)/.test(appJs) &&
+      !/new\s+Audio\s*\(/.test(appJs) &&
+      !appJs.includes('masterTimelineAudio') &&
+      !appJs.includes('cueBridgeAudioEl') &&
+      !appJs.includes('primeBackgroundAndBridgeElementsFromGesture'),
+    'src/app.js must NEVER create or .play() HTML5 <audio> elements (AVPlayer/NowPlaying pauses external audio on iOS)'
   );
   assert.ok(
     appJs.includes('devicechange') && appJs.includes("ctx.state === 'interrupted'"),
@@ -2321,7 +2329,7 @@ test('Mixable AudioSession (never exclusive playback), vocal presence shaper, an
   assert.ok(Math.abs(applySpeechPresenceGain(1.0, 1.45) - 1.0) < 1e-6);
   assert.ok(Math.abs(applySpeechPresenceGain(-1.0, 1.45) + 1.0) < 1e-6);
 
-  // resolveSpeechPcmSamples + buildSingleCueWavBytes produce valid single-cue WAV for speaker-bridge watchdog
+  // resolveSpeechPcmSamples + buildSingleCueWavBytes helpers remain pure & valid
   const sampleMap = new Map([
     ['Squats', new Int16Array([1000, -1000, 2000, -2000])],
     ['in', new Int16Array([500, -500])]
@@ -2334,9 +2342,9 @@ test('Mixable AudioSession (never exclusive playback), vocal presence shaper, an
 });
 
 // ----------------------------------------------------------------------------
-// 22. MULTI-CONDITION MUSIC / PODCAST COEXISTENCE, SILENT MODE & HANDOFF UNIT CHECKS
+// 22. MULTI-CONDITION MUSIC / PODCAST COEXISTENCE, AUTO-SUSPEND & HANDOFF UNIT CHECKS
 // ----------------------------------------------------------------------------
-console.log('\n22. Multi-Condition Music / Podcast Coexistence, Silent Mode & Handoff Unit Checks');
+console.log('\n22. Multi-Condition Music / Podcast Coexistence, Auto-Suspend & Handoff Unit Checks');
 
 test('buildRemainingAudioEvents deduplicates completed foreground speech on app switch while preserving interrupted mid-word cues', () => {
   const sampleSteps = [
@@ -2377,22 +2385,23 @@ test('buildRemainingAudioEvents deduplicates completed foreground speech on app 
   assert.equal(continuedIntro.offsetSec, 0);
 });
 
-test('Audio engine enforces Silent-Mode IPC lead, MediaSession non-hijack, epoch-guarded teardown, and background pause recovery', () => {
+test('Audio engine pre-configures Ambient at bootstrap/modal-open, auto-suspends between bursts, never hijacks MediaSession, and guards async lifecycle epochs', () => {
   const appJs = fs.readFileSync(path.join(rootDir, 'src', 'app.js'), 'utf8');
   assert.ok(
     !/mediaSession\.metadata\s*=/.test(appJs) && !/mediaSession\.setActionHandler/.test(appJs),
     'src/app.js must NEVER hijack navigator.mediaSession (AirPods / Lock Screen controls must stay bound to music/podcast)'
   );
+  const bootstrapSlice = appJs.slice(appJs.indexOf('async function bootstrap()'), appJs.indexOf('async function bootstrap()') + 450);
   assert.ok(
-    appJs.includes('recoverInterruptedMasterTimelineAudio') &&
-      appJs.includes('resumeContextOrPlayCueBridge') &&
-      appJs.includes('suspendAudioContextAndReleaseSession') &&
-      appJs.includes('audioLifecycleEpoch'),
-    'src/app.js must include background pause auto-recovery, hanging-resume bridge fallback, and epoch-guarded session step-down'
+    bootstrapSlice.includes('configureAmbientAudioSession()') && !bootstrapSlice.includes('releaseAudioSessionToAuto'),
+    'bootstrap() must pre-configure configureAmbientAudioSession() upfront (never releaseAudioSessionToAuto)'
   );
   assert.ok(
-    appJs.includes('0.045'),
-    'src/app.js must include 45ms IPC lead on ambient -> transient switch so iPhone Silent Mode never clips attack transients'
+    appJs.includes('scheduleIdleAudioSuspend') &&
+      appJs.includes('suspendAudioContextNow') &&
+      appJs.includes('armWebAudioClockWatchdog') &&
+      appJs.includes('audioLifecycleEpoch'),
+    'src/app.js must auto-suspend sharedAudioCtx between cues, guard async callbacks via audioLifecycleEpoch, and use pure-WebAudio clock watchdog'
   );
 });
 
